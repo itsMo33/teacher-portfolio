@@ -59,8 +59,8 @@ export function FileUploadDropzone({
         onClick={() => inputRef.current?.click()}
         className={`cursor-pointer rounded-xl border-2 border-dashed p-6 text-center transition-colors ${
           dragging
-            ? "border-blue-500 bg-blue-50 dark:bg-blue-950/30"
-            : "border-slate-300 dark:border-slate-700 hover:border-blue-400"
+            ? "border-[var(--brand-primary)] bg-[var(--brand-primary)]/5"
+            : "border-slate-300 dark:border-slate-700 hover:border-[var(--brand-primary)]"
         }`}
       >
         <input

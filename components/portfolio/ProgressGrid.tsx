@@ -14,28 +14,13 @@ export function ProgressGrid({
       {PORTFOLIO_SECTIONS.map((section) => {
         if (section.key === "schedule") return null;
 
-        const isComplete = section.hasSubsections
-          ? section.subsections!.every((sub) => filledSlots.has(`${section.key}:${sub.key}`))
-          : filledSlots.has(`${section.key}:`);
-
         return (
           <Link
             key={section.key}
             href={`${linkPrefix}/${section.key}`}
-            className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4 hover:border-blue-400 transition-colors"
+            className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4 hover:border-[var(--brand-primary)] transition-colors"
           >
-            <div className="flex items-center justify-between mb-2">
-              <h3 className="font-semibold text-slate-900 dark:text-slate-50">{section.labelAr}</h3>
-              <span
-                className={`text-xs px-2 py-0.5 rounded-full ${
-                  isComplete
-                    ? "bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300"
-                    : "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300"
-                }`}
-              >
-                {isComplete ? "مكتمل" : "ناقص"}
-              </span>
-            </div>
+            <h3 className="font-semibold text-slate-900 dark:text-slate-50 mb-2">{section.labelAr}</h3>
             {section.hasSubsections && (
               <ul className="text-xs text-slate-500 dark:text-slate-400 flex flex-col gap-0.5">
                 {section.subsections!.map((sub) => (

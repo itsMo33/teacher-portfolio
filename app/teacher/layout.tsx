@@ -10,6 +10,7 @@ const navItems: NavItem[] = [
   })),
   { href: "/teacher/schedule", label: "الجدول المدرسي" },
   { href: "/teacher/ai-assistant", label: "المساعد الذكي" },
+  { href: "/teacher/settings", label: "الإعدادات" },
 ];
 
 export default async function TeacherLayout({ children }: { children: React.ReactNode }) {

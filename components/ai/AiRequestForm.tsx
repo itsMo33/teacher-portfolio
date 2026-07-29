@@ -70,7 +70,7 @@ export function AiRequestForm() {
               onClick={() => setType(t)}
               className={`rounded-lg px-3 py-1.5 text-sm ${
                 type === t
-                  ? "bg-blue-600 text-white"
+                  ? "bg-[var(--brand-primary)] text-white"
                   : "bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-300"
               }`}
             >
@@ -104,7 +104,7 @@ export function AiRequestForm() {
         <button
           type="submit"
           disabled={loading}
-          className="rounded-lg bg-blue-600 hover:bg-blue-700 disabled:opacity-60 text-white font-medium py-2.5"
+          className="rounded-lg bg-[var(--brand-primary)] hover:bg-[var(--brand-primary-dark)] disabled:opacity-60 text-white font-medium py-2.5"
         >
           {loading ? "جارٍ التوليد..." : "توليد"}
         </button>
@@ -115,7 +115,7 @@ export function AiRequestForm() {
       {(textResult || slides) && (
         <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4">
           <div className="flex justify-end mb-2">
-            <button onClick={copyResult} className="text-xs text-blue-600 dark:text-blue-400 hover:underline">
+            <button onClick={copyResult} className="text-xs text-[var(--brand-primary)] hover:underline">
               نسخ
             </button>
           </div>

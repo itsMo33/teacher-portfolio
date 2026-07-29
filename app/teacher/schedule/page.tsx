@@ -20,7 +20,7 @@ export default async function TeacherSchedulePage() {
           href={signedUrl}
           target="_blank"
           rel="noopener noreferrer"
-          className="inline-block rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 px-4 py-3 text-blue-600 dark:text-blue-400 hover:underline"
+          className="inline-block rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 px-4 py-3 text-[var(--brand-primary)] hover:underline"
         >
           {schedule.file_name}
         </a>

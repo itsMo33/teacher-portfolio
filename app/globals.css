@@ -3,6 +3,11 @@
 :root {
   --background: #f8fafc;
   --foreground: #0f172a;
+  /* MOE / Vision 2030 style palette. Swap for the official brand colors once
+     the real logo/style-guide files are provided. */
+  --brand-primary: #0b6e4f;
+  --brand-primary-dark: #085138;
+  --brand-accent: #c9a227;
 }
 
 @theme inline {
@@ -15,6 +20,9 @@
   :root {
     --background: #0b1220;
     --foreground: #e2e8f0;
+    --brand-primary: #13a374;
+    --brand-primary-dark: #0b6e4f;
+    --brand-accent: #d9bb4c;
   }
 }
 

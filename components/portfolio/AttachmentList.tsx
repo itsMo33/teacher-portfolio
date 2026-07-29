@@ -46,7 +46,7 @@ export function AttachmentList({
             href={a.signedUrl}
             target="_blank"
             rel="noopener noreferrer"
-            className="text-sm text-blue-600 dark:text-blue-400 hover:underline truncate"
+            className="text-sm text-[var(--brand-primary)] hover:underline truncate"
           >
             {a.file_name}
           </a>

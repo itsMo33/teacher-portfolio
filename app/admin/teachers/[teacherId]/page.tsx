@@ -32,7 +32,7 @@ export default async function AdminTeacherPortfolioPage({
         </p>
         <Link
           href={`/admin/teachers/${teacherId}/schedule`}
-          className="mt-2 inline-block text-sm text-blue-600 dark:text-blue-400 hover:underline"
+          className="mt-2 inline-block text-sm text-[var(--brand-primary)] hover:underline"
         >
           إدارة الجدول المدرسي
         </Link>

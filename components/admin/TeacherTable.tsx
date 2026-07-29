@@ -26,7 +26,7 @@ export function TeacherTable({ teachers }: { teachers: TeacherRow[] }) {
           {teachers.map((t) => (
             <tr key={t.id} className="border-t border-slate-100 dark:border-slate-800">
               <td className="px-4 py-3">
-                <Link href={`/admin/teachers/${t.id}`} className="text-blue-600 dark:text-blue-400 hover:underline">
+                <Link href={`/admin/teachers/${t.id}`} className="text-[var(--brand-primary)] hover:underline">
                   {t.name}
                 </Link>
               </td>

@@ -20,7 +20,7 @@ function getArg(name: string, fallback?: string): string {
 
 async function main() {
   const nationalId = getArg("nationalId");
-  const password = getArg("password");
+  const password = getArg("password", nationalId);
   const name = getArg("name");
   const role = getArg("role", "manager");
 

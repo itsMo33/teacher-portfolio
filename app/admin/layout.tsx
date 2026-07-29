@@ -3,7 +3,10 @@ import { AppShell, type NavItem } from "@/components/ui/AppShell";
 
 const navItems: NavItem[] = [
   { href: "/admin", label: "قائمة المعلمين" },
+  { href: "/admin/teachers/new", label: "إضافة معلم" },
+  { href: "/admin/teachers/import", label: "استيراد معلمين" },
   { href: "/admin/reports", label: "تصدير تقرير" },
+  { href: "/admin/settings", label: "الإعدادات" },
 ];
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {

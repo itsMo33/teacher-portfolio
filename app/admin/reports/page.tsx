@@ -7,7 +7,7 @@ export default function AdminReportsPage() {
       </p>
       <a
         href="/api/report/export"
-        className="inline-block rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-medium px-4 py-2.5 transition-colors"
+        className="inline-block rounded-lg bg-[var(--brand-primary)] hover:bg-[var(--brand-primary-dark)] text-white font-medium px-4 py-2.5 transition-colors"
       >
         تنزيل تقرير Excel
       </a>

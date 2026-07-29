@@ -34,8 +34,18 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="flex flex-1 items-center justify-center bg-slate-50 dark:bg-slate-950 px-4">
+    <div className="flex flex-1 flex-col bg-slate-50 dark:bg-slate-950">
+      <div className="h-2 w-full bg-gradient-to-l from-[var(--brand-primary)] to-[var(--brand-accent)]" />
+      <div className="flex flex-1 items-center justify-center px-4">
       <div className="w-full max-w-sm rounded-2xl bg-white dark:bg-slate-900 shadow-lg p-8">
+        <div className="flex items-center justify-center gap-4 mb-4 text-[10px] text-slate-400">
+          <span className="rounded border border-dashed border-slate-300 dark:border-slate-700 px-2 py-1">
+            شعار وزارة التعليم
+          </span>
+          <span className="rounded border border-dashed border-slate-300 dark:border-slate-700 px-2 py-1">
+            رؤية 2030
+          </span>
+        </div>
         <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-50 text-center mb-1">
           بوابة إنجاز المعلمين
         </h1>
@@ -55,7 +65,7 @@ export default function LoginPage() {
               required
               value={nationalId}
               onChange={(e) => setNationalId(e.target.value)}
-              className="rounded-lg border border-slate-300 dark:border-slate-700 bg-transparent px-3 py-2 text-slate-900 dark:text-slate-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="rounded-lg border border-slate-300 dark:border-slate-700 bg-transparent px-3 py-2 text-slate-900 dark:text-slate-50 focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]"
               placeholder="١٠xxxxxxxx"
             />
           </div>
@@ -70,7 +80,7 @@ export default function LoginPage() {
               required
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="rounded-lg border border-slate-300 dark:border-slate-700 bg-transparent px-3 py-2 text-slate-900 dark:text-slate-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="rounded-lg border border-slate-300 dark:border-slate-700 bg-transparent px-3 py-2 text-slate-900 dark:text-slate-50 focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]"
             />
           </div>
 
@@ -81,11 +91,12 @@ export default function LoginPage() {
           <button
             type="submit"
             disabled={loading}
-            className="mt-2 rounded-lg bg-blue-600 hover:bg-blue-700 disabled:opacity-60 text-white font-medium py-2.5 transition-colors"
+            className="mt-2 rounded-lg bg-[var(--brand-primary)] hover:bg-[var(--brand-primary-dark)] disabled:opacity-60 text-white font-medium py-2.5 transition-colors"
           >
             {loading ? "جارٍ الدخول..." : "دخول"}
           </button>
         </form>
+      </div>
       </div>
     </div>
   );
