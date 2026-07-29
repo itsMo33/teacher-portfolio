@@ -24,6 +24,12 @@ export default async function TeacherPortfolioSectionPage({
     <div className="flex flex-col gap-8 max-w-2xl">
       <h2 className="text-xl font-bold text-slate-900 dark:text-slate-50">{section.labelAr}</h2>
 
+      {!section.teacherWritable && (
+        <p className="text-sm text-slate-400">
+          يُدار هذا القسم من قبل الإدارة، ويمكنك هنا الاطلاع على الملفات وتنزيلها فقط.
+        </p>
+      )}
+
       {await Promise.all(
         subsections.map(async (sub) => {
           const attachments = await getSectionAttachments(teacherId, section.key, sub.key || null);
@@ -32,11 +38,13 @@ export default async function TeacherPortfolioSectionPage({
               {sub.labelAr && (
                 <h3 className="font-semibold text-slate-700 dark:text-slate-200">{sub.labelAr}</h3>
               )}
-              <FileUploadDropzone
-                uploadUrl="/api/portfolio/upload"
-                extraFields={{ category: section.key, subcategory: sub.key }}
-              />
-              <AttachmentList attachments={attachments} canDelete />
+              {section.teacherWritable && (
+                <FileUploadDropzone
+                  uploadUrl="/api/portfolio/upload"
+                  extraFields={{ category: section.key, subcategory: sub.key }}
+                />
+              )}
+              <AttachmentList attachments={attachments} canDelete={section.teacherWritable} />
             </div>
           );
         })

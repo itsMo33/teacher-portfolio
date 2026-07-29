@@ -4,6 +4,7 @@ import { supabaseAdmin } from "@/lib/supabase/server";
 import { PORTFOLIO_SECTIONS } from "@/lib/portfolio-sections";
 import { getSectionAttachments } from "@/lib/portfolio-data";
 import { AttachmentList } from "@/components/portfolio/AttachmentList";
+import { FileUploadDropzone } from "@/components/portfolio/FileUploadDropzone";
 
 export default async function AdminTeacherPortfolioPage({
   params,
@@ -76,7 +77,13 @@ export default async function AdminTeacherPortfolioPage({
                       <span className="text-xs text-slate-400">{attachments.length} ملف</span>
                     </div>
                   )}
-                  <AttachmentList attachments={attachments} canDelete={false} />
+                  {!section.teacherWritable && (
+                    <FileUploadDropzone
+                      uploadUrl="/api/portfolio/upload"
+                      extraFields={{ category: section.key, subcategory: sub.key, teacherId }}
+                    />
+                  )}
+                  <AttachmentList attachments={attachments} canDelete={!section.teacherWritable} />
                 </div>
               ))}
             </div>

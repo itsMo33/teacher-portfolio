@@ -34,13 +34,18 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Invalid category/subcategory" }, { status: 400 });
   }
 
+  if (category === "schedule") {
+    return NextResponse.json({ error: "Use /api/schedule for the school schedule" }, { status: 400 });
+  }
+
   const section = getSection(category)!;
-  if (!section.teacherWritable) {
+
+  // Sections marked teacherWritable: false (e.g. tasks_assignments) are managed
+  // by admin/agent on the teacher's behalf; teachers may only view/download them.
+  if (session.user.role === "teacher" && !section.teacherWritable) {
     return NextResponse.json({ error: "This section is not teacher-writable" }, { status: 403 });
   }
 
-  // Teachers can only upload to their own portfolio; admins are not expected to
-  // upload here (schedule uploads go through /api/schedule instead).
   const teacherId = session.user.role === "teacher" ? session.user.id : teacherIdInput;
   if (!teacherId) {
     return NextResponse.json({ error: "Missing teacherId" }, { status: 400 });

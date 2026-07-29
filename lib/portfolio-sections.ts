@@ -99,7 +99,7 @@ export const PORTFOLIO_SECTIONS: PortfolioSection[] = [
     key: "tasks_assignments",
     labelAr: "المهام والتكاليف",
     hasSubsections: false,
-    teacherWritable: true,
+    teacherWritable: false,
   },
 ];
 
