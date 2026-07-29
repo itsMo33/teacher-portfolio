@@ -2,6 +2,7 @@
 
 import { useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
+import Image from "next/image";
 import { signIn } from "next-auth/react";
 
 export default function LoginPage() {
@@ -38,13 +39,9 @@ export default function LoginPage() {
       <div className="h-2 w-full bg-gradient-to-l from-[var(--brand-primary)] to-[var(--brand-accent)]" />
       <div className="flex flex-1 items-center justify-center px-4">
       <div className="w-full max-w-sm rounded-2xl bg-white dark:bg-slate-900 shadow-lg p-8">
-        <div className="flex items-center justify-center gap-4 mb-4 text-[10px] text-slate-400">
-          <span className="rounded border border-dashed border-slate-300 dark:border-slate-700 px-2 py-1">
-            شعار وزارة التعليم
-          </span>
-          <span className="rounded border border-dashed border-slate-300 dark:border-slate-700 px-2 py-1">
-            رؤية 2030
-          </span>
+        <div className="flex items-center justify-center gap-6 mb-4">
+          <Image src="/moe-logo.png" alt="شعار وزارة التعليم" width={90} height={51} className="h-10 w-auto object-contain" />
+          <Image src="/vision2030-logo.png" alt="رؤية 2030" width={90} height={90} className="h-12 w-auto object-contain" />
         </div>
         <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-50 text-center mb-1">
           بوابة إنجاز المعلمين

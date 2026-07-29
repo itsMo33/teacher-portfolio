@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 import { SignOutButton } from "./SignOutButton";
 
 export interface NavItem {
@@ -22,13 +23,9 @@ export function AppShell({
       <div className="h-1.5 w-full bg-gradient-to-l from-[var(--brand-primary)] to-[var(--brand-accent)]" />
       <header className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-6 py-4">
         <div className="flex items-center gap-4">
-          <div className="flex items-center gap-2 text-[10px] text-slate-400">
-            <span className="rounded border border-dashed border-slate-300 dark:border-slate-700 px-1.5 py-0.5">
-              وزارة التعليم
-            </span>
-            <span className="rounded border border-dashed border-slate-300 dark:border-slate-700 px-1.5 py-0.5">
-              رؤية 2030
-            </span>
+          <div className="flex items-center gap-3">
+            <Image src="/moe-logo.png" alt="شعار وزارة التعليم" width={70} height={40} className="h-8 w-auto object-contain" />
+            <Image src="/vision2030-logo.png" alt="رؤية 2030" width={70} height={70} className="h-9 w-auto object-contain" />
           </div>
           <div>
             <h1 className="text-lg font-bold text-slate-900 dark:text-slate-50">{title}</h1>
