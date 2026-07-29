@@ -67,6 +67,7 @@ export const PORTFOLIO_SECTIONS: PortfolioSection[] = [
       { key: "pre_test", labelAr: "الاختبار القبلي" },
       { key: "post_test", labelAr: "الاختبار البعدي" },
       { key: "remedial_plan", labelAr: "الخطة العلاجية" },
+      { key: "impact_measurement", labelAr: "قياس الأثر" },
     ],
     teacherWritable: true,
   },
