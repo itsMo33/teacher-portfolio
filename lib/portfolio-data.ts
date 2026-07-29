@@ -3,16 +3,23 @@ import { supabaseAdmin } from "@/lib/supabase/server";
 import { getSignedUrl, PORTFOLIO_BUCKET } from "@/lib/supabase/storage";
 
 export async function getFilledSlots(teacherId: string): Promise<Set<string>> {
+  const counts = await getSlotCounts(teacherId);
+  return new Set(Object.keys(counts));
+}
+
+/** Maps "category:subcategory" (subcategory empty string when the section has none) to how many files were uploaded to that slot. */
+export async function getSlotCounts(teacherId: string): Promise<Record<string, number>> {
   const { data } = await supabaseAdmin
     .from("attachments")
     .select("category, subcategory")
     .eq("teacher_id", teacherId);
 
-  const slots = new Set<string>();
+  const counts: Record<string, number> = {};
   for (const row of data ?? []) {
-    slots.add(`${row.category}:${row.subcategory ?? ""}`);
+    const key = `${row.category}:${row.subcategory ?? ""}`;
+    counts[key] = (counts[key] ?? 0) + 1;
   }
-  return slots;
+  return counts;
 }
 
 export async function getSectionAttachments(
