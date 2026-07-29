@@ -16,10 +16,7 @@ export function FileUploadDropzone({
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  async function upload(file: File) {
-    setUploading(true);
-    setError(null);
-
+  async function uploadOne(file: File): Promise<string | null> {
     const formData = new FormData();
     formData.append("file", file);
     for (const [key, value] of Object.entries(extraFields ?? {})) {
@@ -27,20 +24,28 @@ export function FileUploadDropzone({
     }
 
     const res = await fetch(uploadUrl, { method: "POST", body: formData });
-    setUploading(false);
-
     if (!res.ok) {
       const body = await res.json().catch(() => ({}));
-      setError(body.error ?? "فشل رفع الملف");
-      return;
+      return body.error ?? `فشل رفع الملف: ${file.name}`;
     }
-
-    router.refresh();
+    return null;
   }
 
-  function handleFiles(files: FileList | null) {
-    const file = files?.[0];
-    if (file) upload(file);
+  async function handleFiles(files: FileList | null) {
+    if (!files || files.length === 0) return;
+
+    setUploading(true);
+    setError(null);
+
+    const errors: string[] = [];
+    for (const file of Array.from(files)) {
+      const err = await uploadOne(file);
+      if (err) errors.push(err);
+    }
+
+    setUploading(false);
+    if (errors.length > 0) setError(errors.join(" | "));
+    router.refresh();
   }
 
   return (
@@ -67,11 +72,14 @@ export function FileUploadDropzone({
           ref={inputRef}
           type="file"
           accept=".pdf,.doc,.docx,.png"
+          multiple
           className="hidden"
           onChange={(e) => handleFiles(e.target.files)}
         />
         <p className="text-sm text-slate-600 dark:text-slate-300">
-          {uploading ? "جارٍ الرفع..." : "اسحب الملف هنا أو اضغط للاختيار (PDF / Word / PNG، حتى 10MB)"}
+          {uploading
+            ? "جارٍ الرفع..."
+            : "اسحب ملفًا أو أكثر هنا أو اضغط للاختيار (PDF / Word / PNG، حتى 10MB لكل ملف)"}
         </p>
       </div>
       {error && <p className="mt-2 text-sm text-red-600 dark:text-red-400">{error}</p>}
