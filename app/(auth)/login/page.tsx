@@ -4,6 +4,7 @@ import { useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { signIn } from "next-auth/react";
+import { SCHOOL_NAME } from "@/lib/school";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -35,17 +36,18 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="flex flex-1 flex-col bg-slate-50 dark:bg-slate-950">
-      <div className="h-2 w-full bg-gradient-to-l from-[var(--brand-primary)] to-[var(--brand-accent)]" />
-      <div className="flex flex-1 items-center justify-center px-4">
-      <div className="w-full max-w-sm rounded-2xl bg-white dark:bg-slate-900 shadow-lg p-8">
-        <div className="flex items-center justify-center gap-6 mb-4">
-          <Image src="/moe-logo.png" alt="شعار وزارة التعليم" width={90} height={51} className="h-10 w-auto object-contain" />
-          <Image src="/vision2030-logo.png" alt="رؤية 2030" width={90} height={90} className="h-12 w-auto object-contain" />
+    <div className="flex flex-1 flex-col overflow-x-hidden bg-slate-50 dark:bg-slate-950">
+      <div className="h-2 w-full shrink-0 bg-gradient-to-l from-[var(--brand-primary)] to-[var(--brand-accent)]" />
+      <div className="flex flex-1 items-center justify-center px-4 py-8">
+      <div className="w-full max-w-sm rounded-2xl bg-white dark:bg-slate-900 shadow-lg p-6 sm:p-8">
+        <div className="flex items-center justify-center gap-5 sm:gap-6 mb-4">
+          <Image src="/moe-logo.png" alt="شعار وزارة التعليم" width={90} height={51} className="h-9 sm:h-10 w-auto object-contain" />
+          <Image src="/vision2030-logo.png" alt="رؤية 2030" width={90} height={90} className="h-11 sm:h-12 w-auto object-contain" />
         </div>
-        <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-50 text-center mb-1">
+        <h1 className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-slate-50 text-center mb-1">
           بوابة إنجاز المعلمين
         </h1>
+        <p className="text-sm font-medium text-[var(--brand-primary)] text-center mb-1">{SCHOOL_NAME}</p>
         <p className="text-sm text-slate-500 dark:text-slate-400 text-center mb-6">
           سجّل الدخول برقم الهوية وكلمة المرور
         </p>

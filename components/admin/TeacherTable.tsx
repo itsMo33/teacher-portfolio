@@ -11,8 +11,8 @@ export interface TeacherRow {
 
 export function TeacherTable({ teachers }: { teachers: TeacherRow[] }) {
   return (
-    <div className="overflow-hidden rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900">
-      <table className="w-full text-sm text-right">
+    <div className="overflow-x-auto rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900">
+      <table className="w-full min-w-[640px] text-sm text-right">
         <thead className="bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-300">
           <tr>
             <th className="px-4 py-3">الاسم</th>
