@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { SignOutButton } from "./SignOutButton";
+import { Footer } from "./Footer";
 import { SCHOOL_NAME } from "@/lib/school";
 
 export interface NavItem {
@@ -81,6 +82,8 @@ export function AppShell({
 
         <main className="min-w-0 flex-1 p-4 sm:p-6">{children}</main>
       </div>
+
+      <Footer />
     </div>
   );
 }

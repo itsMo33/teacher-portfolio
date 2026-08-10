@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { signIn } from "next-auth/react";
 import { SCHOOL_NAME } from "@/lib/school";
+import { Footer } from "@/components/ui/Footer";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -97,6 +98,7 @@ export default function LoginPage() {
         </form>
       </div>
       </div>
+      <Footer />
     </div>
   );
 }
