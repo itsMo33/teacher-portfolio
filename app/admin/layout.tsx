@@ -5,6 +5,7 @@ const navItems: NavItem[] = [
   { href: "/admin", label: "قائمة المعلمين" },
   { href: "/admin/teachers/new", label: "إضافة معلم" },
   { href: "/admin/teachers/import", label: "استيراد معلمين" },
+  { href: "/admin/statistics", label: "الإحصائيات" },
   { href: "/admin/reports", label: "تصدير تقرير" },
   { href: "/admin/settings", label: "الإعدادات" },
 ];

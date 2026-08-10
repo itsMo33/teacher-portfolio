@@ -5,6 +5,7 @@ import { PORTFOLIO_SECTIONS } from "@/lib/portfolio-sections";
 import { getSectionAttachments } from "@/lib/portfolio-data";
 import { AttachmentList } from "@/components/portfolio/AttachmentList";
 import { FileUploadDropzone } from "@/components/portfolio/FileUploadDropzone";
+import { DeleteTeacherButton } from "@/components/admin/DeleteTeacherButton";
 
 export default async function AdminTeacherPortfolioPage({
   params,
@@ -27,7 +28,10 @@ export default async function AdminTeacherPortfolioPage({
   return (
     <div className="flex flex-col gap-8 max-w-3xl">
       <div>
-        <h2 className="text-xl font-bold text-slate-900 dark:text-slate-50">{teacher.name}</h2>
+        <div className="flex items-center justify-between">
+          <h2 className="text-xl font-bold text-slate-900 dark:text-slate-50">{teacher.name}</h2>
+          <DeleteTeacherButton teacherId={teacherId} teacherName={teacher.name} />
+        </div>
         <p className="text-sm text-slate-500">
           {teacher.national_id} {teacher.subject ? `· ${teacher.subject}` : ""}
         </p>
@@ -83,7 +87,11 @@ export default async function AdminTeacherPortfolioPage({
                       extraFields={{ category: section.key, subcategory: sub.key, teacherId }}
                     />
                   )}
-                  <AttachmentList attachments={attachments} canDelete={!section.teacherWritable} />
+                  <AttachmentList
+                    attachments={attachments}
+                    canDelete={!section.teacherWritable}
+                    showViewedStatus={section.key === "tasks_assignments"}
+                  />
                 </div>
               ))}
             </div>

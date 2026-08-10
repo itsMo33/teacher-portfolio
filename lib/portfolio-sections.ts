@@ -47,10 +47,10 @@ export const PORTFOLIO_SECTIONS: PortfolioSection[] = [
     labelAr: "المجتمع المهني",
     hasSubsections: true,
     subsections: [
-      { key: "visits", labelAr: "زيارات" },
-      { key: "meetings", labelAr: "اجتماعات" },
+      { key: "visits", labelAr: "الزيارات الصفية مع الإدارة" },
+      { key: "meetings", labelAr: "الاجتماعات مع المدير" },
     ],
-    teacherWritable: true,
+    teacherWritable: false,
   },
   {
     key: "teaching_strategies",

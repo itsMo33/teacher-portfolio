@@ -29,7 +29,7 @@ export async function getSectionAttachments(
 ) {
   let query = supabaseAdmin
     .from("attachments")
-    .select("id, file_name, file_path, mime_type, uploaded_at")
+    .select("id, file_name, file_path, mime_type, uploaded_at, viewed_at")
     .eq("teacher_id", teacherId)
     .eq("category", category)
     .order("uploaded_at", { ascending: false });

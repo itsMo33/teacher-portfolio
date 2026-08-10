@@ -35,10 +35,14 @@ create table if not exists attachments (
   file_name text not null,
   mime_type text not null,
   uploaded_at timestamptz not null default now(),
-  uploaded_by uuid not null references users(id)
+  uploaded_by uuid not null references users(id),
+  viewed_at timestamptz
 );
 create index if not exists idx_attachments_teacher on attachments(teacher_id);
 create index if not exists idx_attachments_teacher_category on attachments(teacher_id, category, subcategory);
+
+-- Idempotent migration for the viewed_at column added after the initial launch.
+alter table attachments add column if not exists viewed_at timestamptz;
 
 create table if not exists schedules (
   id uuid primary key default gen_random_uuid(),

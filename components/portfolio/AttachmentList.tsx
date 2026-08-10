@@ -8,14 +8,17 @@ export interface AttachmentItem {
   file_name: string;
   uploaded_at: string;
   signedUrl: string;
+  viewed_at?: string | null;
 }
 
 export function AttachmentList({
   attachments,
   canDelete,
+  showViewedStatus,
 }: {
   attachments: AttachmentItem[];
   canDelete: boolean;
+  showViewedStatus?: boolean;
 }) {
   const router = useRouter();
   const [deletingId, setDeletingId] = useState<string | null>(null);
@@ -54,6 +57,17 @@ export function AttachmentList({
             <span className="text-xs text-slate-400">
               {new Date(a.uploaded_at).toLocaleDateString("ar-SA")}
             </span>
+            {showViewedStatus && (
+              <span
+                className={`text-xs px-2 py-0.5 rounded-full whitespace-nowrap ${
+                  a.viewed_at
+                    ? "bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300"
+                    : "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300"
+                }`}
+              >
+                {a.viewed_at ? "تم الاطلاع" : "لم يُفتح بعد"}
+              </span>
+            )}
             {canDelete && (
               <button
                 onClick={() => handleDelete(a.id)}

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { DeleteTeacherButton } from "./DeleteTeacherButton";
 
 export interface TeacherRow {
   id: string;
@@ -20,6 +21,7 @@ export function TeacherTable({ teachers }: { teachers: TeacherRow[] }) {
             <th className="px-4 py-3">المادة</th>
             <th className="px-4 py-3">نسبة الإنجاز</th>
             <th className="px-4 py-3">الجدول</th>
+            <th className="px-4 py-3"></th>
           </tr>
         </thead>
         <tbody>
@@ -52,6 +54,9 @@ export function TeacherTable({ teachers }: { teachers: TeacherRow[] }) {
                 >
                   {t.hasSchedule ? "معروض" : "لم يُرفع"}
                 </Link>
+              </td>
+              <td className="px-4 py-3">
+                <DeleteTeacherButton teacherId={t.id} teacherName={t.name} />
               </td>
             </tr>
           ))}
