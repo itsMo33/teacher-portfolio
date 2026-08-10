@@ -3,6 +3,7 @@ export type SectionKey =
   | "schedule"
   | "weekly_term_plan"
   | "professional_community"
+  | "meetings_and_visits"
   | "teaching_strategies"
   | "learning_outcomes"
   | "parent_interaction"
@@ -47,8 +48,18 @@ export const PORTFOLIO_SECTIONS: PortfolioSection[] = [
     labelAr: "المجتمع المهني",
     hasSubsections: true,
     subsections: [
-      { key: "visits", labelAr: "الزيارات الصفية مع الإدارة" },
-      { key: "meetings", labelAr: "الاجتماعات مع المدير" },
+      { key: "visits", labelAr: "زيارات" },
+      { key: "meetings", labelAr: "اجتماعات" },
+    ],
+    teacherWritable: true,
+  },
+  {
+    key: "meetings_and_visits",
+    labelAr: "الاجتماعات والزيارات الإدارية",
+    hasSubsections: true,
+    subsections: [
+      { key: "principal_meetings", labelAr: "الاجتماعات مع المدير" },
+      { key: "admin_classroom_visits", labelAr: "الزيارات الصفية مع الإدارة" },
     ],
     teacherWritable: false,
   },
