@@ -37,7 +37,12 @@ export default async function TeacherPortfolioSectionPage({
     <div className="flex flex-col gap-8 max-w-2xl">
       {unviewedIds.length > 0 && <MarkViewedOnMount attachmentIds={unviewedIds} />}
 
-      <h2 className="text-xl font-bold text-slate-900 dark:text-slate-50">{section.labelAr}</h2>
+      <div>
+        <h2 className="text-xl font-bold text-slate-900 dark:text-slate-50">{section.labelAr}</h2>
+        {section.note && (
+          <p className="text-sm text-amber-600 dark:text-amber-400 mt-1">{section.note}</p>
+        )}
+      </div>
 
       {!section.teacherWritable && (
         <p className="text-sm text-slate-400">
@@ -48,7 +53,10 @@ export default async function TeacherPortfolioSectionPage({
       {subsectionData.map(({ sub, attachments }) => (
         <div key={sub.key} className="flex flex-col gap-3">
           {sub.labelAr && (
-            <h3 className="font-semibold text-slate-700 dark:text-slate-200">{sub.labelAr}</h3>
+            <div>
+              <h3 className="font-semibold text-slate-700 dark:text-slate-200">{sub.labelAr}</h3>
+              {sub.note && <p className="text-xs text-amber-600 dark:text-amber-400 mt-0.5">{sub.note}</p>}
+            </div>
           )}
           {section.teacherWritable && (
             <FileUploadDropzone

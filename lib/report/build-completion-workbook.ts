@@ -7,28 +7,43 @@ export function buildCompletionWorkbook(teachers: TeacherWithCompletion[]): Exce
   const sheet = workbook.addWorksheet("تقرير الإنجاز");
   sheet.views = [{ rightToLeft: true }];
 
-  const headers = ["الاسم", "رقم الهوية", "المادة", "الجدول المدرسي", ...TEACHER_SLOTS.map((s) => s.labelAr), "نسبة الإنجاز"];
+  const headers = [
+    "الاسم",
+    "رقم الهوية",
+    "المادة",
+    "الجدول المدرسي",
+    ...TEACHER_SLOTS.map((s) => s.labelAr),
+    "نسبة الإنجاز",
+    "إجمالي الملفات",
+  ];
   const headerRow = sheet.addRow(headers);
   headerRow.font = { bold: true };
   headerRow.eachCell((cell) => {
     cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFE2E8F0" } };
   });
 
+  let grandTotalFiles = 0;
+
   for (const teacher of teachers) {
+    grandTotalFiles += teacher.totalFiles;
+
     const row = sheet.addRow([
       teacher.name,
       teacher.national_id,
       teacher.subject ?? "",
       teacher.hasSchedule ? "✓" : "✗",
-      ...TEACHER_SLOTS.map((slot) =>
-        teacher.filledSlots.has(`${slot.section}:${slot.subsection ?? ""}`) ? "✓" : "✗"
-      ),
+      ...TEACHER_SLOTS.map((slot) => {
+        const count = teacher.slotCounts[`${slot.section}:${slot.subsection ?? ""}`] ?? 0;
+        if (count === 0) return "✗";
+        return count > 1 ? `✓ (${count})` : "✓";
+      }),
       `${teacher.completionPercent}%`,
+      teacher.totalFiles,
     ]);
 
     row.eachCell((cell, colNumber) => {
       if (colNumber >= 5 && colNumber <= 4 + TEACHER_SLOTS.length) {
-        const isDone = cell.value === "✓";
+        const isDone = typeof cell.value === "string" && cell.value.startsWith("✓");
         cell.fill = {
           type: "pattern",
           pattern: "solid",
@@ -38,6 +53,18 @@ export function buildCompletionWorkbook(teachers: TeacherWithCompletion[]): Exce
       }
     });
   }
+
+  const totalColumnCount = headers.length;
+  const totalRow = sheet.addRow([
+    "الإجمالي",
+    ...Array(totalColumnCount - 2).fill(""),
+    grandTotalFiles,
+  ]);
+  totalRow.font = { bold: true };
+  totalRow.eachCell((cell) => {
+    cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFE2E8F0" } };
+  });
+  totalRow.getCell(totalColumnCount).alignment = { horizontal: "center" };
 
   sheet.columns.forEach((col) => {
     col.width = 18;

@@ -71,12 +71,16 @@ export default async function AdminTeacherPortfolioPage({
                   {total} ملف
                 </span>
               </div>
+              {section.note && <p className="text-xs text-amber-600 dark:text-amber-400">{section.note}</p>}
               {subsectionData.map(({ sub, attachments }) => (
                 <div key={sub.key} className="flex flex-col gap-1.5 pr-3">
                   {sub.labelAr && (
                     <div className="flex items-center justify-between">
                       <h4 className="text-sm font-medium text-slate-600 dark:text-slate-300">
                         {sub.labelAr}
+                        {sub.note && (
+                          <span className="text-xs font-normal text-amber-600 dark:text-amber-400"> ({sub.note})</span>
+                        )}
                       </h4>
                       <span className="text-xs text-slate-400">{attachments.length} ملف</span>
                     </div>

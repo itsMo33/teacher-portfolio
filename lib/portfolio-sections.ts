@@ -14,6 +14,8 @@ export type SectionKey =
 export interface Subsection {
   key: string;
   labelAr: string;
+  /** Optional short requirement note shown next to this subsection, e.g. "مطلوب زيارتين". */
+  note?: string;
 }
 
 export interface PortfolioSection {
@@ -22,6 +24,8 @@ export interface PortfolioSection {
   hasSubsections: boolean;
   subsections?: Subsection[];
   teacherWritable: boolean;
+  /** Optional short note shown next to the section title, e.g. "منصة مدرستي". */
+  note?: string;
 }
 
 export const PORTFOLIO_SECTIONS: PortfolioSection[] = [
@@ -40,7 +44,11 @@ export const PORTFOLIO_SECTIONS: PortfolioSection[] = [
   {
     key: "weekly_term_plan",
     labelAr: "الخطة الأسبوعية والفصلية",
-    hasSubsections: false,
+    hasSubsections: true,
+    subsections: [
+      { key: "weekly", labelAr: "الخطة الأسبوعية" },
+      { key: "termly", labelAr: "الخطة الفصلية" },
+    ],
     teacherWritable: true,
   },
   {
@@ -48,8 +56,8 @@ export const PORTFOLIO_SECTIONS: PortfolioSection[] = [
     labelAr: "المجتمع المهني",
     hasSubsections: true,
     subsections: [
-      { key: "visits", labelAr: "زيارات" },
-      { key: "meetings", labelAr: "اجتماعات" },
+      { key: "visits", labelAr: "زيارات", note: "مطلوب زيارتين" },
+      { key: "meetings", labelAr: "اجتماعات", note: "مطلوب ثلاث اجتماعات" },
     ],
     teacherWritable: true,
   },
@@ -68,6 +76,7 @@ export const PORTFOLIO_SECTIONS: PortfolioSection[] = [
     labelAr: "استراتيجيات التدريس",
     hasSubsections: false,
     teacherWritable: true,
+    note: "مطلوب ثلاث استراتيجيات في الفصل الدراسي",
   },
   {
     key: "learning_outcomes",
@@ -94,10 +103,8 @@ export const PORTFOLIO_SECTIONS: PortfolioSection[] = [
     hasSubsections: true,
     subsections: [
       { key: "courses", labelAr: "الدورات" },
-      { key: "certificates", labelAr: "الشهادات" },
       { key: "recognition", labelAr: "الشكر والتكريم" },
-      { key: "volunteering", labelAr: "الأعمال التطوعية" },
-      { key: "initiatives", labelAr: "المبادرات" },
+      { key: "volunteering_initiatives", labelAr: "الأعمال التطوعية والمبادرات" },
     ],
     teacherWritable: true,
   },
@@ -106,6 +113,7 @@ export const PORTFOLIO_SECTIONS: PortfolioSection[] = [
     labelAr: "تحضير الدروس",
     hasSubsections: false,
     teacherWritable: true,
+    note: "منصة مدرستي",
   },
   {
     key: "tasks_assignments",
