@@ -30,24 +30,28 @@ export interface PortfolioSection {
 
 export const PORTFOLIO_SECTIONS: PortfolioSection[] = [
   {
-    key: "achievement_file",
-    labelAr: "ملف الإنجاز",
-    hasSubsections: false,
-    teacherWritable: true,
-  },
-  {
     key: "schedule",
     labelAr: "الجدول المدرسي",
     hasSubsections: false,
     teacherWritable: false,
   },
   {
+    key: "achievement_file",
+    labelAr: "ملف الإنجاز",
+    hasSubsections: true,
+    subsections: [
+      { key: "general", labelAr: "ملف الإنجاز" },
+      { key: "professional_license", labelAr: "الرخصة المهنية" },
+    ],
+    teacherWritable: true,
+  },
+  {
     key: "weekly_term_plan",
     labelAr: "الخطة الأسبوعية والفصلية",
     hasSubsections: true,
     subsections: [
-      { key: "weekly", labelAr: "الخطة الأسبوعية" },
       { key: "termly", labelAr: "الخطة الفصلية" },
+      { key: "weekly", labelAr: "الخطة الأسبوعية" },
     ],
     teacherWritable: true,
   },
@@ -66,7 +70,7 @@ export const PORTFOLIO_SECTIONS: PortfolioSection[] = [
     labelAr: "الاجتماعات والزيارات الإدارية",
     hasSubsections: true,
     subsections: [
-      { key: "principal_meetings", labelAr: "الاجتماعات مع المدير" },
+      { key: "principal_meetings", labelAr: "الاجتماعات من وكيل شؤون المعلمين" },
       { key: "admin_classroom_visits", labelAr: "الزيارات الصفية مع الإدارة" },
     ],
     teacherWritable: false,
@@ -88,6 +92,7 @@ export const PORTFOLIO_SECTIONS: PortfolioSection[] = [
       { key: "post_test", labelAr: "الاختبار البعدي" },
       { key: "remedial_plan", labelAr: "الخطة العلاجية" },
       { key: "impact_measurement", labelAr: "قياس الأثر" },
+      { key: "student_followup_sheet", labelAr: "كشف متابعة الطلاب" },
     ],
     teacherWritable: true,
   },

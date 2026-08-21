@@ -22,6 +22,14 @@ export async function getSlotCounts(teacherId: string): Promise<Record<string, n
   return counts;
 }
 
+export async function getHasSchedule(teacherId: string): Promise<boolean> {
+  const { count } = await supabaseAdmin
+    .from("schedules")
+    .select("id", { count: "exact", head: true })
+    .eq("teacher_id", teacherId);
+  return (count ?? 0) > 0;
+}
+
 export async function getSectionAttachments(
   teacherId: string,
   category: string,
