@@ -38,7 +38,13 @@ export default async function TeacherPortfolioSectionPage({
       {unviewedIds.length > 0 && <MarkViewedOnMount attachmentIds={unviewedIds} />}
 
       <div>
-        <h2 className="text-xl font-bold text-slate-900 dark:text-slate-50">{section.labelAr}</h2>
+        <h2 className="flex items-center gap-2 text-xl font-bold text-slate-900 dark:text-slate-50">
+          <span
+            className="inline-block h-3 w-3 shrink-0 rounded-full"
+            style={{ backgroundColor: section.accentColor }}
+          />
+          {section.labelAr}
+        </h2>
         {section.note && (
           <p className="text-sm text-amber-600 dark:text-amber-400 mt-1">{section.note}</p>
         )}

@@ -27,16 +27,22 @@ export function ProgressGrid({
           <Link
             key={section.key}
             href={isSchedule ? "/teacher/schedule" : `${linkPrefix}/${section.key}`}
-            className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4 hover:border-[var(--brand-primary)] transition-colors"
+            style={{ borderInlineStartColor: section.accentColor, borderInlineStartWidth: 4 }}
+            className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4 transition-shadow hover:shadow-md"
           >
             <div className="flex items-center justify-between mb-1">
-              <h3 className="font-semibold text-slate-900 dark:text-slate-50">{section.labelAr}</h3>
+              <h3 className="flex items-center gap-2 font-semibold text-slate-900 dark:text-slate-50">
+                <span
+                  className="inline-block h-2.5 w-2.5 shrink-0 rounded-full"
+                  style={{ backgroundColor: section.accentColor }}
+                />
+                {section.labelAr}
+              </h3>
               <span
-                className={`text-xs px-2 py-0.5 rounded-full whitespace-nowrap ${
-                  isDone
-                    ? "bg-[var(--brand-primary)]/10 text-[var(--brand-primary)]"
-                    : "bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400"
+                className={`text-xs px-2 py-0.5 rounded-full whitespace-nowrap font-medium ${
+                  isDone ? "" : "bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400"
                 }`}
+                style={isDone ? { backgroundColor: `${section.accentColor}1a`, color: section.accentColor } : undefined}
               >
                 {isSchedule ? (hasSchedule ? "معروض" : "لم يُرفع") : `${total} ملف`}
               </span>

@@ -9,7 +9,8 @@ export type SectionKey =
   | "parent_interaction"
   | "achievements"
   | "lesson_prep"
-  | "tasks_assignments";
+  | "tasks_assignments"
+  | "accountability";
 
 export interface Subsection {
   key: string;
@@ -26,6 +27,8 @@ export interface PortfolioSection {
   teacherWritable: boolean;
   /** Optional short note shown next to the section title, e.g. "منصة مدرستي". */
   note?: string;
+  /** Hex accent color used to visually distinguish this section's card/heading. */
+  accentColor: string;
 }
 
 export const PORTFOLIO_SECTIONS: PortfolioSection[] = [
@@ -34,6 +37,7 @@ export const PORTFOLIO_SECTIONS: PortfolioSection[] = [
     labelAr: "الجدول المدرسي",
     hasSubsections: false,
     teacherWritable: false,
+    accentColor: "#2563eb",
   },
   {
     key: "achievement_file",
@@ -44,6 +48,7 @@ export const PORTFOLIO_SECTIONS: PortfolioSection[] = [
       { key: "professional_license", labelAr: "الرخصة المهنية" },
     ],
     teacherWritable: true,
+    accentColor: "#059669",
   },
   {
     key: "weekly_term_plan",
@@ -54,6 +59,7 @@ export const PORTFOLIO_SECTIONS: PortfolioSection[] = [
       { key: "weekly", labelAr: "الخطة الأسبوعية" },
     ],
     teacherWritable: true,
+    accentColor: "#4f46e5",
   },
   {
     key: "professional_community",
@@ -64,6 +70,7 @@ export const PORTFOLIO_SECTIONS: PortfolioSection[] = [
       { key: "meetings", labelAr: "اجتماعات", note: "مطلوب ثلاث اجتماعات" },
     ],
     teacherWritable: true,
+    accentColor: "#0d9488",
   },
   {
     key: "meetings_and_visits",
@@ -74,6 +81,7 @@ export const PORTFOLIO_SECTIONS: PortfolioSection[] = [
       { key: "admin_classroom_visits", labelAr: "الزيارات الصفية مع الإدارة" },
     ],
     teacherWritable: false,
+    accentColor: "#7c3aed",
   },
   {
     key: "teaching_strategies",
@@ -81,6 +89,7 @@ export const PORTFOLIO_SECTIONS: PortfolioSection[] = [
     hasSubsections: false,
     teacherWritable: true,
     note: "مطلوب ثلاث استراتيجيات في الفصل الدراسي",
+    accentColor: "#ea580c",
   },
   {
     key: "learning_outcomes",
@@ -95,12 +104,14 @@ export const PORTFOLIO_SECTIONS: PortfolioSection[] = [
       { key: "student_followup_sheet", labelAr: "كشف متابعة الطلاب" },
     ],
     teacherWritable: true,
+    accentColor: "#e11d48",
   },
   {
     key: "parent_interaction",
     labelAr: "التفاعل مع أولياء الأمور",
     hasSubsections: false,
     teacherWritable: true,
+    accentColor: "#0891b2",
   },
   {
     key: "achievements",
@@ -112,6 +123,7 @@ export const PORTFOLIO_SECTIONS: PortfolioSection[] = [
       { key: "volunteering_initiatives", labelAr: "الأعمال التطوعية والمبادرات" },
     ],
     teacherWritable: true,
+    accentColor: "#d97706",
   },
   {
     key: "lesson_prep",
@@ -119,12 +131,21 @@ export const PORTFOLIO_SECTIONS: PortfolioSection[] = [
     hasSubsections: false,
     teacherWritable: true,
     note: "منصة مدرستي",
+    accentColor: "#0284c7",
   },
   {
     key: "tasks_assignments",
     labelAr: "المهام والتكاليف",
     hasSubsections: false,
     teacherWritable: false,
+    accentColor: "#c026d3",
+  },
+  {
+    key: "accountability",
+    labelAr: "مسائلات",
+    hasSubsections: false,
+    teacherWritable: false,
+    accentColor: "#dc2626",
   },
 ];
 

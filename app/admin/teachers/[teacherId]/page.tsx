@@ -58,15 +58,24 @@ export default async function AdminTeacherPortfolioPage({
           const total = subsectionData.reduce((sum, s) => sum + s.attachments.length, 0);
 
           return (
-            <div key={section.key} className="flex flex-col gap-3">
+            <div
+              key={section.key}
+              style={{ borderInlineStartColor: section.accentColor, borderInlineStartWidth: 3 }}
+              className="flex flex-col gap-3 border-slate-200 pr-3 dark:border-slate-800"
+            >
               <div className="flex items-center justify-between">
-                <h3 className="font-bold text-slate-800 dark:text-slate-100">{section.labelAr}</h3>
+                <h3 className="flex items-center gap-2 font-bold text-slate-800 dark:text-slate-100">
+                  <span
+                    className="inline-block h-2.5 w-2.5 shrink-0 rounded-full"
+                    style={{ backgroundColor: section.accentColor }}
+                  />
+                  {section.labelAr}
+                </h3>
                 <span
-                  className={`text-xs px-2 py-0.5 rounded-full whitespace-nowrap ${
-                    total > 0
-                      ? "bg-[var(--brand-primary)]/10 text-[var(--brand-primary)]"
-                      : "bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400"
+                  className={`text-xs px-2 py-0.5 rounded-full whitespace-nowrap font-medium ${
+                    total > 0 ? "" : "bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400"
                   }`}
+                  style={total > 0 ? { backgroundColor: `${section.accentColor}1a`, color: section.accentColor } : undefined}
                 >
                   {total} ملف
                 </span>
