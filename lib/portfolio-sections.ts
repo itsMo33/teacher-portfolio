@@ -147,8 +147,9 @@ export const ACCEPTED_MIME_TYPES = [
   "application/msword",
   "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
   "image/png",
+  "image/jpeg",
 ];
 
-export const ACCEPTED_EXTENSIONS = [".pdf", ".doc", ".docx", ".png"];
+export const ACCEPTED_EXTENSIONS = [".pdf", ".doc", ".docx", ".png", ".jpg", ".jpeg"];
 
 export const MAX_FILE_SIZE_BYTES = 10 * 1024 * 1024; // 10MB

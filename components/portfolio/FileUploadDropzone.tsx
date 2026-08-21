@@ -71,7 +71,7 @@ export function FileUploadDropzone({
         <input
           ref={inputRef}
           type="file"
-          accept=".pdf,.doc,.docx,.png"
+          accept=".pdf,.doc,.docx,.png,.jpg,.jpeg"
           multiple
           className="hidden"
           onChange={(e) => handleFiles(e.target.files)}
@@ -79,7 +79,7 @@ export function FileUploadDropzone({
         <p className="text-sm text-slate-600 dark:text-slate-300">
           {uploading
             ? "جارٍ الرفع..."
-            : "اسحب ملفًا أو أكثر هنا أو اضغط للاختيار (PDF / Word / PNG، حتى 10MB لكل ملف)"}
+            : "اسحب ملفًا أو أكثر هنا أو اضغط للاختيار (PDF / Word / صورة، حتى 10MB لكل ملف)"}
         </p>
       </div>
       {error && <p className="mt-2 text-sm text-red-600 dark:text-red-400">{error}</p>}
