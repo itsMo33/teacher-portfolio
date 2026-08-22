@@ -2,7 +2,6 @@ import { auth } from "@/lib/auth/auth-options";
 import { supabaseAdmin } from "@/lib/supabase/server";
 import { getSignedUrl, SCHEDULE_BUCKET } from "@/lib/supabase/storage";
 import { MarkScheduleViewedOnMount } from "@/components/portfolio/MarkScheduleViewedOnMount";
-import { FileUploadDropzone } from "@/components/portfolio/FileUploadDropzone";
 
 export default async function TeacherSchedulePage() {
   const session = await auth();
@@ -20,7 +19,7 @@ export default async function TeacherSchedulePage() {
       {schedule && !schedule.viewed_at && <MarkScheduleViewedOnMount />}
       <h2 className="text-xl font-bold text-slate-900 dark:text-slate-50">الجدول المدرسي</h2>
 
-      {schedule && signedUrl && (
+      {schedule && signedUrl ? (
         <a
           href={signedUrl}
           target="_blank"
@@ -29,9 +28,11 @@ export default async function TeacherSchedulePage() {
         >
           الملف الحالي: {schedule.file_name}
         </a>
+      ) : (
+        <p className="text-sm text-slate-500 dark:text-slate-400">
+          لم يتم رفع الجدول المدرسي بعد من قبل الإدارة
+        </p>
       )}
-
-      <FileUploadDropzone uploadUrl={`/api/schedule/${session!.user.id}`} />
     </div>
   );
 }

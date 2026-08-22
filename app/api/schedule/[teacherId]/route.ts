@@ -57,10 +57,8 @@ export async function POST(
 
   const { teacherId } = await params;
 
-  const isOwner = session.user.role === "teacher" && session.user.id === teacherId;
-  const isAdmin = session.user.role === "agent" || session.user.role === "manager";
-  if (!isOwner && !isAdmin) {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  if (session.user.role === "teacher") {
+    return NextResponse.json({ error: "Teachers cannot edit the schedule" }, { status: 403 });
   }
 
   const formData = await req.formData();
