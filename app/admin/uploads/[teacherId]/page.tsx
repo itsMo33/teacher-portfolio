@@ -1,12 +1,14 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { supabaseAdmin } from "@/lib/supabase/server";
-import { PORTFOLIO_SECTIONS } from "@/lib/portfolio-sections";
+import { PORTFOLIO_SECTIONS, getSection } from "@/lib/portfolio-sections";
 import { getSectionAttachments } from "@/lib/portfolio-data";
+import { getSignedUrl, SCHEDULE_BUCKET } from "@/lib/supabase/storage";
 import { AttachmentList } from "@/components/portfolio/AttachmentList";
 import { FileUploadDropzone } from "@/components/portfolio/FileUploadDropzone";
 
 const ADMIN_SECTIONS = PORTFOLIO_SECTIONS.filter((s) => !s.teacherWritable && s.key !== "schedule");
+const SCHEDULE_SECTION = getSection("schedule")!;
 
 export default async function AdminUploadsForTeacherPage({
   params,
@@ -25,6 +27,15 @@ export default async function AdminUploadsForTeacherPage({
 
   if (!teacher) notFound();
 
+  const { data: schedule } = await supabaseAdmin
+    .from("schedules")
+    .select("file_name, file_path, uploaded_at")
+    .eq("teacher_id", teacherId)
+    .is("deleted_at", null)
+    .maybeSingle();
+
+  const scheduleSignedUrl = schedule ? await getSignedUrl(SCHEDULE_BUCKET, schedule.file_path) : null;
+
   return (
     <div className="flex flex-col gap-8 max-w-2xl">
       <div>
@@ -35,6 +46,27 @@ export default async function AdminUploadsForTeacherPage({
         <p className="text-sm text-slate-500">
           {teacher.national_id} {teacher.subject ? `· ${teacher.subject}` : ""}
         </p>
+      </div>
+
+      <div className="flex flex-col gap-3">
+        <h3 className="flex items-center gap-2 font-bold text-slate-800 dark:text-slate-100">
+          <span
+            className="inline-block h-2.5 w-2.5 shrink-0 rounded-full"
+            style={{ backgroundColor: SCHEDULE_SECTION.accentColor }}
+          />
+          {SCHEDULE_SECTION.labelAr}
+        </h3>
+        {schedule && scheduleSignedUrl && (
+          <a
+            href={scheduleSignedUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-block rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 px-4 py-3 text-[var(--brand-primary)] hover:underline w-fit"
+          >
+            الملف الحالي: {schedule.file_name}
+          </a>
+        )}
+        <FileUploadDropzone uploadUrl={`/api/schedule/${teacherId}`} />
       </div>
 
       {await Promise.all(
