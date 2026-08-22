@@ -8,6 +8,7 @@ export interface TeacherRow {
   subject: string | null;
   completionPercent: number;
   hasSchedule: boolean;
+  hasUnviewedByAdmin?: boolean;
 }
 
 export function TeacherTable({ teachers }: { teachers: TeacherRow[] }) {
@@ -28,8 +29,17 @@ export function TeacherTable({ teachers }: { teachers: TeacherRow[] }) {
           {teachers.map((t) => (
             <tr key={t.id} className="border-t border-slate-100 dark:border-slate-800">
               <td className="px-4 py-3">
-                <Link href={`/admin/teachers/${t.id}`} className="text-[var(--brand-primary)] hover:underline">
+                <Link
+                  href={`/admin/teachers/${t.id}`}
+                  className="flex items-center gap-2 text-[var(--brand-primary)] hover:underline w-fit"
+                >
                   {t.name}
+                  {t.hasUnviewedByAdmin && (
+                    <span className="flex items-center gap-1 rounded-full bg-red-100 dark:bg-red-900/40 px-1.5 py-0.5 text-[10px] font-bold text-red-600 dark:text-red-300">
+                      <span className="animate-pulse-dot inline-block h-1.5 w-1.5 rounded-full bg-red-500" />
+                      جديد
+                    </span>
+                  )}
                 </Link>
               </td>
               <td className="px-4 py-3 text-slate-500">{t.national_id}</td>

@@ -1,19 +1,22 @@
 import { auth } from "@/lib/auth/auth-options";
 import { supabaseAdmin } from "@/lib/supabase/server";
 import { getSignedUrl, SCHEDULE_BUCKET } from "@/lib/supabase/storage";
+import { MarkScheduleViewedOnMount } from "@/components/portfolio/MarkScheduleViewedOnMount";
 
 export default async function TeacherSchedulePage() {
   const session = await auth();
   const { data: schedule } = await supabaseAdmin
     .from("schedules")
-    .select("file_name, file_path, uploaded_at")
+    .select("file_name, file_path, uploaded_at, viewed_at")
     .eq("teacher_id", session!.user.id)
+    .is("deleted_at", null)
     .maybeSingle();
 
   const signedUrl = schedule ? await getSignedUrl(SCHEDULE_BUCKET, schedule.file_path) : null;
 
   return (
     <div className="max-w-xl">
+      {schedule && !schedule.viewed_at && <MarkScheduleViewedOnMount />}
       <h2 className="text-xl font-bold text-slate-900 dark:text-slate-50 mb-4">الجدول المدرسي</h2>
       {schedule && signedUrl ? (
         <a

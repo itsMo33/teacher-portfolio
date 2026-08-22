@@ -9,7 +9,7 @@ export function DeleteTeacherButton({ teacherId, teacherName }: { teacherId: str
 
   async function handleDelete() {
     const confirmed = window.confirm(
-      `هل أنت متأكد من حذف حساب "${teacherName}"؟ سيتم حذف جميع ملفاته نهائيًا ولا يمكن التراجع.`
+      `هل أنت متأكد من حذف حساب "${teacherName}"؟ سينتقل الحساب وملفاته لسلة المحذوفات ويمكن استعادته لاحقًا.`
     );
     if (!confirmed) return;
 

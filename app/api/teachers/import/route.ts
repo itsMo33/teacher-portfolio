@@ -3,6 +3,7 @@ import ExcelJS from "exceljs";
 import { auth } from "@/lib/auth/auth-options";
 import { supabaseAdmin } from "@/lib/supabase/server";
 import { createUser } from "@/lib/account";
+import { logActivity } from "@/lib/audit";
 
 interface ParsedRow {
   name: string;
@@ -87,7 +88,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "لم يتم العثور على بيانات صالحة في الملف" }, { status: 400 });
   }
 
-  const { data: existing } = await supabaseAdmin.from("users").select("national_id");
+  const { data: existing } = await supabaseAdmin.from("users").select("national_id").is("deleted_at", null);
   const existingIds = new Set((existing ?? []).map((u) => u.national_id));
 
   const created: ParsedRow[] = [];
@@ -105,6 +106,15 @@ export async function POST(req: NextRequest) {
     } catch (err) {
       skipped.push({ row, reason: err instanceof Error ? err.message : "خطأ غير معروف" });
     }
+  }
+
+  if (created.length > 0) {
+    await logActivity({
+      actorId: session.user.id,
+      actorName: session.user.name ?? "",
+      action: "import_teachers",
+      details: `تم استيراد ${created.length} معلم${skipped.length > 0 ? `، وتجاوز ${skipped.length}` : ""}`,
+    });
   }
 
   return NextResponse.json({ created, skipped });

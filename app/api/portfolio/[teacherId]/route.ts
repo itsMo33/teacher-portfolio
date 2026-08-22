@@ -24,6 +24,7 @@ export async function GET(
     .from("attachments")
     .select("id, category, subcategory, file_name, file_path, mime_type, uploaded_at")
     .eq("teacher_id", teacherId)
+    .is("deleted_at", null)
     .order("uploaded_at", { ascending: false });
 
   if (error) {

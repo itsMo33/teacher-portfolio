@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth/auth-options";
 import { supabaseAdmin } from "@/lib/supabase/server";
-import { deleteFile, PORTFOLIO_BUCKET, SCHEDULE_BUCKET } from "@/lib/supabase/storage";
+import { logActivity } from "@/lib/audit";
 
 export async function DELETE(
   req: NextRequest,
@@ -19,38 +19,34 @@ export async function DELETE(
 
   const { data: teacher } = await supabaseAdmin
     .from("users")
-    .select("id")
+    .select("id, name")
     .eq("id", teacherId)
     .eq("role", "teacher")
+    .is("deleted_at", null)
     .maybeSingle();
 
   if (!teacher) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
 
-  const { data: attachments } = await supabaseAdmin
-    .from("attachments")
-    .select("file_path")
-    .eq("teacher_id", teacherId);
+  // Soft delete only -- files, attachments and the schedule are left untouched
+  // so restoring the account brings everything back exactly as it was.
+  const { error } = await supabaseAdmin
+    .from("users")
+    .update({ deleted_at: new Date().toISOString() })
+    .eq("id", teacherId);
 
-  for (const a of attachments ?? []) {
-    await deleteFile(PORTFOLIO_BUCKET, a.file_path).catch(() => {});
-  }
-
-  const { data: schedule } = await supabaseAdmin
-    .from("schedules")
-    .select("file_path")
-    .eq("teacher_id", teacherId)
-    .maybeSingle();
-
-  if (schedule) {
-    await deleteFile(SCHEDULE_BUCKET, schedule.file_path).catch(() => {});
-  }
-
-  const { error } = await supabaseAdmin.from("users").delete().eq("id", teacherId);
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
+
+  await logActivity({
+    actorId: session.user.id,
+    actorName: session.user.name ?? "",
+    action: "soft_delete_teacher",
+    targetTeacherId: teacherId,
+    targetTeacherName: teacher.name,
+  });
 
   return NextResponse.json({ success: true });
 }

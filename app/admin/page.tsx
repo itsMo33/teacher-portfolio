@@ -1,5 +1,5 @@
 import { getTeachersWithCompletion } from "@/lib/teachers-data";
-import { TeacherTable } from "@/components/admin/TeacherTable";
+import { TeacherListWithSearch } from "@/components/admin/TeacherListWithSearch";
 import { AddTeacherForm } from "@/components/admin/AddTeacherForm";
 
 export default async function AdminDashboard() {
@@ -9,7 +9,7 @@ export default async function AdminDashboard() {
     <div className="flex flex-col gap-8">
       <div>
         <h2 className="text-xl font-bold text-slate-900 dark:text-slate-50 mb-4">قائمة المعلمين</h2>
-        <TeacherTable teachers={teachers} />
+        <TeacherListWithSearch teachers={teachers} />
       </div>
 
       <div className="max-w-sm rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-5">

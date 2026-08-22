@@ -1,16 +1,30 @@
 import Link from "next/link";
 import { PORTFOLIO_SECTIONS } from "@/lib/portfolio-sections";
 
+function NewBadge() {
+  return (
+    <span className="flex items-center gap-1 rounded-full bg-red-100 dark:bg-red-900/40 px-1.5 py-0.5 text-[10px] font-bold text-red-600 dark:text-red-300">
+      <span className="animate-pulse-dot inline-block h-1.5 w-1.5 rounded-full bg-red-500" />
+      جديد
+    </span>
+  );
+}
+
 export function ProgressGrid({
   slotCounts,
   linkPrefix,
   hasSchedule,
+  unviewedSectionKeys,
+  hasUnviewedSchedule,
 }: {
   /** Maps "category:subcategory" (subcategory empty string when the section has none) to file count. */
   slotCounts: Record<string, number>;
   linkPrefix: string;
   /** Whether the admin has uploaded a schedule for this teacher. */
   hasSchedule: boolean;
+  /** Section keys with at least one admin-uploaded file the teacher hasn't opened yet. */
+  unviewedSectionKeys?: Set<string>;
+  hasUnviewedSchedule?: boolean;
 }) {
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -22,6 +36,7 @@ export function ProgressGrid({
           ? section.subsections!.reduce((sum, sub) => sum + (slotCounts[`${section.key}:${sub.key}`] ?? 0), 0)
           : slotCounts[`${section.key}:`] ?? 0;
         const isDone = isSchedule ? hasSchedule : total > 0;
+        const isNew = isSchedule ? !!hasUnviewedSchedule : !!unviewedSectionKeys?.has(section.key);
 
         return (
           <Link
@@ -41,6 +56,7 @@ export function ProgressGrid({
                   style={{ backgroundColor: section.accentColor }}
                 />
                 {section.labelAr}
+                {isNew && <NewBadge />}
               </h3>
               <span
                 className={`text-xs px-2 py-0.5 rounded-full whitespace-nowrap font-medium ${

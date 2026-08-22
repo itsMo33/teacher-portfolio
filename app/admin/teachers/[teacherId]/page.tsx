@@ -6,6 +6,7 @@ import { getSectionAttachments } from "@/lib/portfolio-data";
 import { AttachmentList } from "@/components/portfolio/AttachmentList";
 import { FileUploadDropzone } from "@/components/portfolio/FileUploadDropzone";
 import { DeleteTeacherButton } from "@/components/admin/DeleteTeacherButton";
+import { MarkAdminViewedOnMount } from "@/components/admin/MarkAdminViewedOnMount";
 
 export default async function AdminTeacherPortfolioPage({
   params,
@@ -19,6 +20,7 @@ export default async function AdminTeacherPortfolioPage({
     .select("id, name, national_id, subject")
     .eq("id", teacherId)
     .eq("role", "teacher")
+    .is("deleted_at", null)
     .maybeSingle();
 
   if (!teacher) notFound();
@@ -27,6 +29,7 @@ export default async function AdminTeacherPortfolioPage({
 
   return (
     <div className="flex flex-col gap-8 max-w-3xl">
+      <MarkAdminViewedOnMount teacherId={teacherId} />
       <div>
         <div className="flex items-center justify-between">
           <h2 className="text-xl font-bold text-slate-900 dark:text-slate-50">{teacher.name}</h2>
@@ -35,12 +38,21 @@ export default async function AdminTeacherPortfolioPage({
         <p className="text-sm text-slate-500">
           {teacher.national_id} {teacher.subject ? `· ${teacher.subject}` : ""}
         </p>
-        <Link
-          href={`/admin/teachers/${teacherId}/schedule`}
-          className="mt-2 inline-block text-sm text-[var(--brand-primary)] hover:underline"
-        >
-          إدارة الجدول المدرسي
-        </Link>
+        <div className="mt-2 flex items-center gap-4">
+          <Link
+            href={`/admin/teachers/${teacherId}/schedule`}
+            className="text-sm text-[var(--brand-primary)] hover:underline"
+          >
+            إدارة الجدول المدرسي
+          </Link>
+          <Link
+            href={`/admin/teachers/${teacherId}/print`}
+            target="_blank"
+            className="text-sm text-[var(--brand-primary)] hover:underline"
+          >
+            طباعة / تصدير تقرير
+          </Link>
+        </div>
       </div>
 
       {await Promise.all(

@@ -27,8 +27,8 @@ export function AppShell({
 
   return (
     <div className="flex min-h-screen flex-col bg-slate-50 dark:bg-slate-950 overflow-x-hidden">
-      <div className="h-1.5 w-full shrink-0 bg-gradient-to-l from-[var(--brand-primary)] to-[var(--brand-accent)]" />
-      <header className="flex items-center justify-between gap-2 border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-3 sm:px-6 py-3">
+      <div className="no-print h-1.5 w-full shrink-0 bg-gradient-to-l from-[var(--brand-primary)] to-[var(--brand-accent)]" />
+      <header className="no-print flex items-center justify-between gap-2 border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-3 sm:px-6 py-3">
         <div className="flex min-w-0 items-center gap-2 sm:gap-4">
           <button
             onClick={() => setMenuOpen(true)}
@@ -61,7 +61,7 @@ export function AppShell({
         )}
 
         <nav
-          className={`fixed inset-y-0 right-0 z-40 w-64 shrink-0 border-l border-slate-200 bg-white p-4 transition-transform duration-200 dark:border-slate-800 dark:bg-slate-900 md:static md:z-auto md:w-56 md:translate-x-0 ${
+          className={`no-print fixed inset-y-0 right-0 z-40 w-64 shrink-0 border-l border-slate-200 bg-white p-4 transition-transform duration-200 dark:border-slate-800 dark:bg-slate-900 md:static md:z-auto md:w-56 md:translate-x-0 ${
             menuOpen ? "translate-x-0" : "translate-x-full"
           }`}
         >
@@ -83,7 +83,9 @@ export function AppShell({
         <main className="min-w-0 flex-1 p-4 sm:p-6">{children}</main>
       </div>
 
-      <Footer />
+      <div className="no-print">
+        <Footer />
+      </div>
     </div>
   );
 }

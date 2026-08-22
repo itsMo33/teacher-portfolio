@@ -23,6 +23,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           .from("users")
           .select("id, national_id, password_hash, role, name, subject")
           .eq("national_id", nationalId)
+          .is("deleted_at", null)
           .maybeSingle();
 
         if (error || !user) return null;

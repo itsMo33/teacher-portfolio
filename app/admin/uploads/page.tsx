@@ -1,5 +1,5 @@
 import { getTeachersWithCompletion } from "@/lib/teachers-data";
-import { AdminUploadsTable } from "@/components/admin/AdminUploadsTable";
+import { AdminUploadsListWithSearch } from "@/components/admin/AdminUploadsListWithSearch";
 
 export default async function AdminUploadsPage() {
   const teachers = await getTeachersWithCompletion();
@@ -10,7 +10,7 @@ export default async function AdminUploadsPage() {
       <p className="text-sm text-slate-500 mb-4">
         هذه هي الأقسام التي يرفع فيها الوكيل أو المدير الملفات نيابةً عن المعلم. اختر معلمًا لرفع أو استعراض ملفاته.
       </p>
-      <AdminUploadsTable teachers={teachers} />
+      <AdminUploadsListWithSearch teachers={teachers} />
     </div>
   );
 }

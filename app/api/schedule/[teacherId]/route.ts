@@ -9,6 +9,7 @@ import {
   SCHEDULE_BUCKET,
 } from "@/lib/supabase/storage";
 import { ACCEPTED_MIME_TYPES, ACCEPTED_EXTENSIONS, MAX_FILE_SIZE_BYTES } from "@/lib/portfolio-sections";
+import { logActivity } from "@/lib/audit";
 
 export async function GET(
   req: NextRequest,
@@ -30,6 +31,7 @@ export async function GET(
     .from("schedules")
     .select("id, file_name, file_path, uploaded_at")
     .eq("teacher_id", teacherId)
+    .is("deleted_at", null)
     .maybeSingle();
 
   if (error) {
@@ -80,7 +82,7 @@ export async function POST(
     .from("schedules")
     .select("id, file_path")
     .eq("teacher_id", teacherId)
-    .maybeSingle();
+    .maybeSingle(); // intentionally not filtering deleted_at: a teacher can only ever have one schedule row (unique constraint), so re-uploading always reuses/revives it
 
   const buffer = Buffer.from(await file.arrayBuffer());
   const path = buildSchedulePath(teacherId, file.name);
@@ -95,6 +97,8 @@ export async function POST(
         file_name: file.name,
         uploaded_at: new Date().toISOString(),
         uploaded_by: session.user.id,
+        viewed_at: null,
+        deleted_at: null,
       })
       .eq("id", existing.id);
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
@@ -107,6 +111,16 @@ export async function POST(
     });
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   }
+
+  const { data: teacher } = await supabaseAdmin.from("users").select("name").eq("id", teacherId).maybeSingle();
+  await logActivity({
+    actorId: session.user.id,
+    actorName: session.user.name ?? "",
+    action: "upload_schedule",
+    targetTeacherId: teacherId,
+    targetTeacherName: teacher?.name,
+    details: file.name,
+  });
 
   return NextResponse.json({ success: true });
 }

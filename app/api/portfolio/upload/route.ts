@@ -13,6 +13,7 @@ import {
   ACCEPTED_EXTENSIONS,
   MAX_FILE_SIZE_BYTES,
 } from "@/lib/portfolio-sections";
+import { logActivity } from "@/lib/audit";
 
 export async function POST(req: NextRequest) {
   const session = await auth();
@@ -87,6 +88,22 @@ export async function POST(req: NextRequest) {
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
+
+  let targetTeacherName: string | undefined =
+    session.user.role === "teacher" ? session.user.name ?? undefined : undefined;
+  if (!targetTeacherName) {
+    const { data: teacher } = await supabaseAdmin.from("users").select("name").eq("id", teacherId).maybeSingle();
+    targetTeacherName = teacher?.name ?? undefined;
+  }
+
+  await logActivity({
+    actorId: session.user.id,
+    actorName: session.user.name ?? "",
+    action: "upload",
+    targetTeacherId: teacherId,
+    targetTeacherName,
+    details: `${section.labelAr}${data.subcategory ? ` - ${data.subcategory}` : ""}: ${file.name}`,
+  });
 
   return NextResponse.json({ attachment: data });
 }

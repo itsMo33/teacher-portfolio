@@ -20,6 +20,7 @@ export default async function AdminUploadsForTeacherPage({
     .select("id, name, national_id, subject")
     .eq("id", teacherId)
     .eq("role", "teacher")
+    .is("deleted_at", null)
     .maybeSingle();
 
   if (!teacher) notFound();

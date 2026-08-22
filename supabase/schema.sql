@@ -52,3 +52,31 @@ create table if not exists schedules (
   uploaded_at timestamptz not null default now(),
   uploaded_by uuid not null references users(id)
 );
+
+-- Idempotent migrations for the trash / read-receipt / audit-log features
+-- added after the initial launch.
+
+-- Soft delete: rows are hidden from normal queries once deleted_at is set,
+-- but nothing is actually removed until an admin purges it from the trash.
+alter table users add column if not exists deleted_at timestamptz;
+alter table attachments add column if not exists deleted_at timestamptz;
+alter table schedules add column if not exists deleted_at timestamptz;
+
+-- Teacher-side read receipt for the schedule (attachments.viewed_at already exists above).
+alter table schedules add column if not exists viewed_at timestamptz;
+
+-- Admin-side read receipt: set when an admin/agent opens a teacher's drill-in
+-- page, for attachments the *teacher* uploaded (teacherWritable sections).
+alter table attachments add column if not exists admin_viewed_at timestamptz;
+
+create table if not exists activity_log (
+  id uuid primary key default gen_random_uuid(),
+  actor_id uuid references users(id),
+  actor_name text not null,
+  action text not null,
+  target_teacher_id uuid,
+  target_teacher_name text,
+  details text,
+  created_at timestamptz not null default now()
+);
+create index if not exists idx_activity_log_created_at on activity_log(created_at desc);

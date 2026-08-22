@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth/auth-options";
 import { createUser } from "@/lib/account";
+import { logActivity } from "@/lib/audit";
 
 export async function POST(req: NextRequest) {
   const session = await auth();
@@ -18,6 +19,13 @@ export async function POST(req: NextRequest) {
 
   try {
     const teacher = await createUser({ nationalId, name, role: "teacher", subject });
+    await logActivity({
+      actorId: session.user.id,
+      actorName: session.user.name ?? "",
+      action: "create_teacher",
+      targetTeacherId: teacher.id,
+      targetTeacherName: teacher.name,
+    });
     return NextResponse.json({ teacher });
   } catch (err) {
     const message = err instanceof Error ? err.message : "Failed to create teacher";

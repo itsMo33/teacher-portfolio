@@ -15,6 +15,7 @@ export default async function AdminTeacherSchedulePage({
     .select("id, name")
     .eq("id", teacherId)
     .eq("role", "teacher")
+    .is("deleted_at", null)
     .maybeSingle();
 
   if (!teacher) notFound();
@@ -23,6 +24,7 @@ export default async function AdminTeacherSchedulePage({
     .from("schedules")
     .select("file_name, file_path, uploaded_at")
     .eq("teacher_id", teacherId)
+    .is("deleted_at", null)
     .maybeSingle();
 
   const signedUrl = schedule ? await getSignedUrl(SCHEDULE_BUCKET, schedule.file_path) : null;
