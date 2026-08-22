@@ -62,7 +62,7 @@ export const PORTFOLIO_SECTIONS: PortfolioSection[] = [
     key: "weekly_plan_admin",
     labelAr: "الخطة الأسبوعية",
     hasSubsections: false,
-    teacherWritable: false,
+    teacherWritable: true,
     accentColor: "#6366f1",
   },
   {
