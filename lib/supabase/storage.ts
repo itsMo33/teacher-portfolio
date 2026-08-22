@@ -16,6 +16,16 @@ export async function ensureBuckets() {
   }
 }
 
+/** Supabase Storage object keys reject non-ASCII characters (e.g. Arabic file names),
+ *  so we only carry a safe extension through to the storage key; the original file name
+ *  is kept separately in the database `file_name` column for display/download. */
+function safeExtension(fileName: string): string {
+  const dot = fileName.lastIndexOf(".");
+  if (dot === -1) return "";
+  const ext = fileName.slice(dot).toLowerCase();
+  return /^\.[a-z0-9]{1,10}$/.test(ext) ? ext : "";
+}
+
 export function buildPortfolioPath(
   teacherId: string,
   category: string,
@@ -23,11 +33,11 @@ export function buildPortfolioPath(
   fileName: string
 ) {
   const sub = subcategory ?? "none";
-  return `portfolio/${teacherId}/${category}/${sub}/${randomUUID()}-${fileName}`;
+  return `portfolio/${teacherId}/${category}/${sub}/${randomUUID()}${safeExtension(fileName)}`;
 }
 
 export function buildSchedulePath(teacherId: string, fileName: string) {
-  return `schedules/${teacherId}/${randomUUID()}-${fileName}`;
+  return `schedules/${teacherId}/${randomUUID()}${safeExtension(fileName)}`;
 }
 
 export async function uploadFile(
