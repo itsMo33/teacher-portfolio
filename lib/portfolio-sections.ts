@@ -15,7 +15,7 @@ export type SectionKey =
 export interface Subsection {
   key: string;
   labelAr: string;
-  /** Optional short requirement note shown next to this subsection, e.g. "مطلوب زيارتين". */
+  /** Optional short requirement note shown next to this subsection, e.g. "زيارتان كحد أدنى". */
   note?: string;
 }
 
@@ -66,8 +66,8 @@ export const PORTFOLIO_SECTIONS: PortfolioSection[] = [
     labelAr: "المجتمع المهني",
     hasSubsections: true,
     subsections: [
-      { key: "visits", labelAr: "زيارات", note: "مطلوب زيارتين" },
-      { key: "meetings", labelAr: "اجتماعات", note: "مطلوب ثلاث اجتماعات" },
+      { key: "visits", labelAr: "زيارات", note: "زيارتان كحد أدنى" },
+      { key: "meetings", labelAr: "اجتماعات", note: "ثلاث اجتماعات كحد أدنى" },
     ],
     teacherWritable: true,
     accentColor: "#0d9488",
@@ -88,7 +88,7 @@ export const PORTFOLIO_SECTIONS: PortfolioSection[] = [
     labelAr: "استراتيجيات التدريس",
     hasSubsections: false,
     teacherWritable: true,
-    note: "مطلوب ثلاث استراتيجيات في الفصل الدراسي",
+    note: "ثلاث استراتيجيات كحد أدنى في الفصل الدراسي",
     accentColor: "#ea580c",
   },
   {

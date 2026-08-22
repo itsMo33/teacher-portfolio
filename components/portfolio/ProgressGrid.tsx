@@ -14,7 +14,7 @@ export function ProgressGrid({
 }) {
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-      {PORTFOLIO_SECTIONS.map((section) => {
+      {PORTFOLIO_SECTIONS.map((section, index) => {
         const isSchedule = section.key === "schedule";
         const total = isSchedule
           ? 0
@@ -27,13 +27,17 @@ export function ProgressGrid({
           <Link
             key={section.key}
             href={isSchedule ? "/teacher/schedule" : `${linkPrefix}/${section.key}`}
-            style={{ borderInlineStartColor: section.accentColor, borderInlineStartWidth: 4 }}
-            className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4 transition-shadow hover:shadow-md"
+            style={{
+              borderInlineStartColor: section.accentColor,
+              borderInlineStartWidth: 4,
+              animationDelay: `${index * 45}ms`,
+            }}
+            className="animate-fade-in-up group rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg"
           >
             <div className="flex items-center justify-between mb-1">
               <h3 className="flex items-center gap-2 font-semibold text-slate-900 dark:text-slate-50">
                 <span
-                  className="inline-block h-2.5 w-2.5 shrink-0 rounded-full"
+                  className="inline-block h-2.5 w-2.5 shrink-0 rounded-full transition-transform duration-200 group-hover:scale-125"
                   style={{ backgroundColor: section.accentColor }}
                 />
                 {section.labelAr}

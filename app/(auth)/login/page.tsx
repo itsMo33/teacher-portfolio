@@ -40,10 +40,10 @@ export default function LoginPage() {
     <div className="flex flex-1 flex-col overflow-x-hidden bg-slate-50 dark:bg-slate-950">
       <div className="h-2 w-full shrink-0 bg-gradient-to-l from-[var(--brand-primary)] to-[var(--brand-accent)]" />
       <div className="flex flex-1 items-center justify-center px-4 py-8">
-      <div className="w-full max-w-sm rounded-2xl bg-white dark:bg-slate-900 shadow-lg p-6 sm:p-8">
+      <div className="animate-fade-in-scale w-full max-w-sm rounded-2xl bg-white dark:bg-slate-900 shadow-lg p-6 sm:p-8">
         <div className="flex items-center justify-center gap-5 sm:gap-6 mb-4">
-          <Image src="/moe-logo.png" alt="شعار وزارة التعليم" width={90} height={51} className="h-9 sm:h-10 w-auto object-contain" />
-          <Image src="/vision2030-logo.png" alt="رؤية 2030" width={90} height={90} className="h-11 sm:h-12 w-auto object-contain" />
+          <Image src="/moe-logo.png" alt="شعار وزارة التعليم" width={90} height={51} className="h-9 sm:h-10 w-auto object-contain transition-transform duration-300 hover:scale-110" />
+          <Image src="/vision2030-logo.png" alt="رؤية 2030" width={90} height={90} className="h-11 sm:h-12 w-auto object-contain transition-transform duration-300 hover:scale-110" />
         </div>
         <h1 className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-slate-50 text-center mb-1">
           بوابة إنجاز المعلمين
@@ -65,7 +65,7 @@ export default function LoginPage() {
               required
               value={nationalId}
               onChange={(e) => setNationalId(e.target.value)}
-              className="rounded-lg border border-slate-300 dark:border-slate-700 bg-transparent px-3 py-2 text-slate-900 dark:text-slate-50 focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]"
+              className="rounded-lg border border-slate-300 dark:border-slate-700 bg-transparent px-3 py-2 text-slate-900 dark:text-slate-50 transition-shadow focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]"
               placeholder="١٠xxxxxxxx"
             />
           </div>
@@ -80,18 +80,18 @@ export default function LoginPage() {
               required
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="rounded-lg border border-slate-300 dark:border-slate-700 bg-transparent px-3 py-2 text-slate-900 dark:text-slate-50 focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]"
+              className="rounded-lg border border-slate-300 dark:border-slate-700 bg-transparent px-3 py-2 text-slate-900 dark:text-slate-50 transition-shadow focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]"
             />
           </div>
 
           {error && (
-            <p className="text-sm text-red-600 dark:text-red-400 text-center">{error}</p>
+            <p className="animate-fade-in-up text-sm text-red-600 dark:text-red-400 text-center">{error}</p>
           )}
 
           <button
             type="submit"
             disabled={loading}
-            className="mt-2 rounded-lg bg-[var(--brand-primary)] hover:bg-[var(--brand-primary-dark)] disabled:opacity-60 text-white font-medium py-2.5 transition-colors"
+            className="mt-2 rounded-lg bg-[var(--brand-primary)] hover:bg-[var(--brand-primary-dark)] disabled:opacity-60 text-white font-medium py-2.5 transition-all duration-150 hover:shadow-md active:scale-[0.98]"
           >
             {loading ? "جارٍ الدخول..." : "دخول"}
           </button>

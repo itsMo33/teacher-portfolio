@@ -40,8 +40,8 @@ export function AppShell({
             </svg>
           </button>
           <div className="hidden shrink-0 items-center gap-2 sm:flex">
-            <Image src="/moe-logo.png" alt="شعار وزارة التعليم" width={70} height={40} className="h-7 w-auto object-contain sm:h-8" />
-            <Image src="/vision2030-logo.png" alt="رؤية 2030" width={70} height={70} className="h-8 w-auto object-contain sm:h-9" />
+            <Image src="/moe-logo.png" alt="شعار وزارة التعليم" width={70} height={40} className="h-7 w-auto object-contain sm:h-8 transition-transform duration-300 hover:scale-110" />
+            <Image src="/vision2030-logo.png" alt="رؤية 2030" width={70} height={70} className="h-8 w-auto object-contain sm:h-9 transition-transform duration-300 hover:scale-110" />
           </div>
           <div className="min-w-0">
             <h1 className="truncate text-base font-bold text-slate-900 dark:text-slate-50 sm:text-lg">{title}</h1>
@@ -66,12 +66,12 @@ export function AppShell({
           }`}
         >
           <ul className="flex flex-col gap-1">
-            {navItems.map((item) => (
-              <li key={item.href}>
+            {navItems.map((item, index) => (
+              <li key={item.href} className="animate-fade-in-up" style={{ animationDelay: `${index * 30}ms` }}>
                 <Link
                   href={item.href}
                   onClick={() => setMenuOpen(false)}
-                  className="block rounded-lg px-3 py-2 text-sm text-slate-700 dark:text-slate-300 hover:bg-[var(--brand-primary)]/10 hover:text-[var(--brand-primary)] transition-colors"
+                  className="block rounded-lg px-3 py-2 text-sm text-slate-700 dark:text-slate-300 transition-all duration-150 hover:translate-x-[-4px] hover:bg-[var(--brand-primary)]/10 hover:text-[var(--brand-primary)]"
                 >
                   {item.label}
                 </Link>
