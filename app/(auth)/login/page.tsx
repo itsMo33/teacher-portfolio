@@ -39,7 +39,16 @@ export default function LoginPage() {
   return (
     <div className="flex flex-1 flex-col overflow-x-hidden bg-slate-50 dark:bg-slate-950">
       <div className="h-2 w-full shrink-0 bg-gradient-to-l from-[var(--brand-primary)] to-[var(--brand-accent)]" />
-      <div className="flex flex-1 items-center justify-center px-4 py-8">
+      <div className="flex flex-1 flex-col items-center justify-center px-4 py-8">
+        <Image
+          src="/leaders.jpg"
+          alt="خادم الحرمين الشريفين الملك سلمان وولي العهد الأمير محمد بن سلمان"
+          width={280}
+          height={280}
+          className="animate-fade-in-up mb-4 h-32 w-auto object-contain sm:h-40"
+          style={{ filter: "drop-shadow(0 12px 20px rgba(0,0,0,0.35))" }}
+          priority
+        />
       <div className="animate-fade-in-scale w-full max-w-sm rounded-2xl bg-white dark:bg-slate-900 shadow-lg p-6 sm:p-8">
         <div className="flex items-center justify-center gap-5 sm:gap-6 mb-4">
           <Image src="/moe-logo.png" alt="شعار وزارة التعليم" width={90} height={51} className="h-9 sm:h-10 w-auto object-contain transition-transform duration-300 hover:scale-110" />
