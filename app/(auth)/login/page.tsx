@@ -37,19 +37,17 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="flex flex-1 flex-col overflow-x-hidden bg-slate-50 dark:bg-slate-950">
-      <div className="h-2 w-full shrink-0 bg-gradient-to-l from-[var(--brand-primary)] to-[var(--brand-accent)]" />
-      <div className="flex flex-1 flex-col items-center justify-center px-4 py-8">
-        <Image
-          src="/leaders.jpg"
-          alt="خادم الحرمين الشريفين الملك سلمان وولي العهد الأمير محمد بن سلمان"
-          width={280}
-          height={280}
-          className="mb-4 h-32 w-auto object-contain sm:h-40"
-          style={{ filter: "drop-shadow(0 12px 20px rgba(0,0,0,0.35))" }}
-          priority
-        />
-      <div className="animate-fade-in-scale w-full max-w-sm rounded-2xl bg-white dark:bg-slate-900 shadow-lg p-6 sm:p-8">
+    <div className="relative flex flex-1 flex-col overflow-hidden bg-slate-50 dark:bg-slate-950">
+      <Image
+        src="/leaders.jpg"
+        alt="خادم الحرمين الشريفين الملك سلمان وولي العهد الأمير محمد بن سلمان"
+        fill
+        priority
+        className="pointer-events-none object-cover opacity-15 dark:opacity-10"
+      />
+      <div className="relative z-10 h-2 w-full shrink-0 bg-gradient-to-l from-[var(--brand-primary)] to-[var(--brand-accent)]" />
+      <div className="relative z-10 flex flex-1 flex-col items-center justify-center px-4 py-8">
+      <div className="animate-fade-in-scale w-full max-w-sm rounded-2xl bg-white/90 dark:bg-slate-900/90 backdrop-blur-sm shadow-lg p-6 sm:p-8">
         <div className="flex items-center justify-center gap-5 sm:gap-6 mb-4">
           <Image src="/moe-logo.png" alt="شعار وزارة التعليم" width={90} height={51} className="h-9 sm:h-10 w-auto object-contain transition-transform duration-300 hover:scale-110" />
           <Image src="/vision2030-logo.png" alt="رؤية 2030" width={90} height={90} className="h-11 sm:h-12 w-auto object-contain transition-transform duration-300 hover:scale-110" />
@@ -107,7 +105,9 @@ export default function LoginPage() {
         </form>
       </div>
       </div>
-      <Footer />
+      <div className="relative z-10">
+        <Footer />
+      </div>
     </div>
   );
 }
