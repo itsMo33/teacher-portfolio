@@ -45,7 +45,7 @@ export default function LoginPage() {
           alt="خادم الحرمين الشريفين الملك سلمان وولي العهد الأمير محمد بن سلمان"
           width={280}
           height={280}
-          className="animate-fade-in-up mb-4 h-32 w-auto object-contain sm:h-40"
+          className="mb-4 h-32 w-auto object-contain sm:h-40"
           style={{ filter: "drop-shadow(0 12px 20px rgba(0,0,0,0.35))" }}
           priority
         />
