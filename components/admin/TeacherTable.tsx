@@ -47,10 +47,8 @@ export function TeacherTable({ teachers }: { teachers: TeacherRow[] }) {
               <td className="px-4 py-3">
                 <span
                   className={`px-2 py-0.5 rounded-full text-xs ${
-                    t.completionPercent === 100
+                    t.completionPercent > 0
                       ? "bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300"
-                      : t.completionPercent >= 50
-                      ? "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300"
                       : "bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300"
                   }`}
                 >
