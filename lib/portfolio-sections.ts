@@ -2,6 +2,7 @@ export type SectionKey =
   | "achievement_file"
   | "schedule"
   | "weekly_term_plan"
+  | "weekly_plan_admin"
   | "professional_community"
   | "meetings_and_visits"
   | "teaching_strategies"
@@ -52,14 +53,17 @@ export const PORTFOLIO_SECTIONS: PortfolioSection[] = [
   },
   {
     key: "weekly_term_plan",
-    labelAr: "الخطة الأسبوعية والفصلية",
-    hasSubsections: true,
-    subsections: [
-      { key: "termly", labelAr: "الخطة الفصلية" },
-      { key: "weekly", labelAr: "الخطة الأسبوعية" },
-    ],
+    labelAr: "الخطة الفصلية",
+    hasSubsections: false,
     teacherWritable: true,
     accentColor: "#4f46e5",
+  },
+  {
+    key: "weekly_plan_admin",
+    labelAr: "الخطة الأسبوعية",
+    hasSubsections: false,
+    teacherWritable: false,
+    accentColor: "#6366f1",
   },
   {
     key: "professional_community",
