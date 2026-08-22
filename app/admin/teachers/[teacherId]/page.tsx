@@ -103,7 +103,7 @@ export default async function AdminTeacherPortfolioPage({
                   <AttachmentList
                     attachments={attachments}
                     canDelete={!section.teacherWritable}
-                    showViewedStatus={section.key === "tasks_assignments"}
+                    showViewedStatus={!section.teacherWritable}
                   />
                 </div>
               ))}

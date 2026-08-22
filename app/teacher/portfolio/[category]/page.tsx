@@ -28,10 +28,11 @@ export default async function TeacherPortfolioSectionPage({
     }))
   );
 
-  const unviewedIds =
-    section.key === "tasks_assignments"
-      ? subsectionData.flatMap((s) => s.attachments.filter((a) => !a.viewed_at).map((a) => a.id))
-      : [];
+  // Read-receipt tracking applies to any section the admin/agent uploads on the
+  // teacher's behalf, so they can see when the teacher has actually opened it.
+  const unviewedIds = !section.teacherWritable
+    ? subsectionData.flatMap((s) => s.attachments.filter((a) => !a.viewed_at).map((a) => a.id))
+    : [];
 
   return (
     <div className="flex flex-col gap-8 max-w-2xl">
