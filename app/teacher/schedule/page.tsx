@@ -2,6 +2,7 @@ import { auth } from "@/lib/auth/auth-options";
 import { supabaseAdmin } from "@/lib/supabase/server";
 import { getSignedUrl, SCHEDULE_BUCKET } from "@/lib/supabase/storage";
 import { MarkScheduleViewedOnMount } from "@/components/portfolio/MarkScheduleViewedOnMount";
+import { FileUploadDropzone } from "@/components/portfolio/FileUploadDropzone";
 
 export default async function TeacherSchedulePage() {
   const session = await auth();
@@ -15,23 +16,22 @@ export default async function TeacherSchedulePage() {
   const signedUrl = schedule ? await getSignedUrl(SCHEDULE_BUCKET, schedule.file_path) : null;
 
   return (
-    <div className="max-w-xl">
+    <div className="max-w-xl flex flex-col gap-4">
       {schedule && !schedule.viewed_at && <MarkScheduleViewedOnMount />}
-      <h2 className="text-xl font-bold text-slate-900 dark:text-slate-50 mb-4">الجدول المدرسي</h2>
-      {schedule && signedUrl ? (
+      <h2 className="text-xl font-bold text-slate-900 dark:text-slate-50">الجدول المدرسي</h2>
+
+      {schedule && signedUrl && (
         <a
           href={signedUrl}
           target="_blank"
           rel="noopener noreferrer"
-          className="inline-block rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 px-4 py-3 text-[var(--brand-primary)] hover:underline"
+          className="inline-block rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 px-4 py-3 text-[var(--brand-primary)] hover:underline w-fit"
         >
-          {schedule.file_name}
+          الملف الحالي: {schedule.file_name}
         </a>
-      ) : (
-        <p className="text-sm text-slate-400">
-          لم يتم رفع الجدول المدرسي بعد من قبل الإدارة.
-        </p>
       )}
+
+      <FileUploadDropzone uploadUrl={`/api/schedule/${session!.user.id}`} />
     </div>
   );
 }

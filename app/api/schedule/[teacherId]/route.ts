@@ -55,11 +55,14 @@ export async function POST(
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  if (session.user.role === "teacher") {
-    return NextResponse.json({ error: "Teachers cannot edit the schedule" }, { status: 403 });
+  const { teacherId } = await params;
+
+  const isOwner = session.user.role === "teacher" && session.user.id === teacherId;
+  const isAdmin = session.user.role === "agent" || session.user.role === "manager";
+  if (!isOwner && !isAdmin) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
-  const { teacherId } = await params;
   const formData = await req.formData();
   const file = formData.get("file") as File | null;
 
