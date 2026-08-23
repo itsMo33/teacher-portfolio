@@ -88,11 +88,34 @@ body {
   }
 }
 
+.print-only {
+  display: none;
+}
+
 @media print {
   .no-print {
     display: none !important;
   }
+  .print-only {
+    display: block !important;
+  }
   body {
     background: white !important;
+    color: #000 !important;
+  }
+  table {
+    border-collapse: collapse;
+    width: 100%;
+  }
+  thead {
+    display: table-header-group;
+  }
+  tr {
+    page-break-inside: avoid;
+  }
+  th,
+  td {
+    border: 1px solid #000 !important;
+    color: #000 !important;
   }
 }
