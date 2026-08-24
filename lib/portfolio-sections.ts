@@ -11,7 +11,8 @@ export type SectionKey =
   | "achievements"
   | "lesson_prep"
   | "tasks_assignments"
-  | "accountability";
+  | "accountability"
+  | "excuse_request";
 
 export interface Subsection {
   key: string;
@@ -150,6 +151,13 @@ export const PORTFOLIO_SECTIONS: PortfolioSection[] = [
     hasSubsections: false,
     teacherWritable: false,
     accentColor: "#dc2626",
+  },
+  {
+    key: "excuse_request",
+    labelAr: "الاستئذان",
+    hasSubsections: false,
+    teacherWritable: true,
+    accentColor: "#65a30d",
   },
 ];
 

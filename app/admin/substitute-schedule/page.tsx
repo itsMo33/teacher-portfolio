@@ -54,7 +54,7 @@ function buildSlipHtml(group: AbsenceGroup, dateStr: string): string {
   const rows = group.rows
     .map(
       (r) =>
-        `<tr><td>${r.period}</td><td>${r.section ?? "/"}</td><td></td><td>${r.assignment?.substitute ?? "/"}</td><td></td><td></td><td></td></tr>`
+        `<tr><td>${r.period}</td><td>${r.section ?? "/"}</td><td></td><td>${r.assignment?.substitute ?? "/"}</td><td></td><td></td></tr>`
     )
     .join("");
 
@@ -72,7 +72,7 @@ function buildSlipHtml(group: AbsenceGroup, dateStr: string): string {
     </div>
     <table>
       <thead>
-        <tr><th>الحصة</th><th>الفصل</th><th>المادة</th><th>المعلم المنتظر</th><th>ما تم تنفيذه في حصة الانتظار</th><th>التوقيع</th><th>ملاحظات</th></tr>
+        <tr><th>الحصة</th><th>الفصل</th><th>المادة</th><th>المعلم المنتظر</th><th>التوقيع</th><th>ملاحظات</th></tr>
       </thead>
       <tbody>${rows}</tbody>
     </table>
@@ -420,7 +420,6 @@ export default function SubstituteSchedulePage() {
                       <th className="px-3 py-2 border border-slate-200 dark:border-slate-800">الفصل</th>
                       <th className="px-3 py-2 border border-slate-200 dark:border-slate-800">المادة</th>
                       <th className="px-3 py-2 border border-slate-200 dark:border-slate-800">المعلم المنتظر</th>
-                      <th className="px-3 py-2 border border-slate-200 dark:border-slate-800">ما تم تنفيذه في حصة الانتظار</th>
                       <th className="px-3 py-2 border border-slate-200 dark:border-slate-800">التوقيع</th>
                       <th className="px-3 py-2 border border-slate-200 dark:border-slate-800">ملاحظات</th>
                       <th className="px-3 py-2 no-print"></th>
@@ -437,7 +436,6 @@ export default function SubstituteSchedulePage() {
                         <td className="px-3 py-2 border border-slate-200 dark:border-slate-800">
                           {row.assignment?.substitute ?? "/"}
                         </td>
-                        <td className="px-3 py-2 border border-slate-200 dark:border-slate-800"></td>
                         <td className="px-3 py-2 border border-slate-200 dark:border-slate-800"></td>
                         <td className="px-3 py-2 border border-slate-200 dark:border-slate-800"></td>
                         <td className="px-3 py-2 no-print">
