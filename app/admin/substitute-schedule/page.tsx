@@ -12,7 +12,14 @@ import {
   TEACHER_NAMES_SORTED,
   CAPPED_TEACHERS,
 } from "@/lib/substitute-data";
-import { Candidate, RANK_LABELS, SubstituteAssignment, getCandidates } from "@/lib/substitute-logic";
+import {
+  AbsenceGroup,
+  Candidate,
+  RANK_LABELS,
+  SubstituteAssignment,
+  buildAbsenceGroups,
+  getCandidates,
+} from "@/lib/substitute-logic";
 import { SCHOOL_NAME } from "@/lib/school";
 
 const STORAGE_KEY = "makkah-substitute-log-v1";
@@ -43,21 +50,39 @@ function candidateInfoLabel(c: Candidate): string {
   return `نصاب ${c.official} + انتظار ${c.subCount} = ${c.total}/24`;
 }
 
-function buildPrintHtml(assignments: SubstituteAssignment[]): string {
-  const sorted = [...assignments].sort((a, b) => {
-    const dayDiff = DAYS.indexOf(a.day) - DAYS.indexOf(b.day);
-    if (dayDiff !== 0) return dayDiff;
-    return Number(a.period) - Number(b.period);
-  });
-
-  const rows = sorted
+function buildSlipHtml(group: AbsenceGroup, dateStr: string): string {
+  const rows = group.rows
     .map(
-      (a) =>
-        `<tr><td>${a.day}</td><td>${a.period}</td><td>${a.absentTeacher}</td><td>${a.section}</td><td>${a.substitute}</td><td>${a.rank}</td></tr>`
+      (r) =>
+        `<tr><td>${r.period}</td><td>${r.section ?? "/"}</td><td></td><td>${r.assignment?.substitute ?? "/"}</td><td></td><td></td><td></td></tr>`
     )
     .join("");
 
+  return `
+  <div class="slip">
+    <div class="slip-header">
+      <div>
+        <p>زملائي المعلمين / نظراً لغياب الزميل: <strong>${group.absentTeacher}</strong></p>
+        <p>آمل تسديد مكانه حسب الجدول الموضح والتوقيع بالعلم، ولكم جزيل الشكر</p>
+      </div>
+      <div class="slip-header-side">
+        <p>لهذا اليوم: <strong>${group.day}</strong></p>
+        <p>الموافق: ${dateStr}</p>
+      </div>
+    </div>
+    <table>
+      <thead>
+        <tr><th>الحصة</th><th>الفصل</th><th>المادة</th><th>المعلم المنتظر</th><th>ما تم تنفيذه في حصة الانتظار</th><th>التوقيع</th><th>ملاحظات</th></tr>
+      </thead>
+      <tbody>${rows}</tbody>
+    </table>
+  </div>`;
+}
+
+function buildPrintHtml(assignments: SubstituteAssignment[]): string {
+  const groups = buildAbsenceGroups(assignments);
   const dateStr = new Date().toLocaleDateString("ar-SA", { year: "numeric", month: "long", day: "numeric" });
+  const slips = groups.map((g) => buildSlipHtml(g, dateStr)).join("");
 
   return `<!doctype html>
 <html dir="rtl" lang="ar">
@@ -66,21 +91,20 @@ function buildPrintHtml(assignments: SubstituteAssignment[]): string {
 <title>سجل إسناد الانتظار</title>
 <style>
   body { font-family: Tahoma, Arial, sans-serif; padding: 24px; color: #000; }
-  h1 { font-size: 20px; margin-bottom: 4px; }
-  p { margin: 2px 0 16px; color: #333; }
+  h1 { font-size: 20px; margin-bottom: 16px; }
+  .slip { margin-bottom: 28px; page-break-inside: avoid; }
+  .slip-header { display: flex; justify-content: space-between; gap: 16px; margin-bottom: 8px; font-size: 13px; }
+  .slip-header p { margin: 2px 0; }
+  .slip-header-side { text-align: left; white-space: nowrap; }
   table { border-collapse: collapse; width: 100%; }
-  th, td { border: 1px solid #000; padding: 6px 10px; text-align: right; font-size: 13px; }
+  th, td { border: 1px solid #000; padding: 6px 8px; text-align: right; font-size: 12px; }
   thead { display: table-header-group; }
   tr { page-break-inside: avoid; }
 </style>
 </head>
 <body>
   <h1>${SCHOOL_NAME} — سجل إسناد الانتظار</h1>
-  <p>تاريخ الطباعة: ${dateStr} · عدد الإسنادات: ${assignments.length}</p>
-  <table>
-    <thead><tr><th>اليوم</th><th>الحصة</th><th>المعلم الغائب</th><th>الشعبة</th><th>المعلم المناوب</th><th>الترتيب</th></tr></thead>
-    <tbody>${rows}</tbody>
-  </table>
+  ${slips}
   <script>
     window.onload = function () {
       try { window.print(); } catch (e) {}
@@ -189,14 +213,10 @@ export default function SubstituteSchedulePage() {
     toastTimeoutRef.current = setTimeout(() => setShowPrintToast(false), 12000);
   }
 
-  const sortedLog = useMemo(
-    () =>
-      [...assignments].sort((a, b) => {
-        const dayDiff = DAYS.indexOf(a.day) - DAYS.indexOf(b.day);
-        if (dayDiff !== 0) return dayDiff;
-        return Number(a.period) - Number(b.period);
-      }),
-    [assignments]
+  const groups = useMemo(() => buildAbsenceGroups(assignments), [assignments]);
+  const printDateStr = useMemo(
+    () => new Date().toLocaleDateString("ar-SA", { year: "numeric", month: "long", day: "numeric" }),
+    []
   );
 
   return (
@@ -365,50 +385,80 @@ export default function SubstituteSchedulePage() {
           </div>
         )}
 
-        <div className="overflow-x-auto rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900">
-          <table className="w-full min-w-[640px] text-sm text-right">
-            <thead className="bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-300">
-              <tr>
-                <th className="px-4 py-3">اليوم</th>
-                <th className="px-4 py-3">الحصة</th>
-                <th className="px-4 py-3">المعلم الغائب</th>
-                <th className="px-4 py-3">الشعبة</th>
-                <th className="px-4 py-3">المعلم المناوب</th>
-                <th className="px-4 py-3">الترتيب</th>
-                <th className="px-4 py-3 no-print"></th>
-              </tr>
-            </thead>
-            <tbody>
-              {sortedLog.length === 0 ? (
-                <tr>
-                  <td colSpan={7} className="px-4 py-6 text-center text-slate-400">
-                    لا توجد إسنادات مسجّلة بعد
-                  </td>
-                </tr>
-              ) : (
-                sortedLog.map((a) => (
-                  <tr key={`${a.day}-${a.period}-${a.absentTeacher}`} className="border-t border-slate-100 dark:border-slate-800">
-                    <td className="px-4 py-3">{a.day}</td>
-                    <td className="px-4 py-3 tabular-nums">{a.period}</td>
-                    <td className="px-4 py-3">{a.absentTeacher}</td>
-                    <td className="px-4 py-3 tabular-nums">{a.section}</td>
-                    <td className="px-4 py-3">{a.substitute}</td>
-                    <td className="px-4 py-3 tabular-nums">{a.rank}</td>
-                    <td className="px-4 py-3 no-print">
-                      <button
-                        type="button"
-                        onClick={() => handleCancel(a.day, a.period, a.absentTeacher)}
-                        className="text-red-600 dark:text-red-400 hover:underline"
-                      >
-                        إلغاء
-                      </button>
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
+        {groups.length === 0 ? (
+          <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-6 text-center text-sm text-slate-400">
+            لا توجد إسنادات مسجّلة بعد
+          </div>
+        ) : (
+          groups.map((group) => (
+            <div
+              key={`${group.day}-${group.absentTeacher}`}
+              className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4"
+            >
+              <div className="flex flex-wrap items-start justify-between gap-2 mb-3 text-sm">
+                <div>
+                  <p className="text-slate-700 dark:text-slate-200">
+                    زملائي المعلمين / نظراً لغياب الزميل: <strong>{group.absentTeacher}</strong>
+                  </p>
+                  <p className="text-slate-500 text-xs mt-0.5">
+                    آمل تسديد مكانه حسب الجدول الموضح والتوقيع بالعلم، ولكم جزيل الشكر
+                  </p>
+                </div>
+                <div className="text-left text-xs text-slate-500 whitespace-nowrap">
+                  <p>
+                    لهذا اليوم: <strong className="text-slate-700 dark:text-slate-200">{group.day}</strong>
+                  </p>
+                  <p>الموافق: {printDateStr}</p>
+                </div>
+              </div>
+
+              <div className="overflow-x-auto">
+                <table className="w-full min-w-[640px] text-sm text-right border border-slate-200 dark:border-slate-800">
+                  <thead className="bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-300">
+                    <tr>
+                      <th className="px-3 py-2 border border-slate-200 dark:border-slate-800">الحصة</th>
+                      <th className="px-3 py-2 border border-slate-200 dark:border-slate-800">الفصل</th>
+                      <th className="px-3 py-2 border border-slate-200 dark:border-slate-800">المادة</th>
+                      <th className="px-3 py-2 border border-slate-200 dark:border-slate-800">المعلم المنتظر</th>
+                      <th className="px-3 py-2 border border-slate-200 dark:border-slate-800">ما تم تنفيذه في حصة الانتظار</th>
+                      <th className="px-3 py-2 border border-slate-200 dark:border-slate-800">التوقيع</th>
+                      <th className="px-3 py-2 border border-slate-200 dark:border-slate-800">ملاحظات</th>
+                      <th className="px-3 py-2 no-print"></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {group.rows.map((row) => (
+                      <tr key={row.period} className="border-t border-slate-100 dark:border-slate-800">
+                        <td className="px-3 py-2 border border-slate-200 dark:border-slate-800 tabular-nums">{row.period}</td>
+                        <td className="px-3 py-2 border border-slate-200 dark:border-slate-800 tabular-nums">
+                          {row.section ?? "/"}
+                        </td>
+                        <td className="px-3 py-2 border border-slate-200 dark:border-slate-800"></td>
+                        <td className="px-3 py-2 border border-slate-200 dark:border-slate-800">
+                          {row.assignment?.substitute ?? "/"}
+                        </td>
+                        <td className="px-3 py-2 border border-slate-200 dark:border-slate-800"></td>
+                        <td className="px-3 py-2 border border-slate-200 dark:border-slate-800"></td>
+                        <td className="px-3 py-2 border border-slate-200 dark:border-slate-800"></td>
+                        <td className="px-3 py-2 no-print">
+                          {row.assignment && (
+                            <button
+                              type="button"
+                              onClick={() => handleCancel(group.day, row.period, group.absentTeacher)}
+                              className="text-red-600 dark:text-red-400 hover:underline text-xs"
+                            >
+                              إلغاء
+                            </button>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          ))
+        )}
       </div>
     </div>
   );
