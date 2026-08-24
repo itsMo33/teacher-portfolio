@@ -8,6 +8,7 @@ import {
   OFFICIAL_LOAD,
   PERIODS,
   PeriodKey,
+  RESERVE_TEACHER_NAMES,
   TEACHER_BY_NAME,
   TEACHERS,
 } from "./substitute-data";
@@ -89,7 +90,21 @@ export function getCandidates(
   return candidates.slice(0, 5);
 }
 
-export const RANK_LABELS = ["المنتظر الأول", "المنتظر الثاني", "المنتظر الثالث", "المنتظر الرابع", "المنتظر الخامس"];
+export const RANK_LABELS = [
+  "المنتظر الأول",
+  "المنتظر الثاني",
+  "المنتظر الثالث",
+  "المنتظر الرابع",
+  "المنتظر الخامس",
+  "المنتظر السادس",
+];
+
+export const RESERVE_RANK = 6;
+
+/** Reserve substitutes (no official load, no cap) offered as an always-available last-resort tier after the ranked top 5. */
+export function getReserveCandidates(assignments: SubstituteAssignment[], day: DayKey, period: PeriodKey): string[] {
+  return RESERVE_TEACHER_NAMES.filter((name) => !isAlreadyAssignedThatSlot(assignments, name, day, period));
+}
 
 export interface AbsenceGroupRow {
   period: PeriodKey;

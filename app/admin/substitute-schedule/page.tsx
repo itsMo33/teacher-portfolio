@@ -16,9 +16,11 @@ import {
   AbsenceGroup,
   Candidate,
   RANK_LABELS,
+  RESERVE_RANK,
   SubstituteAssignment,
   buildAbsenceGroups,
   getCandidates,
+  getReserveCandidates,
 } from "@/lib/substitute-logic";
 import { SCHOOL_NAME } from "@/lib/school";
 
@@ -161,7 +163,7 @@ export default function SubstituteSchedulePage() {
     [assignments]
   );
 
-  function handleAssign(day: DayKey, period: PeriodKey, absent: string, section: string, candidate: Candidate, rank: number) {
+  function handleAssign(day: DayKey, period: PeriodKey, absent: string, section: string, substituteName: string, rank: number) {
     setAssignments((prev) => {
       const filtered = prev.filter((a) => !(a.day === day && a.period === period && a.absentTeacher === absent));
       return [
@@ -171,7 +173,7 @@ export default function SubstituteSchedulePage() {
           period,
           absentTeacher: absent,
           section,
-          substitute: candidate.name,
+          substitute: substituteName,
           rank,
           timestamp: new Date().toISOString(),
         },
@@ -286,6 +288,7 @@ export default function SubstituteSchedulePage() {
               dayPeriods.map(({ period, section }) => {
                 const existing = assignmentFor(selectedDay, period, absentTeacher);
                 const candidates = existing ? [] : getCandidates(assignments, selectedDay, period, absentTeacher);
+                const reserveCandidates = existing ? [] : getReserveCandidates(assignments, selectedDay, period);
 
                 return (
                   <div
@@ -314,33 +317,59 @@ export default function SubstituteSchedulePage() {
                           إلغاء الإسناد
                         </button>
                       </div>
-                    ) : candidates.length === 0 ? (
-                      <p className="text-sm text-amber-600 dark:text-amber-400">لا يوجد معلم متاح لتغطية هذه الحصة حالياً.</p>
                     ) : (
                       <div className="flex flex-col gap-2">
-                        {candidates.length < 5 && (
-                          <p className="text-xs text-slate-400">يوجد {candidates.length} مرشح متاح فقط لهذه الحصة</p>
+                        {candidates.length === 0 ? (
+                          <p className="text-sm text-amber-600 dark:text-amber-400">لا يوجد معلم متاح لتغطية هذه الحصة حالياً.</p>
+                        ) : (
+                          <>
+                            {candidates.length < 5 && (
+                              <p className="text-xs text-slate-400">يوجد {candidates.length} مرشح متاح فقط لهذه الحصة</p>
+                            )}
+                            {candidates.map((c, i) => (
+                              <div
+                                key={c.name}
+                                className="flex items-center justify-between gap-3 rounded-lg border border-slate-200 dark:border-slate-800 px-3 py-2"
+                              >
+                                <div>
+                                  <p className="text-sm font-medium text-slate-800 dark:text-slate-100">
+                                    {RANK_LABELS[i]}: {c.name}
+                                  </p>
+                                  <p className="text-xs text-slate-400 tabular-nums">{candidateInfoLabel(c)}</p>
+                                </div>
+                                <button
+                                  type="button"
+                                  onClick={() => handleAssign(selectedDay, period, absentTeacher, section, c.name, i + 1)}
+                                  className="shrink-0 rounded-lg bg-[var(--brand-primary)] hover:bg-[var(--brand-primary-dark)] text-white text-sm px-3 py-1.5 transition-colors"
+                                >
+                                  إسناد
+                                </button>
+                              </div>
+                            ))}
+                          </>
                         )}
-                        {candidates.map((c, i) => (
-                          <div
-                            key={c.name}
-                            className="flex items-center justify-between gap-3 rounded-lg border border-slate-200 dark:border-slate-800 px-3 py-2"
-                          >
-                            <div>
-                              <p className="text-sm font-medium text-slate-800 dark:text-slate-100">
-                                {RANK_LABELS[i]}: {c.name}
-                              </p>
-                              <p className="text-xs text-slate-400 tabular-nums">{candidateInfoLabel(c)}</p>
-                            </div>
-                            <button
-                              type="button"
-                              onClick={() => handleAssign(selectedDay, period, absentTeacher, section, c, i + 1)}
-                              className="shrink-0 rounded-lg bg-[var(--brand-primary)] hover:bg-[var(--brand-primary-dark)] text-white text-sm px-3 py-1.5 transition-colors"
-                            >
-                              إسناد
-                            </button>
+
+                        {reserveCandidates.length > 0 && (
+                          <div className="flex flex-col gap-2 pt-1">
+                            {reserveCandidates.map((name) => (
+                              <div
+                                key={name}
+                                className="flex items-center justify-between gap-3 rounded-lg border border-dashed border-slate-300 dark:border-slate-700 px-3 py-2"
+                              >
+                                <p className="text-sm font-medium text-slate-600 dark:text-slate-300">
+                                  {RANK_LABELS[RESERVE_RANK - 1]}: {name}
+                                </p>
+                                <button
+                                  type="button"
+                                  onClick={() => handleAssign(selectedDay, period, absentTeacher, section, name, RESERVE_RANK)}
+                                  className="shrink-0 rounded-lg border border-[var(--brand-primary)] text-[var(--brand-primary)] text-sm px-3 py-1.5 transition-colors hover:bg-[var(--brand-primary)]/10"
+                                >
+                                  إسناد
+                                </button>
+                              </div>
+                            ))}
                           </div>
-                        ))}
+                        )}
                       </div>
                     )}
                   </div>
