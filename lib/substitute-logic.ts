@@ -59,6 +59,8 @@ export function getCandidates(
   period: PeriodKey,
   absentTeacherName: string
 ): Candidate[] {
+  if (period === "1") return [];
+
   const candidates: Candidate[] = [];
 
   for (const teacher of TEACHERS) {
@@ -103,6 +105,7 @@ export const RESERVE_RANK = 6;
 
 /** Reserve substitutes (no official load, no cap) offered as an always-available last-resort tier after the ranked top 5. */
 export function getReserveCandidates(assignments: SubstituteAssignment[], day: DayKey, period: PeriodKey): string[] {
+  if (period === "1") return [];
   return RESERVE_TEACHER_NAMES.filter((name) => !isAlreadyAssignedThatSlot(assignments, name, day, period));
 }
 
