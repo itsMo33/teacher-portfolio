@@ -113,7 +113,7 @@ export const PORTFOLIO_SECTIONS: PortfolioSection[] = [
   },
   {
     key: "parent_interaction",
-    labelAr: "التواصل مع أولياء الأمور بواسطة منصة مدرستي",
+    labelAr: "التواصل مع أولياء الأمور في منصة مدرستي",
     hasSubsections: false,
     teacherWritable: true,
     accentColor: "#0891b2",

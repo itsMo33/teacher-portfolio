@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { PORTFOLIO_SECTIONS } from "@/lib/portfolio-sections";
-import { getEncouragingMessage, TROPHY_BADGE } from "@/lib/motivational-messages";
+import { TROPHY_BADGE } from "@/lib/motivational-messages";
 
 function NewBadge() {
   return (
@@ -61,11 +61,11 @@ export function ProgressGrid({
             )
           : Math.round((Math.min(total / (requiredCount ?? 1), 1)) * 100);
 
-        let badgeText: string;
+        let badgeText: string | null;
         if (isSchedule) {
           badgeText = hasSchedule ? "معروض" : "لم يُرفع";
         } else if (!sectionShowPercent) {
-          badgeText = (section.hasSubsections ? allSubsectionsDone : isDone) ? TROPHY_BADGE : getEncouragingMessage(section.key);
+          badgeText = (section.hasSubsections ? allSubsectionsDone : isDone) ? TROPHY_BADGE : null;
         } else if (requiredCount && requiredCount > 1) {
           badgeText = `${total}/${requiredCount} ملف (${sectionPercent}%)`;
         } else {
@@ -92,14 +92,16 @@ export function ProgressGrid({
                 {section.labelAr}
                 {isNew && <NewBadge />}
               </h3>
-              <span
-                className={`text-xs px-2 py-0.5 rounded-full whitespace-nowrap font-medium ${
-                  isDone ? "" : "bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400"
-                }`}
-                style={isDone ? { backgroundColor: `${section.accentColor}1a`, color: section.accentColor } : undefined}
-              >
-                {badgeText}
-              </span>
+              {badgeText && (
+                <span
+                  className={`text-xs px-2 py-0.5 rounded-full whitespace-nowrap font-medium ${
+                    isDone ? "" : "bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400"
+                  }`}
+                  style={isDone ? { backgroundColor: `${section.accentColor}1a`, color: section.accentColor } : undefined}
+                >
+                  {badgeText}
+                </span>
+              )}
             </div>
             {section.note && <p className="text-xs text-amber-600 dark:text-amber-400 mb-2">{section.note}</p>}
             {section.hasSubsections && (
@@ -109,19 +111,18 @@ export function ProgressGrid({
                   const subRequired = sub.requiredCount ?? 1;
                   const subPercent = Math.round(Math.min(subCount / subRequired, 1) * 100);
                   const subDone = subCount >= subRequired;
+                  const subText = sub.showPercent
+                    ? `${subCount}${subRequired > 1 ? `/${subRequired}` : ""} (${subPercent}%)`
+                    : subDone
+                    ? TROPHY_BADGE
+                    : null;
                   return (
                     <li key={sub.key} className="flex items-center justify-between gap-2">
                       <span>
                         {sub.labelAr}
                         {sub.note && <span className="text-amber-600 dark:text-amber-400"> ({sub.note})</span>}
                       </span>
-                      <span className="shrink-0">
-                        {sub.showPercent
-                          ? `${subCount}${subRequired > 1 ? `/${subRequired}` : ""} (${subPercent}%)`
-                          : subDone
-                          ? TROPHY_BADGE
-                          : getEncouragingMessage(`${section.key}:${sub.key}`)}
-                      </span>
+                      {subText && <span className="shrink-0">{subText}</span>}
                     </li>
                   );
                 })}

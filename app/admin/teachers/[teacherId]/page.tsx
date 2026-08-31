@@ -7,7 +7,7 @@ import { AttachmentList } from "@/components/portfolio/AttachmentList";
 import { FileUploadDropzone } from "@/components/portfolio/FileUploadDropzone";
 import { DeleteTeacherButton } from "@/components/admin/DeleteTeacherButton";
 import { MarkAdminViewedOnMount } from "@/components/admin/MarkAdminViewedOnMount";
-import { getEncouragingMessage, TROPHY_BADGE } from "@/lib/motivational-messages";
+import { TROPHY_BADGE } from "@/lib/motivational-messages";
 
 export default async function AdminTeacherPortfolioPage({
   params,
@@ -86,10 +86,10 @@ export default async function AdminTeacherPortfolioPage({
               )
             : Math.round(Math.min(total / (section.requiredCount ?? 1), 1) * 100);
 
-          const badgeText = !sectionShowPercent
+          const badgeText: string | null = !sectionShowPercent
             ? allSubsectionsDone
               ? TROPHY_BADGE
-              : getEncouragingMessage(section.key)
+              : null
             : `${total} ملف (${sectionPercent}%)`;
 
           const accountabilityStats =
@@ -119,14 +119,16 @@ export default async function AdminTeacherPortfolioPage({
                   />
                   {section.labelAr}
                 </h3>
-                <span
-                  className={`text-xs px-2 py-0.5 rounded-full whitespace-nowrap font-medium ${
-                    total > 0 ? "" : "bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400"
-                  }`}
-                  style={total > 0 ? { backgroundColor: `${section.accentColor}1a`, color: section.accentColor } : undefined}
-                >
-                  {badgeText}
-                </span>
+                {badgeText && (
+                  <span
+                    className={`text-xs px-2 py-0.5 rounded-full whitespace-nowrap font-medium ${
+                      total > 0 ? "" : "bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400"
+                    }`}
+                    style={total > 0 ? { backgroundColor: `${section.accentColor}1a`, color: section.accentColor } : undefined}
+                  >
+                    {badgeText}
+                  </span>
+                )}
               </div>
               {section.note && <p className="text-xs text-amber-600 dark:text-amber-400">{section.note}</p>}
               {accountabilityStats && (
@@ -152,15 +154,17 @@ export default async function AdminTeacherPortfolioPage({
                           <span className="text-xs font-normal text-amber-600 dark:text-amber-400"> ({sub.note})</span>
                         )}
                       </h4>
-                      <span className="text-xs text-slate-400">
-                        {sub.showPercent
+                      {(() => {
+                        const subDone = attachments.length >= (sub.requiredCount ?? 1);
+                        const subText = sub.showPercent
                           ? `${attachments.length} ملف (${Math.round(
                               Math.min(attachments.length / (sub.requiredCount ?? 1), 1) * 100
                             )}%)`
-                          : attachments.length >= (sub.requiredCount ?? 1)
+                          : subDone
                           ? TROPHY_BADGE
-                          : getEncouragingMessage(`${section.key}:${sub.key}`)}
-                      </span>
+                          : null;
+                        return subText ? <span className="text-xs text-slate-400">{subText}</span> : null;
+                      })()}
                     </div>
                   )}
                   {!section.teacherWritable && (
