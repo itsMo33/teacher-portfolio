@@ -68,6 +68,16 @@ export default async function AdminTeacherPortfolioPage({
             }))
           );
           const total = subsectionData.reduce((sum, s) => sum + s.attachments.length, 0);
+          const sectionPercent = section.hasSubsections
+            ? Math.round(
+                (subsectionData.reduce(
+                  (sum, s) => sum + Math.min(s.attachments.length / (s.sub.requiredCount ?? 1), 1),
+                  0
+                ) /
+                  subsectionData.length) *
+                  100
+              )
+            : Math.round(Math.min(total / (section.requiredCount ?? 1), 1) * 100);
 
           return (
             <div
@@ -89,7 +99,7 @@ export default async function AdminTeacherPortfolioPage({
                   }`}
                   style={total > 0 ? { backgroundColor: `${section.accentColor}1a`, color: section.accentColor } : undefined}
                 >
-                  {total} ملف
+                  {total} ملف ({sectionPercent}%)
                 </span>
               </div>
               {section.note && <p className="text-xs text-amber-600 dark:text-amber-400">{section.note}</p>}
@@ -103,7 +113,9 @@ export default async function AdminTeacherPortfolioPage({
                           <span className="text-xs font-normal text-amber-600 dark:text-amber-400"> ({sub.note})</span>
                         )}
                       </h4>
-                      <span className="text-xs text-slate-400">{attachments.length} ملف</span>
+                      <span className="text-xs text-slate-400">
+                        {attachments.length} ملف ({Math.round(Math.min(attachments.length / (sub.requiredCount ?? 1), 1) * 100)}%)
+                      </span>
                     </div>
                   )}
                   {!section.teacherWritable && (

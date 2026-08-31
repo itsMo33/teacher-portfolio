@@ -38,6 +38,19 @@ export function ProgressGrid({
         const requiredCount = section.hasSubsections ? undefined : section.requiredCount ?? 1;
         const isDone = isSchedule ? hasSchedule : total >= (requiredCount ?? 1);
         const isNew = isSchedule ? !!hasUnviewedSchedule : !!unviewedSectionKeys?.has(section.key);
+        const sectionPercent = isSchedule
+          ? undefined
+          : section.hasSubsections
+          ? Math.round(
+              (section.subsections!.reduce(
+                (sum, sub) =>
+                  sum + Math.min((slotCounts[`${section.key}:${sub.key}`] ?? 0) / (sub.requiredCount ?? 1), 1),
+                0
+              ) /
+                section.subsections!.length) *
+                100
+            )
+          : Math.round((Math.min(total / (requiredCount ?? 1), 1)) * 100);
 
         return (
           <Link
@@ -70,25 +83,30 @@ export function ProgressGrid({
                     ? "معروض"
                     : "لم يُرفع"
                   : requiredCount && requiredCount > 1
-                  ? `${total}/${requiredCount} ملف`
-                  : `${total} ملف`}
+                  ? `${total}/${requiredCount} ملف (${sectionPercent}%)`
+                  : `${total} ملف (${sectionPercent}%)`}
               </span>
             </div>
             {section.note && <p className="text-xs text-amber-600 dark:text-amber-400 mb-2">{section.note}</p>}
             {section.hasSubsections && (
               <ul className="text-xs text-slate-500 dark:text-slate-400 flex flex-col gap-0.5">
-                {section.subsections!.map((sub) => (
-                  <li key={sub.key} className="flex items-center justify-between gap-2">
-                    <span>
-                      {sub.labelAr}
-                      {sub.note && <span className="text-amber-600 dark:text-amber-400"> ({sub.note})</span>}
-                    </span>
-                    <span className="shrink-0">
-                      {slotCounts[`${section.key}:${sub.key}`] ?? 0}
-                      {sub.requiredCount && sub.requiredCount > 1 ? `/${sub.requiredCount}` : ""}
-                    </span>
-                  </li>
-                ))}
+                {section.subsections!.map((sub) => {
+                  const subCount = slotCounts[`${section.key}:${sub.key}`] ?? 0;
+                  const subRequired = sub.requiredCount ?? 1;
+                  const subPercent = Math.round(Math.min(subCount / subRequired, 1) * 100);
+                  return (
+                    <li key={sub.key} className="flex items-center justify-between gap-2">
+                      <span>
+                        {sub.labelAr}
+                        {sub.note && <span className="text-amber-600 dark:text-amber-400"> ({sub.note})</span>}
+                      </span>
+                      <span className="shrink-0">
+                        {subCount}
+                        {subRequired > 1 ? `/${subRequired}` : ""} ({subPercent}%)
+                      </span>
+                    </li>
+                  );
+                })}
               </ul>
             )}
           </Link>
