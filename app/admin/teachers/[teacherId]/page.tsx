@@ -7,6 +7,7 @@ import { AttachmentList } from "@/components/portfolio/AttachmentList";
 import { FileUploadDropzone } from "@/components/portfolio/FileUploadDropzone";
 import { DeleteTeacherButton } from "@/components/admin/DeleteTeacherButton";
 import { MarkAdminViewedOnMount } from "@/components/admin/MarkAdminViewedOnMount";
+import { getEncouragingMessage, TROPHY_BADGE } from "@/lib/motivational-messages";
 
 export default async function AdminTeacherPortfolioPage({
   params,
@@ -68,6 +69,12 @@ export default async function AdminTeacherPortfolioPage({
             }))
           );
           const total = subsectionData.reduce((sum, s) => sum + s.attachments.length, 0);
+          const sectionShowPercent = section.hasSubsections
+            ? section.subsections!.some((s) => s.showPercent)
+            : !!section.showPercent;
+          const allSubsectionsDone = subsectionData.every(
+            ({ sub, attachments }) => attachments.length >= (sub.requiredCount ?? 1)
+          );
           const sectionPercent = section.hasSubsections
             ? Math.round(
                 (subsectionData.reduce(
@@ -78,6 +85,25 @@ export default async function AdminTeacherPortfolioPage({
                   100
               )
             : Math.round(Math.min(total / (section.requiredCount ?? 1), 1) * 100);
+
+          const badgeText = !sectionShowPercent
+            ? allSubsectionsDone
+              ? TROPHY_BADGE
+              : getEncouragingMessage(section.key)
+            : `${total} ملف (${sectionPercent}%)`;
+
+          const accountabilityStats =
+            section.key === "accountability"
+              ? subsectionData[0].attachments.reduce(
+                  (acc, a) => {
+                    if (a.accountability_status === "excused") acc.excused++;
+                    else if (a.accountability_status === "rejected") acc.rejected++;
+                    else acc.pending++;
+                    return acc;
+                  },
+                  { excused: 0, rejected: 0, pending: 0 }
+                )
+              : null;
 
           return (
             <div
@@ -99,10 +125,23 @@ export default async function AdminTeacherPortfolioPage({
                   }`}
                   style={total > 0 ? { backgroundColor: `${section.accentColor}1a`, color: section.accentColor } : undefined}
                 >
-                  {total} ملف ({sectionPercent}%)
+                  {badgeText}
                 </span>
               </div>
               {section.note && <p className="text-xs text-amber-600 dark:text-amber-400">{section.note}</p>}
+              {accountabilityStats && (
+                <div className="flex flex-wrap gap-2 text-xs">
+                  <span className="rounded-full bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-300 px-2 py-0.5">
+                    مقبول بعذر: {accountabilityStats.excused}
+                  </span>
+                  <span className="rounded-full bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-300 px-2 py-0.5">
+                    غير مقبول: {accountabilityStats.rejected}
+                  </span>
+                  <span className="rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 px-2 py-0.5">
+                    بدون قرار: {accountabilityStats.pending}
+                  </span>
+                </div>
+              )}
               {subsectionData.map(({ sub, attachments }) => (
                 <div key={sub.key} className="flex flex-col gap-1.5 pr-3">
                   {sub.labelAr && (
@@ -114,7 +153,13 @@ export default async function AdminTeacherPortfolioPage({
                         )}
                       </h4>
                       <span className="text-xs text-slate-400">
-                        {attachments.length} ملف ({Math.round(Math.min(attachments.length / (sub.requiredCount ?? 1), 1) * 100)}%)
+                        {sub.showPercent
+                          ? `${attachments.length} ملف (${Math.round(
+                              Math.min(attachments.length / (sub.requiredCount ?? 1), 1) * 100
+                            )}%)`
+                          : attachments.length >= (sub.requiredCount ?? 1)
+                          ? TROPHY_BADGE
+                          : getEncouragingMessage(`${section.key}:${sub.key}`)}
                       </span>
                     </div>
                   )}

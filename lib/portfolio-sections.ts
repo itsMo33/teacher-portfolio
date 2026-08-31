@@ -21,6 +21,8 @@ export interface Subsection {
   note?: string;
   /** Number of uploaded files needed for this subsection to reach 100%. Defaults to 1. Uploading more is always allowed. */
   requiredCount?: number;
+  /** Whether to show a numeric percentage badge for this subsection. When false, shows an encouraging message / trophy instead. */
+  showPercent?: boolean;
 }
 
 export interface PortfolioSection {
@@ -35,6 +37,8 @@ export interface PortfolioSection {
   accentColor: string;
   /** Number of uploaded files needed for this section to reach 100% (sections without subsections only). Defaults to 1. Uploading more is always allowed. */
   requiredCount?: number;
+  /** Whether to show a numeric percentage badge for this section. When false, shows an encouraging message / trophy instead. Only meaningful for sections without subsections -- with subsections, each subsection's own showPercent applies. */
+  showPercent?: boolean;
 }
 
 export const PORTFOLIO_SECTIONS: PortfolioSection[] = [
@@ -50,8 +54,8 @@ export const PORTFOLIO_SECTIONS: PortfolioSection[] = [
     labelAr: "ملف الإنجاز",
     hasSubsections: true,
     subsections: [
-      { key: "general", labelAr: "ملف الإنجاز" },
-      { key: "professional_license", labelAr: "الرخصة المهنية" },
+      { key: "general", labelAr: "ملف الإنجاز", showPercent: true },
+      { key: "professional_license", labelAr: "الرخصة المهنية", showPercent: true },
     ],
     teacherWritable: true,
     accentColor: "#059669",
@@ -61,6 +65,7 @@ export const PORTFOLIO_SECTIONS: PortfolioSection[] = [
     labelAr: "توزيع المنهج",
     hasSubsections: false,
     teacherWritable: true,
+    showPercent: true,
     accentColor: "#4f46e5",
   },
   {
@@ -69,6 +74,7 @@ export const PORTFOLIO_SECTIONS: PortfolioSection[] = [
     hasSubsections: false,
     teacherWritable: true,
     requiredCount: 17,
+    showPercent: true,
     accentColor: "#6366f1",
   },
   {
@@ -85,6 +91,7 @@ export const PORTFOLIO_SECTIONS: PortfolioSection[] = [
     teacherWritable: true,
     note: "ثلاث استراتيجيات كحد أدنى في الفصل الدراسي",
     requiredCount: 3,
+    showPercent: true,
     accentColor: "#ea580c",
   },
   {
@@ -116,8 +123,8 @@ export const PORTFOLIO_SECTIONS: PortfolioSection[] = [
     labelAr: "المجتمع المهني",
     hasSubsections: true,
     subsections: [
-      { key: "visits", labelAr: "زيارات", note: "زيارتان كحد أدنى", requiredCount: 2 },
-      { key: "meetings", labelAr: "اجتماعات", note: "ثلاث اجتماعات كحد أدنى", requiredCount: 3 },
+      { key: "visits", labelAr: "زيارات", note: "زيارتان كحد أدنى", requiredCount: 2, showPercent: true },
+      { key: "meetings", labelAr: "اجتماعات", note: "ثلاث اجتماعات كحد أدنى", requiredCount: 3, showPercent: true },
     ],
     teacherWritable: true,
     accentColor: "#0d9488",

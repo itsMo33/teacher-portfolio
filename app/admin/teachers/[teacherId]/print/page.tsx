@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import { supabaseAdmin } from "@/lib/supabase/server";
-import { PORTFOLIO_SECTIONS } from "@/lib/portfolio-sections";
-import { getSectionAttachments } from "@/lib/portfolio-data";
+import { PORTFOLIO_SECTIONS, TEACHER_SLOTS, TOTAL_TEACHER_SLOTS } from "@/lib/portfolio-sections";
+import { getSectionAttachments, getSlotCounts } from "@/lib/portfolio-data";
 import { SCHOOL_NAME } from "@/lib/school";
 import { PrintButton } from "@/components/admin/PrintButton";
 
@@ -30,6 +30,16 @@ export default async function TeacherPrintReportPage({
     .maybeSingle();
 
   const sections = PORTFOLIO_SECTIONS.filter((s) => s.key !== "schedule");
+
+  const slotCounts = await getSlotCounts(teacherId);
+  const completionPercent = Math.round(
+    (TEACHER_SLOTS.reduce((sum, slot) => {
+      const count = slotCounts[`${slot.section}:${slot.subsection ?? ""}`] ?? 0;
+      return sum + Math.min(count / slot.requiredCount, 1);
+    }, 0) /
+      TOTAL_TEACHER_SLOTS) *
+      100
+  );
 
   const sectionsData = await Promise.all(
     sections.map(async (section) => {
@@ -68,6 +78,9 @@ export default async function TeacherPrintReportPage({
               <strong>المادة:</strong> {teacher.subject}
             </p>
           )}
+          <p>
+            <strong>نسبة الإنجاز:</strong> {completionPercent}%
+          </p>
         </div>
         <p>
           <strong>تاريخ الطباعة:</strong> {new Date().toLocaleDateString("ar-SA")}

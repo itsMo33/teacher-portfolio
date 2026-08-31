@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { PORTFOLIO_SECTIONS } from "@/lib/portfolio-sections";
+import { getEncouragingMessage, TROPHY_BADGE } from "@/lib/motivational-messages";
 
 function NewBadge() {
   return (
@@ -38,6 +39,14 @@ export function ProgressGrid({
         const requiredCount = section.hasSubsections ? undefined : section.requiredCount ?? 1;
         const isDone = isSchedule ? hasSchedule : total >= (requiredCount ?? 1);
         const isNew = isSchedule ? !!hasUnviewedSchedule : !!unviewedSectionKeys?.has(section.key);
+        const sectionShowPercent = section.hasSubsections
+          ? section.subsections!.some((s) => s.showPercent)
+          : !!section.showPercent;
+        const allSubsectionsDone = section.hasSubsections
+          ? section.subsections!.every(
+              (sub) => (slotCounts[`${section.key}:${sub.key}`] ?? 0) >= (sub.requiredCount ?? 1)
+            )
+          : false;
         const sectionPercent = isSchedule
           ? undefined
           : section.hasSubsections
@@ -51,6 +60,17 @@ export function ProgressGrid({
                 100
             )
           : Math.round((Math.min(total / (requiredCount ?? 1), 1)) * 100);
+
+        let badgeText: string;
+        if (isSchedule) {
+          badgeText = hasSchedule ? "معروض" : "لم يُرفع";
+        } else if (!sectionShowPercent) {
+          badgeText = (section.hasSubsections ? allSubsectionsDone : isDone) ? TROPHY_BADGE : getEncouragingMessage(section.key);
+        } else if (requiredCount && requiredCount > 1) {
+          badgeText = `${total}/${requiredCount} ملف (${sectionPercent}%)`;
+        } else {
+          badgeText = `${total} ملف (${sectionPercent}%)`;
+        }
 
         return (
           <Link
@@ -78,13 +98,7 @@ export function ProgressGrid({
                 }`}
                 style={isDone ? { backgroundColor: `${section.accentColor}1a`, color: section.accentColor } : undefined}
               >
-                {isSchedule
-                  ? hasSchedule
-                    ? "معروض"
-                    : "لم يُرفع"
-                  : requiredCount && requiredCount > 1
-                  ? `${total}/${requiredCount} ملف (${sectionPercent}%)`
-                  : `${total} ملف (${sectionPercent}%)`}
+                {badgeText}
               </span>
             </div>
             {section.note && <p className="text-xs text-amber-600 dark:text-amber-400 mb-2">{section.note}</p>}
@@ -94,6 +108,7 @@ export function ProgressGrid({
                   const subCount = slotCounts[`${section.key}:${sub.key}`] ?? 0;
                   const subRequired = sub.requiredCount ?? 1;
                   const subPercent = Math.round(Math.min(subCount / subRequired, 1) * 100);
+                  const subDone = subCount >= subRequired;
                   return (
                     <li key={sub.key} className="flex items-center justify-between gap-2">
                       <span>
@@ -101,8 +116,11 @@ export function ProgressGrid({
                         {sub.note && <span className="text-amber-600 dark:text-amber-400"> ({sub.note})</span>}
                       </span>
                       <span className="shrink-0">
-                        {subCount}
-                        {subRequired > 1 ? `/${subRequired}` : ""} ({subPercent}%)
+                        {sub.showPercent
+                          ? `${subCount}${subRequired > 1 ? `/${subRequired}` : ""} (${subPercent}%)`
+                          : subDone
+                          ? TROPHY_BADGE
+                          : getEncouragingMessage(`${section.key}:${sub.key}`)}
                       </span>
                     </li>
                   );

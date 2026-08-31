@@ -73,6 +73,20 @@ export default async function AdminUploadsForTeacherPage({
         ADMIN_SECTIONS.map(async (section) => {
           const subsections = section.hasSubsections ? section.subsections! : [{ key: "", labelAr: "" }];
 
+          const accountabilityAttachments =
+            section.key === "accountability" ? await getSectionAttachments(teacherId, section.key, null) : null;
+          const accountabilityStats = accountabilityAttachments
+            ? accountabilityAttachments.reduce(
+                (acc, a) => {
+                  if (a.accountability_status === "excused") acc.excused++;
+                  else if (a.accountability_status === "rejected") acc.rejected++;
+                  else acc.pending++;
+                  return acc;
+                },
+                { excused: 0, rejected: 0, pending: 0 }
+              )
+            : null;
+
           return (
             <div key={section.key} className="flex flex-col gap-3">
               <h3 className="flex items-center gap-2 font-bold text-slate-800 dark:text-slate-100">
@@ -83,10 +97,26 @@ export default async function AdminUploadsForTeacherPage({
                 {section.labelAr}
               </h3>
               {section.note && <p className="text-xs text-amber-600 dark:text-amber-400">{section.note}</p>}
+              {accountabilityStats && (
+                <div className="flex flex-wrap gap-2 text-xs">
+                  <span className="rounded-full bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-300 px-2 py-0.5">
+                    مقبول بعذر: {accountabilityStats.excused}
+                  </span>
+                  <span className="rounded-full bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-300 px-2 py-0.5">
+                    غير مقبول: {accountabilityStats.rejected}
+                  </span>
+                  <span className="rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 px-2 py-0.5">
+                    بدون قرار: {accountabilityStats.pending}
+                  </span>
+                </div>
+              )}
 
               {await Promise.all(
                 subsections.map(async (sub) => {
-                  const attachments = await getSectionAttachments(teacherId, section.key, sub.key || null);
+                  const attachments =
+                    section.key === "accountability" && accountabilityAttachments
+                      ? accountabilityAttachments
+                      : await getSectionAttachments(teacherId, section.key, sub.key || null);
                   return (
                     <div key={sub.key} className="flex flex-col gap-2 pr-3">
                       {sub.labelAr && (
