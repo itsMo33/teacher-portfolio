@@ -86,10 +86,10 @@ export default async function AdminTeacherPortfolioPage({
               )
             : Math.round(Math.min(total / (section.requiredCount ?? 1), 1) * 100);
 
-          const badgeText: string | null = !sectionShowPercent
+          const badgeText: string = !sectionShowPercent
             ? allSubsectionsDone
               ? TROPHY_BADGE
-              : null
+              : `${total} ملف`
             : `${total} ملف (${sectionPercent}%)`;
 
           const accountabilityStats =
@@ -162,8 +162,8 @@ export default async function AdminTeacherPortfolioPage({
                             )}%)`
                           : subDone
                           ? TROPHY_BADGE
-                          : null;
-                        return subText ? <span className="text-xs text-slate-400">{subText}</span> : null;
+                          : `${attachments.length} ملف`;
+                        return <span className="text-xs text-slate-400">{subText}</span>;
                       })()}
                     </div>
                   )}

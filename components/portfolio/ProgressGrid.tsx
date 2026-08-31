@@ -65,7 +65,7 @@ export function ProgressGrid({
         if (isSchedule) {
           badgeText = hasSchedule ? "معروض" : "لم يُرفع";
         } else if (!sectionShowPercent) {
-          badgeText = (section.hasSubsections ? allSubsectionsDone : isDone) ? TROPHY_BADGE : null;
+          badgeText = (section.hasSubsections ? allSubsectionsDone : isDone) ? TROPHY_BADGE : `${total} ملف`;
         } else if (requiredCount && requiredCount > 1) {
           badgeText = `${total}/${requiredCount} ملف (${sectionPercent}%)`;
         } else {
@@ -115,7 +115,7 @@ export function ProgressGrid({
                     ? `${subCount}${subRequired > 1 ? `/${subRequired}` : ""} (${subPercent}%)`
                     : subDone
                     ? TROPHY_BADGE
-                    : null;
+                    : `${subCount} ملف`;
                   return (
                     <li key={sub.key} className="flex items-center justify-between gap-2">
                       <span>
