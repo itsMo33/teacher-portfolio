@@ -10,17 +10,14 @@ import {
   PeriodKey,
   TEACHER_BY_NAME,
   TEACHER_NAMES_SORTED,
-  CAPPED_TEACHERS,
 } from "@/lib/substitute-data";
 import {
   AbsenceGroup,
   Candidate,
   RANK_LABELS,
-  RESERVE_RANK,
   SubstituteAssignment,
   buildAbsenceGroups,
   getCandidates,
-  getReserveCandidates,
 } from "@/lib/substitute-logic";
 import { SCHOOL_NAME } from "@/lib/school";
 
@@ -46,8 +43,8 @@ function saveAssignments(assignments: SubstituteAssignment[]) {
 }
 
 function candidateInfoLabel(c: Candidate): string {
-  if (CAPPED_TEACHERS.has(c.name)) {
-    return `انتظار ${c.subCount}/5 هذا الأسبوع`;
+  if (!TEACHER_BY_NAME[c.name]) {
+    return `انتظار ${c.subCount} هذا الأسبوع`;
   }
   return `نصاب ${c.official} + انتظار ${c.subCount} = ${c.total}/24`;
 }
@@ -288,7 +285,6 @@ export default function SubstituteSchedulePage() {
               dayPeriods.map(({ period, section }) => {
                 const existing = assignmentFor(selectedDay, period, absentTeacher);
                 const candidates = existing ? [] : getCandidates(assignments, selectedDay, period, absentTeacher);
-                const reserveCandidates = existing ? [] : getReserveCandidates(assignments, selectedDay, period);
 
                 return (
                   <div
@@ -347,28 +343,6 @@ export default function SubstituteSchedulePage() {
                               </div>
                             ))}
                           </>
-                        )}
-
-                        {reserveCandidates.length > 0 && (
-                          <div className="flex flex-col gap-2 pt-1">
-                            {reserveCandidates.map((name) => (
-                              <div
-                                key={name}
-                                className="flex items-center justify-between gap-3 rounded-lg border border-dashed border-slate-300 dark:border-slate-700 px-3 py-2"
-                              >
-                                <p className="text-sm font-medium text-slate-600 dark:text-slate-300">
-                                  {RANK_LABELS[RESERVE_RANK - 1]}: {name}
-                                </p>
-                                <button
-                                  type="button"
-                                  onClick={() => handleAssign(selectedDay, period, absentTeacher, section, name, RESERVE_RANK)}
-                                  className="shrink-0 rounded-lg border border-[var(--brand-primary)] text-[var(--brand-primary)] text-sm px-3 py-1.5 transition-colors hover:bg-[var(--brand-primary)]/10"
-                                >
-                                  إسناد
-                                </button>
-                              </div>
-                            ))}
-                          </div>
                         )}
                       </div>
                     )}
