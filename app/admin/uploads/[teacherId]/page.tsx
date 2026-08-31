@@ -101,7 +101,12 @@ export default async function AdminUploadsForTeacherPage({
                         uploadUrl="/api/portfolio/upload"
                         extraFields={{ category: section.key, subcategory: sub.key, teacherId }}
                       />
-                      <AttachmentList attachments={attachments} canDelete showViewedStatus />
+                      <AttachmentList
+                        attachments={attachments}
+                        canDelete
+                        showViewedStatus
+                        editableAccountabilityStatus={section.key === "accountability"}
+                      />
                     </div>
                   );
                 })

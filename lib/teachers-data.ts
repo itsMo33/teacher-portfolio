@@ -1,6 +1,6 @@
 import "server-only";
 import { supabaseAdmin } from "@/lib/supabase/server";
-import { TOTAL_TEACHER_SLOTS, PORTFOLIO_SECTIONS } from "@/lib/portfolio-sections";
+import { TEACHER_SLOTS, TOTAL_TEACHER_SLOTS, PORTFOLIO_SECTIONS } from "@/lib/portfolio-sections";
 
 const TEACHER_WRITABLE_CATEGORIES = PORTFOLIO_SECTIONS.filter((s) => s.teacherWritable).map((s) => s.key);
 
@@ -58,9 +58,13 @@ export async function getTeachersWithCompletion(): Promise<TeacherWithCompletion
     const slotCounts = slotCountsByTeacher.get(t.id) ?? {};
     const filledSlots = new Set(Object.keys(slotCounts));
     const totalFiles = Object.values(slotCounts).reduce((sum, n) => sum + n, 0);
+    const slotRatioSum = TEACHER_SLOTS.reduce((sum, slot) => {
+      const count = slotCounts[`${slot.section}:${slot.subsection ?? ""}`] ?? 0;
+      return sum + Math.min(count / slot.requiredCount, 1);
+    }, 0);
     return {
       ...t,
-      completionPercent: Math.round((filledSlots.size / TOTAL_TEACHER_SLOTS) * 100),
+      completionPercent: Math.round((slotRatioSum / TOTAL_TEACHER_SLOTS) * 100),
       hasSchedule: scheduledTeacherIds.has(t.id),
       filledSlots,
       slotCounts,

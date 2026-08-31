@@ -34,8 +34,9 @@ export function buildCompletionWorkbook(teachers: TeacherWithCompletion[]): Exce
       teacher.hasSchedule ? "✓" : "✗",
       ...TEACHER_SLOTS.map((slot) => {
         const count = teacher.slotCounts[`${slot.section}:${slot.subsection ?? ""}`] ?? 0;
-        if (count === 0) return "✗";
-        return count > 1 ? `✓ (${count})` : "✓";
+        const mark = count >= slot.requiredCount ? "✓" : "✗";
+        if (slot.requiredCount > 1) return `${mark} (${count}/${slot.requiredCount})`;
+        return count > 1 ? `${mark} (${count})` : mark;
       }),
       `${teacher.completionPercent}%`,
       teacher.totalFiles,

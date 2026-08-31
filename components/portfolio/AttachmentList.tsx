@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { AccountabilityStatus, ACCOUNTABILITY_STATUS_LABELS_AR } from "@/lib/portfolio-sections";
 
 export interface AttachmentItem {
   id: string;
@@ -10,20 +11,36 @@ export interface AttachmentItem {
   signedUrl: string;
   viewed_at?: string | null;
   mime_type?: string;
+  accountability_status?: AccountabilityStatus | null;
 }
 
 export function AttachmentList({
   attachments,
   canDelete,
   showViewedStatus,
+  editableAccountabilityStatus,
 }: {
   attachments: AttachmentItem[];
   canDelete: boolean;
   showViewedStatus?: boolean;
+  /** Admin-only: show a select to mark each file "مقبول بعذر" / "غير مقبول" (مسائلات section). */
+  editableAccountabilityStatus?: boolean;
 }) {
   const router = useRouter();
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [savingStatusId, setSavingStatusId] = useState<string | null>(null);
+
+  async function handleStatusChange(id: string, status: AccountabilityStatus | null) {
+    setSavingStatusId(id);
+    await fetch("/api/portfolio/accountability-status", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ attachmentId: id, status }),
+    });
+    setSavingStatusId(null);
+    router.refresh();
+  }
 
   async function handleDelete(id: string) {
     setDeletingId(id);
@@ -74,6 +91,32 @@ export function AttachmentList({
                 <span className="text-xs text-slate-400">
                   {new Date(a.uploaded_at).toLocaleDateString("ar-SA")}
                 </span>
+                {editableAccountabilityStatus ? (
+                  <select
+                    value={a.accountability_status ?? ""}
+                    disabled={savingStatusId === a.id}
+                    onChange={(e) =>
+                      handleStatusChange(a.id, (e.target.value || null) as AccountabilityStatus | null)
+                    }
+                    className="text-xs rounded-full border border-slate-300 dark:border-slate-700 bg-transparent px-2 py-0.5 disabled:opacity-50"
+                  >
+                    <option value="">بدون قرار</option>
+                    <option value="excused">{ACCOUNTABILITY_STATUS_LABELS_AR.excused}</option>
+                    <option value="rejected">{ACCOUNTABILITY_STATUS_LABELS_AR.rejected}</option>
+                  </select>
+                ) : (
+                  a.accountability_status && (
+                    <span
+                      className={`text-xs px-2 py-0.5 rounded-full whitespace-nowrap ${
+                        a.accountability_status === "excused"
+                          ? "bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300"
+                          : "bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300"
+                      }`}
+                    >
+                      {ACCOUNTABILITY_STATUS_LABELS_AR[a.accountability_status]}
+                    </span>
+                  )
+                )}
                 {showViewedStatus && (
                   <span
                     className={`flex items-center gap-1.5 text-xs px-2 py-0.5 rounded-full whitespace-nowrap ${

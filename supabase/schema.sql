@@ -69,6 +69,16 @@ alter table schedules add column if not exists viewed_at timestamptz;
 -- page, for attachments the *teacher* uploaded (teacherWritable sections).
 alter table attachments add column if not exists admin_viewed_at timestamptz;
 
+-- Admin-set status for "مسائلات" (accountability) attachments: whether the
+-- teacher's excuse for the file was accepted or not. Null = not yet decided.
+alter table attachments add column if not exists accountability_status text;
+do $$ begin
+  alter table attachments add constraint attachments_accountability_status_check
+    check (accountability_status in ('excused', 'rejected'));
+exception
+  when duplicate_object then null;
+end $$;
+
 create table if not exists activity_log (
   id uuid primary key default gen_random_uuid(),
   actor_id uuid references users(id),

@@ -67,7 +67,7 @@ export async function getSectionAttachments(
 ) {
   let query = supabaseAdmin
     .from("attachments")
-    .select("id, file_name, file_path, mime_type, uploaded_at, viewed_at, admin_viewed_at")
+    .select("id, file_name, file_path, mime_type, uploaded_at, viewed_at, admin_viewed_at, accountability_status")
     .eq("teacher_id", teacherId)
     .eq("category", category)
     .is("deleted_at", null)

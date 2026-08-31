@@ -35,7 +35,8 @@ export function ProgressGrid({
           : section.hasSubsections
           ? section.subsections!.reduce((sum, sub) => sum + (slotCounts[`${section.key}:${sub.key}`] ?? 0), 0)
           : slotCounts[`${section.key}:`] ?? 0;
-        const isDone = isSchedule ? hasSchedule : total > 0;
+        const requiredCount = section.hasSubsections ? undefined : section.requiredCount ?? 1;
+        const isDone = isSchedule ? hasSchedule : total >= (requiredCount ?? 1);
         const isNew = isSchedule ? !!hasUnviewedSchedule : !!unviewedSectionKeys?.has(section.key);
 
         return (
@@ -64,7 +65,13 @@ export function ProgressGrid({
                 }`}
                 style={isDone ? { backgroundColor: `${section.accentColor}1a`, color: section.accentColor } : undefined}
               >
-                {isSchedule ? (hasSchedule ? "معروض" : "لم يُرفع") : `${total} ملف`}
+                {isSchedule
+                  ? hasSchedule
+                    ? "معروض"
+                    : "لم يُرفع"
+                  : requiredCount && requiredCount > 1
+                  ? `${total}/${requiredCount} ملف`
+                  : `${total} ملف`}
               </span>
             </div>
             {section.note && <p className="text-xs text-amber-600 dark:text-amber-400 mb-2">{section.note}</p>}
@@ -76,7 +83,10 @@ export function ProgressGrid({
                       {sub.labelAr}
                       {sub.note && <span className="text-amber-600 dark:text-amber-400"> ({sub.note})</span>}
                     </span>
-                    <span className="shrink-0">{slotCounts[`${section.key}:${sub.key}`] ?? 0}</span>
+                    <span className="shrink-0">
+                      {slotCounts[`${section.key}:${sub.key}`] ?? 0}
+                      {sub.requiredCount && sub.requiredCount > 1 ? `/${sub.requiredCount}` : ""}
+                    </span>
                   </li>
                 ))}
               </ul>

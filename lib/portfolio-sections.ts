@@ -19,6 +19,8 @@ export interface Subsection {
   labelAr: string;
   /** Optional short requirement note shown next to this subsection, e.g. "زيارتان كحد أدنى". */
   note?: string;
+  /** Number of uploaded files needed for this subsection to reach 100%. Defaults to 1. Uploading more is always allowed. */
+  requiredCount?: number;
 }
 
 export interface PortfolioSection {
@@ -31,6 +33,8 @@ export interface PortfolioSection {
   note?: string;
   /** Hex accent color used to visually distinguish this section's card/heading. */
   accentColor: string;
+  /** Number of uploaded files needed for this section to reach 100% (sections without subsections only). Defaults to 1. Uploading more is always allowed. */
+  requiredCount?: number;
 }
 
 export const PORTFOLIO_SECTIONS: PortfolioSection[] = [
@@ -54,7 +58,7 @@ export const PORTFOLIO_SECTIONS: PortfolioSection[] = [
   },
   {
     key: "weekly_term_plan",
-    labelAr: "الخطة الفصلية",
+    labelAr: "توزيع المنهج",
     hasSubsections: false,
     teacherWritable: true,
     accentColor: "#4f46e5",
@@ -64,29 +68,15 @@ export const PORTFOLIO_SECTIONS: PortfolioSection[] = [
     labelAr: "الخطة الأسبوعية",
     hasSubsections: false,
     teacherWritable: true,
+    requiredCount: 17,
     accentColor: "#6366f1",
   },
   {
-    key: "professional_community",
-    labelAr: "المجتمع المهني",
-    hasSubsections: true,
-    subsections: [
-      { key: "visits", labelAr: "زيارات", note: "زيارتان كحد أدنى" },
-      { key: "meetings", labelAr: "اجتماعات", note: "ثلاث اجتماعات كحد أدنى" },
-    ],
+    key: "lesson_prep",
+    labelAr: "توثيق من منصة مدرستي لتحضير الدروس",
+    hasSubsections: false,
     teacherWritable: true,
-    accentColor: "#0d9488",
-  },
-  {
-    key: "meetings_and_visits",
-    labelAr: "الاجتماعات والزيارات الإدارية",
-    hasSubsections: true,
-    subsections: [
-      { key: "principal_meetings", labelAr: "الاجتماعات من وكيل شؤون المعلمين" },
-      { key: "admin_classroom_visits", labelAr: "الزيارات الصفية مع الإدارة" },
-    ],
-    teacherWritable: false,
-    accentColor: "#7c3aed",
+    accentColor: "#0284c7",
   },
   {
     key: "teaching_strategies",
@@ -94,6 +84,7 @@ export const PORTFOLIO_SECTIONS: PortfolioSection[] = [
     hasSubsections: false,
     teacherWritable: true,
     note: "ثلاث استراتيجيات كحد أدنى في الفصل الدراسي",
+    requiredCount: 3,
     accentColor: "#ea580c",
   },
   {
@@ -107,16 +98,29 @@ export const PORTFOLIO_SECTIONS: PortfolioSection[] = [
       { key: "remedial_plan", labelAr: "الخطة العلاجية" },
       { key: "impact_measurement", labelAr: "قياس الأثر" },
       { key: "student_followup_sheet", labelAr: "كشف متابعة الطلاب" },
+      { key: "student_affairs_agent_contact", labelAr: "التواصل مع وكيل شؤون الطلاب" },
+      { key: "student_counselor_contact", labelAr: "التواصل مع الموجهين الطلابيين" },
     ],
     teacherWritable: true,
     accentColor: "#e11d48",
   },
   {
     key: "parent_interaction",
-    labelAr: "التفاعل مع أولياء الأمور",
+    labelAr: "التواصل مع أولياء الأمور بواسطة منصة مدرستي",
     hasSubsections: false,
     teacherWritable: true,
     accentColor: "#0891b2",
+  },
+  {
+    key: "professional_community",
+    labelAr: "المجتمع المهني",
+    hasSubsections: true,
+    subsections: [
+      { key: "visits", labelAr: "زيارات", note: "زيارتان كحد أدنى", requiredCount: 2 },
+      { key: "meetings", labelAr: "اجتماعات", note: "ثلاث اجتماعات كحد أدنى", requiredCount: 3 },
+    ],
+    teacherWritable: true,
+    accentColor: "#0d9488",
   },
   {
     key: "achievements",
@@ -131,17 +135,27 @@ export const PORTFOLIO_SECTIONS: PortfolioSection[] = [
     accentColor: "#d97706",
   },
   {
-    key: "lesson_prep",
-    labelAr: "تحضير الدروس",
-    hasSubsections: false,
-    teacherWritable: true,
-    note: "منصة مدرستي",
-    accentColor: "#0284c7",
+    key: "meetings_and_visits",
+    labelAr: "الاجتماعات والزيارات الإدارية",
+    hasSubsections: true,
+    subsections: [
+      { key: "principal_meetings", labelAr: "الاجتماعات من وكيل شؤون المعلمين" },
+      { key: "admin_classroom_visits", labelAr: "الزيارات الصفية مع الإدارة" },
+    ],
+    teacherWritable: false,
+    accentColor: "#7c3aed",
   },
   {
     key: "tasks_assignments",
     labelAr: "المهام والتكاليف",
-    hasSubsections: false,
+    hasSubsections: true,
+    subsections: [
+      { key: "administrative_tasks", labelAr: "التكاليف الإدارية" },
+      { key: "exam_writing", labelAr: "تكاليف وضع الاختبارات" },
+      { key: "duty", labelAr: "المناوبة" },
+      { key: "recess_supervision", labelAr: "إشراف الفسحة" },
+      { key: "curriculum_completion_acknowledgment", labelAr: "إقرار إنهاء المنهج" },
+    ],
     teacherWritable: false,
     accentColor: "#c026d3",
   },
@@ -155,7 +169,12 @@ export const PORTFOLIO_SECTIONS: PortfolioSection[] = [
   {
     key: "excuse_request",
     labelAr: "الاستئذان",
-    hasSubsections: false,
+    hasSubsections: true,
+    subsections: [
+      { key: "hospital_appointments", labelAr: "مواعيد المستشفى" },
+      { key: "health_center_appointments", labelAr: "مواعيد المراكز الصحية" },
+      { key: "other", labelAr: "أخرى" },
+    ],
     teacherWritable: true,
     accentColor: "#65a30d",
   },
@@ -175,15 +194,16 @@ export function isValidCategory(category: string, subcategory?: string | null): 
 
 /** Total number of trackable "slots" across all sections (subsections count individually).
  *  The schedule is tracked separately since it is admin-uploaded, not teacher-completed. */
-export const TEACHER_SLOTS: { section: SectionKey; subsection?: string; labelAr: string }[] =
+export const TEACHER_SLOTS: { section: SectionKey; subsection?: string; labelAr: string; requiredCount: number }[] =
   PORTFOLIO_SECTIONS.filter((s) => s.key !== "schedule").flatMap((s) =>
     s.hasSubsections
       ? s.subsections!.map((sub) => ({
           section: s.key,
           subsection: sub.key,
           labelAr: `${s.labelAr} - ${sub.labelAr}`,
+          requiredCount: sub.requiredCount ?? 1,
         }))
-      : [{ section: s.key, labelAr: s.labelAr }]
+      : [{ section: s.key, labelAr: s.labelAr, requiredCount: s.requiredCount ?? 1 }]
   );
 
 export const TOTAL_TEACHER_SLOTS = TEACHER_SLOTS.length;
@@ -199,3 +219,11 @@ export const ACCEPTED_MIME_TYPES = [
 export const ACCEPTED_EXTENSIONS = [".pdf", ".doc", ".docx", ".png", ".jpg", ".jpeg"];
 
 export const MAX_FILE_SIZE_BYTES = 10 * 1024 * 1024; // 10MB
+
+export const ACCOUNTABILITY_STATUSES = ["excused", "rejected"] as const;
+export type AccountabilityStatus = (typeof ACCOUNTABILITY_STATUSES)[number];
+
+export const ACCOUNTABILITY_STATUS_LABELS_AR: Record<AccountabilityStatus, string> = {
+  excused: "مقبول بعذر",
+  rejected: "غير مقبول",
+};
