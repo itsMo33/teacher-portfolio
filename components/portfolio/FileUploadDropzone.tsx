@@ -3,6 +3,15 @@
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 
+// Vercel caps a serverless function's request body at 4.5MB, well under the 10MB files this app
+// accepts. Files under this threshold go through the old direct-POST path unchanged; anything
+// larger uploads straight to Supabase Storage via a signed URL, bypassing our function entirely.
+const LARGE_FILE_THRESHOLD = 4 * 1024 * 1024;
+
+function getSignedUrlEndpoint(uploadUrl: string): string {
+  return uploadUrl === "/api/portfolio/upload" ? "/api/portfolio/upload-url" : `${uploadUrl}/upload-url`;
+}
+
 export function FileUploadDropzone({
   uploadUrl,
   extraFields,
@@ -16,7 +25,7 @@ export function FileUploadDropzone({
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  async function uploadOne(file: File): Promise<string | null> {
+  async function uploadSmall(file: File): Promise<string | null> {
     const formData = new FormData();
     formData.append("file", file);
     for (const [key, value] of Object.entries(extraFields ?? {})) {
@@ -29,6 +38,43 @@ export function FileUploadDropzone({
       return body.error ?? `فشل رفع الملف: ${file.name}`;
     }
     return null;
+  }
+
+  async function uploadLarge(file: File): Promise<string | null> {
+    const urlRes = await fetch(getSignedUrlEndpoint(uploadUrl), {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ ...extraFields, fileName: file.name, mimeType: file.type, size: file.size }),
+    });
+    if (!urlRes.ok) {
+      const body = await urlRes.json().catch(() => ({}));
+      return body.error ?? `فشل رفع الملف: ${file.name}`;
+    }
+    const { path, signedUrl } = await urlRes.json();
+
+    const putRes = await fetch(signedUrl, {
+      method: "PUT",
+      headers: { "Content-Type": file.type || "application/octet-stream" },
+      body: file,
+    });
+    if (!putRes.ok) {
+      return `فشل رفع الملف: ${file.name}`;
+    }
+
+    const confirmRes = await fetch(uploadUrl, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ ...extraFields, filePath: path, fileName: file.name, mimeType: file.type }),
+    });
+    if (!confirmRes.ok) {
+      const body = await confirmRes.json().catch(() => ({}));
+      return body.error ?? `فشل رفع الملف: ${file.name}`;
+    }
+    return null;
+  }
+
+  async function uploadOne(file: File): Promise<string | null> {
+    return file.size > LARGE_FILE_THRESHOLD ? uploadLarge(file) : uploadSmall(file);
   }
 
   async function handleFiles(files: FileList | null) {

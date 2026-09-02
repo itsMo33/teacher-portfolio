@@ -64,3 +64,15 @@ export async function getSignedUrl(bucket: string, path: string, expiresInSecond
   if (error) throw error;
   return data.signedUrl;
 }
+
+/**
+ * A one-time URL the browser can upload directly to, bypassing our own serverless function --
+ * Vercel hard-caps a serverless function's request body at 4.5MB, well under the 10MB files this
+ * app accepts, so large files must go straight from the browser to storage instead of through
+ * our API route.
+ */
+export async function createUploadSignedUrl(bucket: string, path: string) {
+  const { data, error } = await supabaseAdmin.storage.from(bucket).createSignedUploadUrl(path);
+  if (error) throw error;
+  return data;
+}
