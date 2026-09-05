@@ -10,14 +10,12 @@ export default async function AdminStatisticsPage() {
 
   const sectionStats: SectionBreakdownItem[] = sections.map((section) => {
     const teacherStatuses = teachers.map((t) => {
-      const totalCount = section.hasSubsections ? section.subsections!.length : 1;
+      const totalCount = section.hasSubsections ? section.subsections!.length : (section.requiredCount ?? 1);
       const doneCount = section.hasSubsections
         ? section.subsections!.filter(
             (sub) => (t.slotCounts[`${section.key}:${sub.key}`] ?? 0) >= (sub.requiredCount ?? 1)
           ).length
-        : (t.slotCounts[`${section.key}:`] ?? 0) >= (section.requiredCount ?? 1)
-          ? 1
-          : 0;
+        : Math.min(t.slotCounts[`${section.key}:`] ?? 0, totalCount);
       return { name: t.name, doneCount, totalCount };
     });
     teacherStatuses.sort((a, b) => b.doneCount / b.totalCount - a.doneCount / a.totalCount);
