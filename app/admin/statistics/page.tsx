@@ -17,6 +17,7 @@ export default async function AdminStatisticsPage() {
         : (t.slotCounts[`${section.key}:`] ?? 0) >= (section.requiredCount ?? 1);
       return { name: t.name, done };
     });
+    teacherStatuses.sort((a, b) => Number(b.done) - Number(a.done));
     const count = teacherStatuses.filter((t) => t.done).length;
     return { key: section.key, label: section.labelAr, count, teachers: teacherStatuses };
   });
