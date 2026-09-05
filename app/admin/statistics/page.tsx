@@ -19,14 +19,13 @@ export default async function AdminStatisticsPage() {
       return { name: t.name, doneCount, totalCount };
     });
     teacherStatuses.sort((a, b) => b.doneCount / b.totalCount - a.doneCount / a.totalCount);
-    const count = teacherStatuses.filter((t) => t.doneCount >= t.totalCount).length;
+    // Any upload counts here, even partial -- a teacher who uploaded 1 of 17 weekly plans still
+    // shows up in this count instead of only teachers who fully completed the section.
+    const count = teacherStatuses.filter((t) => t.doneCount > 0).length;
     return { key: section.key, label: section.labelAr, count, teachers: teacherStatuses };
   });
 
   const scheduleCount = teachers.filter((t) => t.hasSchedule).length;
-
-  const averageCompletion =
-    total > 0 ? Math.round(teachers.reduce((sum, t) => sum + t.completionPercent, 0) / total) : 0;
 
   const fullyCompleteCount = teachers.filter((t) => t.completionPercent === 100).length;
 
@@ -34,9 +33,8 @@ export default async function AdminStatisticsPage() {
     <div className="flex flex-col gap-8 max-w-2xl">
       <h2 className="text-xl font-bold text-slate-900 dark:text-slate-50">الإحصائيات</h2>
 
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+      <div className="grid grid-cols-3 gap-4">
         <StatCard label="عدد المعلمين" value={total} />
-        <StatCard label="متوسط الإنجاز" value={`${averageCompletion}%`} />
         <StatCard label="أكملوا الملف بالكامل" value={fullyCompleteCount} />
         <StatCard label="رفعوا الجدول" value={scheduleCount} />
       </div>
