@@ -4,7 +4,10 @@ import { useState } from "react";
 
 export interface SectionBreakdownTeacher {
   name: string;
-  done: boolean;
+  /** How many of this section's subsections the teacher completed (1 for sections without subsections). */
+  doneCount: number;
+  /** Total subsections in this section (1 for sections without subsections). */
+  totalCount: number;
 }
 
 export interface SectionBreakdownItem {
@@ -48,18 +51,20 @@ export function SectionBreakdownList({ sections, total }: { sections: SectionBre
 
             {isOpen && (
               <div className="mt-3 flex flex-wrap gap-1.5 border-t border-slate-100 dark:border-slate-800 pt-3">
-                {s.teachers.map((t) => (
-                  <span
-                    key={t.name}
-                    className={`rounded-full px-2.5 py-1 text-xs ${
-                      t.done
-                        ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300"
-                        : "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300"
-                    }`}
-                  >
-                    {t.name}
-                  </span>
-                ))}
+                {s.teachers.map((t) => {
+                  const colorClass =
+                    t.doneCount >= t.totalCount
+                      ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300"
+                      : t.doneCount > 0
+                        ? "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300"
+                        : "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300";
+                  return (
+                    <span key={t.name} className={`rounded-full px-2.5 py-1 text-xs ${colorClass}`}>
+                      {t.name}
+                      {t.totalCount > 1 && ` (${t.doneCount}/${t.totalCount})`}
+                    </span>
+                  );
+                })}
               </div>
             )}
           </div>
