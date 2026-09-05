@@ -23,7 +23,7 @@ export function DeleteTeacherButton({ teacherId, teacherName }: { teacherId: str
       return;
     }
 
-    router.push("/admin");
+    router.push("/admin/teachers");
     router.refresh();
   }
 

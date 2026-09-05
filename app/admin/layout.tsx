@@ -3,6 +3,7 @@ import { AppShell, type NavItem } from "@/components/ui/AppShell";
 
 const navItems: NavItem[] = [
   { href: "/admin", label: "لوحة تحكم" },
+  { href: "/admin/teachers", label: "قائمة المعلمين" },
   { href: "/admin/uploads", label: "رفع ملفات للمعلمين" },
   { href: "/admin/substitute-schedule", label: "جدول الانتظار" },
   { href: "/admin/teachers/new", label: "إضافة معلم" },
