@@ -50,6 +50,21 @@ export async function getUnviewedAdminSectionKeys(teacherId: string): Promise<Se
   return new Set((data ?? []).map((row) => row.category));
 }
 
+/** Section keys (teacher-writable) that have at least one attachment the admin hasn't opened yet. */
+export async function getUnviewedByAdminSectionKeys(teacherId: string): Promise<Set<string>> {
+  const teacherWritableCategories = PORTFOLIO_SECTIONS.filter((s) => s.teacherWritable).map((s) => s.key);
+
+  const { data } = await supabaseAdmin
+    .from("attachments")
+    .select("category")
+    .eq("teacher_id", teacherId)
+    .is("deleted_at", null)
+    .is("admin_viewed_at", null)
+    .in("category", teacherWritableCategories);
+
+  return new Set((data ?? []).map((row) => row.category));
+}
+
 export async function getHasUnviewedSchedule(teacherId: string): Promise<boolean> {
   const { count } = await supabaseAdmin
     .from("schedules")

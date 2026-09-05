@@ -17,15 +17,21 @@ export function ProgressGrid({
   hasSchedule,
   unviewedSectionKeys,
   hasUnviewedSchedule,
+  scheduleHref = "/teacher/schedule",
+  scheduleUploadedLabel = "معروض",
 }: {
   /** Maps "category:subcategory" (subcategory empty string when the section has none) to file count. */
   slotCounts: Record<string, number>;
   linkPrefix: string;
   /** Whether the admin has uploaded a schedule for this teacher. */
   hasSchedule: boolean;
-  /** Section keys with at least one admin-uploaded file the teacher hasn't opened yet. */
+  /** Section keys with at least one file the viewer hasn't opened yet. */
   unviewedSectionKeys?: Set<string>;
   hasUnviewedSchedule?: boolean;
+  /** Where the "الجدول المدرسي" card links to. Defaults to the teacher's own schedule page. */
+  scheduleHref?: string;
+  /** Badge text shown on the schedule card when a schedule exists. Defaults to the teacher-facing wording. */
+  scheduleUploadedLabel?: string;
 }) {
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -63,7 +69,7 @@ export function ProgressGrid({
 
         let badgeText: string | null;
         if (isSchedule) {
-          badgeText = hasSchedule ? "معروض" : "لم يُرفع";
+          badgeText = hasSchedule ? scheduleUploadedLabel : "لم يُرفع";
         } else if (!sectionShowPercent) {
           badgeText = (section.hasSubsections ? allSubsectionsDone : isDone) ? TROPHY_BADGE : `${total} ملف`;
         } else if (requiredCount && requiredCount > 1) {
@@ -75,7 +81,7 @@ export function ProgressGrid({
         return (
           <Link
             key={section.key}
-            href={isSchedule ? "/teacher/schedule" : `${linkPrefix}/${section.key}`}
+            href={isSchedule ? scheduleHref : `${linkPrefix}/${section.key}`}
             style={{
               borderInlineStartColor: section.accentColor,
               borderInlineStartWidth: 4,
