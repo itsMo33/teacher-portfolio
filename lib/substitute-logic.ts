@@ -1,5 +1,5 @@
 import { DAYS, DayKey, OFFICIAL_LOAD, PERIODS, PeriodKey, TEACHER_BY_NAME } from "./substitute-data";
-import { STATIC_RANK_TABLE } from "./substitute-static-schedule";
+import { ALWAYS_AVAILABLE_PERIODS, ALWAYS_AVAILABLE_TEACHERS, STATIC_RANK_TABLE } from "./substitute-static-schedule";
 
 export interface SubstituteAssignment {
   day: DayKey;
@@ -61,7 +61,26 @@ export const RANK_LABELS = [
   "المنتظر الثالث",
   "المنتظر الرابع",
   "المنتظر الخامس",
+  "المنتظر السادس",
 ];
+
+/**
+ * The four standing substitutes with no official teaching load, offered for periods 2-6 only
+ * (never period 1, never period 7) every day regardless of the numbered ranking above -- listed
+ * with no rank number since they're a separate always-available pool, not part of the ranking.
+ */
+export function getAlwaysAvailableCandidates(
+  assignments: SubstituteAssignment[],
+  day: DayKey,
+  period: PeriodKey,
+  absentTeacherName: string
+): string[] {
+  if (!ALWAYS_AVAILABLE_PERIODS.includes(period)) return [];
+
+  return ALWAYS_AVAILABLE_TEACHERS.filter((name) => name !== absentTeacherName).filter(
+    (name) => !isAlreadyAssignedThatSlot(assignments, name, day, period)
+  );
+}
 
 export interface AbsenceGroupRow {
   period: PeriodKey;

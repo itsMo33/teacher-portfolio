@@ -17,6 +17,7 @@ import {
   RANK_LABELS,
   SubstituteAssignment,
   buildAbsenceGroups,
+  getAlwaysAvailableCandidates,
   getCandidates,
 } from "@/lib/substitute-logic";
 import { SCHOOL_NAME } from "@/lib/school";
@@ -285,6 +286,9 @@ export default function SubstituteSchedulePage() {
               dayPeriods.map(({ period, section }) => {
                 const existing = assignmentFor(selectedDay, period, absentTeacher);
                 const candidates = existing ? [] : getCandidates(assignments, selectedDay, period, absentTeacher);
+                const alwaysAvailable = existing
+                  ? []
+                  : getAlwaysAvailableCandidates(assignments, selectedDay, period, absentTeacher);
 
                 return (
                   <div
@@ -303,7 +307,7 @@ export default function SubstituteSchedulePage() {
                     {existing ? (
                       <div className="flex items-center justify-between rounded-lg bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 px-4 py-3">
                         <p className="text-sm text-green-700 dark:text-green-300">
-                          ✓ يغطيها: <strong>{existing.substitute}</strong> — {RANK_LABELS[existing.rank - 1]}
+                          ✓ يغطيها: <strong>{existing.substitute}</strong> — {existing.rank === 0 ? "منتظر" : RANK_LABELS[existing.rank - 1]}
                         </p>
                         <button
                           type="button"
@@ -315,11 +319,11 @@ export default function SubstituteSchedulePage() {
                       </div>
                     ) : (
                       <div className="flex flex-col gap-2">
-                        {candidates.length === 0 ? (
+                        {candidates.length === 0 && alwaysAvailable.length === 0 ? (
                           <p className="text-sm text-amber-600 dark:text-amber-400">لا يوجد معلم متاح لتغطية هذه الحصة حالياً.</p>
                         ) : (
                           <>
-                            {candidates.length < 5 && (
+                            {candidates.length > 0 && candidates.length < 5 && (
                               <p className="text-xs text-slate-400">يوجد {candidates.length} مرشح متاح فقط لهذه الحصة</p>
                             )}
                             {candidates.map((c, i) => (
@@ -342,6 +346,26 @@ export default function SubstituteSchedulePage() {
                                 </button>
                               </div>
                             ))}
+                            {alwaysAvailable.length > 0 && (
+                              <div className="flex flex-col gap-2 pt-1">
+                                <p className="text-xs text-slate-400">منتظرون دائمون (بدون ترتيب)</p>
+                                {alwaysAvailable.map((name) => (
+                                  <div
+                                    key={name}
+                                    className="flex items-center justify-between gap-3 rounded-lg border border-dashed border-slate-300 dark:border-slate-700 px-3 py-2"
+                                  >
+                                    <p className="text-sm font-medium text-slate-800 dark:text-slate-100">منتظر: {name}</p>
+                                    <button
+                                      type="button"
+                                      onClick={() => handleAssign(selectedDay, period, absentTeacher, section, name, 0)}
+                                      className="shrink-0 rounded-lg bg-[var(--brand-primary)] hover:bg-[var(--brand-primary-dark)] text-white text-sm px-3 py-1.5 transition-colors"
+                                    >
+                                      إسناد
+                                    </button>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
                           </>
                         )}
                       </div>
