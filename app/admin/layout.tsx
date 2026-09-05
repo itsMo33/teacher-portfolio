@@ -2,7 +2,7 @@ import { auth } from "@/lib/auth/auth-options";
 import { AppShell, type NavItem } from "@/components/ui/AppShell";
 
 const navItems: NavItem[] = [
-  { href: "/admin", label: "قائمة المعلمين" },
+  { href: "/admin", label: "لوحة تحكم" },
   { href: "/admin/uploads", label: "رفع ملفات للمعلمين" },
   { href: "/admin/substitute-schedule", label: "جدول الانتظار" },
   { href: "/admin/teachers/new", label: "إضافة معلم" },
