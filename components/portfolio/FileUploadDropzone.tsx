@@ -9,7 +9,9 @@ import { useRouter } from "next/navigation";
 const LARGE_FILE_THRESHOLD = 4 * 1024 * 1024;
 
 function getSignedUrlEndpoint(uploadUrl: string): string {
-  return uploadUrl === "/api/portfolio/upload" ? "/api/portfolio/upload-url" : `${uploadUrl}/upload-url`;
+  if (uploadUrl === "/api/portfolio/upload") return "/api/portfolio/upload-url";
+  if (uploadUrl === "/api/school-files/upload") return "/api/school-files/upload-url";
+  return `${uploadUrl}/upload-url`;
 }
 
 export function FileUploadDropzone({

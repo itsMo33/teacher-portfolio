@@ -37,4 +37,6 @@ export const ACTION_LABELS_AR: Record<string, string> = {
   soft_delete_teacher: "حذف حساب معلم",
   restore_teacher: "استعادة حساب معلم",
   purge_teacher: "حذف حساب معلم نهائيًا",
+  upload_school_file: "رفع ملف إدارة المدرسة",
+  soft_delete_school_file: "حذف ملف إدارة المدرسة",
 };

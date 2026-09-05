@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import { supabaseAdmin } from "@/lib/supabase/server";
-import { PORTFOLIO_SECTIONS, TEACHER_SLOTS, TOTAL_TEACHER_SLOTS } from "@/lib/portfolio-sections";
+import { PORTFOLIO_SECTIONS, TEACHER_COMPLETION_SLOTS, TOTAL_TEACHER_COMPLETION_SLOTS } from "@/lib/portfolio-sections";
 import { getSectionAttachments, getSlotCounts } from "@/lib/portfolio-data";
 import { SCHOOL_NAME } from "@/lib/school";
 import { PrintButton } from "@/components/admin/PrintButton";
@@ -33,11 +33,11 @@ export default async function TeacherPrintReportPage({
 
   const slotCounts = await getSlotCounts(teacherId);
   const completionPercent = Math.round(
-    (TEACHER_SLOTS.reduce((sum, slot) => {
+    (TEACHER_COMPLETION_SLOTS.reduce((sum, slot) => {
       const count = slotCounts[`${slot.section}:${slot.subsection ?? ""}`] ?? 0;
       return sum + Math.min(count / slot.requiredCount, 1);
     }, 0) /
-      TOTAL_TEACHER_SLOTS) *
+      TOTAL_TEACHER_COMPLETION_SLOTS) *
       100
   );
 

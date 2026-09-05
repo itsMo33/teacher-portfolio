@@ -40,6 +40,10 @@ export function buildSchedulePath(teacherId: string, fileName: string) {
   return `schedules/${teacherId}/${randomUUID()}${safeExtension(fileName)}`;
 }
 
+export function buildSchoolFilePath(category: string, fileName: string) {
+  return `school-management/${category}/${randomUUID()}${safeExtension(fileName)}`;
+}
+
 export async function uploadFile(
   bucket: string,
   path: string,

@@ -79,6 +79,20 @@ exception
   when duplicate_object then null;
 end $$;
 
+-- Admin-only files not tied to any teacher (مدير المدرسة، وكيل شؤون المعلمين، إلخ), shown under
+-- "إدارة المدرسة" -- never visible to teachers.
+create table if not exists school_files (
+  id uuid primary key default gen_random_uuid(),
+  category text not null,
+  file_path text not null,
+  file_name text not null,
+  mime_type text not null,
+  uploaded_at timestamptz not null default now(),
+  uploaded_by uuid not null references users(id),
+  deleted_at timestamptz
+);
+create index if not exists idx_school_files_category on school_files(category);
+
 create table if not exists activity_log (
   id uuid primary key default gen_random_uuid(),
   actor_id uuid references users(id),

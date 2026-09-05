@@ -1,5 +1,6 @@
 import { getTeachersWithCompletion } from "@/lib/teachers-data";
 import { PORTFOLIO_SECTIONS } from "@/lib/portfolio-sections";
+import { SectionBreakdownList, type SectionBreakdownItem } from "@/components/admin/SectionBreakdownList";
 
 export default async function AdminStatisticsPage() {
   const teachers = await getTeachersWithCompletion();
@@ -7,13 +8,17 @@ export default async function AdminStatisticsPage() {
 
   const sections = PORTFOLIO_SECTIONS.filter((s) => s.key !== "schedule");
 
-  const sectionStats = sections.map((section) => {
-    const count = teachers.filter((t) =>
-      section.hasSubsections
-        ? section.subsections!.some((sub) => t.filledSlots.has(`${section.key}:${sub.key}`))
-        : t.filledSlots.has(`${section.key}:`)
-    ).length;
-    return { label: section.labelAr, count };
+  const sectionStats: SectionBreakdownItem[] = sections.map((section) => {
+    const teacherStatuses = teachers.map((t) => {
+      const done = section.hasSubsections
+        ? section.subsections!.every(
+            (sub) => (t.slotCounts[`${section.key}:${sub.key}`] ?? 0) >= (sub.requiredCount ?? 1)
+          )
+        : (t.slotCounts[`${section.key}:`] ?? 0) >= (section.requiredCount ?? 1);
+      return { name: t.name, done };
+    });
+    const count = teacherStatuses.filter((t) => t.done).length;
+    return { key: section.key, label: section.labelAr, count, teachers: teacherStatuses };
   });
 
   const scheduleCount = teachers.filter((t) => t.hasSchedule).length;
@@ -36,25 +41,8 @@ export default async function AdminStatisticsPage() {
 
       <div className="flex flex-col gap-3">
         <h3 className="font-bold text-slate-800 dark:text-slate-100">عدد المعلمين اللي رفعوا ملف لكل قسم</h3>
-        {sectionStats.map((s) => {
-          const percent = total > 0 ? Math.round((s.count / total) * 100) : 0;
-          return (
-            <div key={s.label} className="rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-3">
-              <div className="flex items-center justify-between mb-1.5 text-sm">
-                <span className="text-slate-700 dark:text-slate-200">{s.label}</span>
-                <span className="text-slate-500">
-                  {s.count} من {total} ({percent}%)
-                </span>
-              </div>
-              <div className="h-2 rounded-full bg-slate-100 dark:bg-slate-800 overflow-hidden">
-                <div
-                  className="h-full bg-[var(--brand-primary)] rounded-full"
-                  style={{ width: `${percent}%` }}
-                />
-              </div>
-            </div>
-          );
-        })}
+        <p className="text-xs text-slate-400">اضغط على أي قسم لعرض المعلمين اللي رفعوا (أخضر) والي ما رفعوا (أحمر)</p>
+        <SectionBreakdownList sections={sectionStats} total={total} />
       </div>
     </div>
   );

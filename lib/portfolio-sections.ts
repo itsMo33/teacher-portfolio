@@ -215,6 +215,21 @@ export const TEACHER_SLOTS: { section: SectionKey; subsection?: string; labelAr:
 
 export const TOTAL_TEACHER_SLOTS = TEACHER_SLOTS.length;
 
+/** Sections that track admin/HR matters rather than the teacher's own portfolio work, so they're
+ *  kept out of the "نسبة الإنجاز" completion percentage even though files still get uploaded to
+ *  them and they still show up in per-section breakdowns and reports. */
+export const COMPLETION_EXCLUDED_KEYS: SectionKey[] = [
+  "accountability",
+  "excuse_request",
+  "meetings_and_visits",
+  "tasks_assignments",
+];
+
+export const TEACHER_COMPLETION_SLOTS = TEACHER_SLOTS.filter(
+  (s) => !COMPLETION_EXCLUDED_KEYS.includes(s.section)
+);
+export const TOTAL_TEACHER_COMPLETION_SLOTS = TEACHER_COMPLETION_SLOTS.length;
+
 export const ACCEPTED_MIME_TYPES = [
   "application/pdf",
   "application/msword",
