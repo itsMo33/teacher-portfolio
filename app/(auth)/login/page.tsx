@@ -63,7 +63,7 @@ export default function LoginPage() {
           <Image src="/vision2030-logo.png" alt="رؤية 2030" width={90} height={90} className="h-11 sm:h-12 w-auto object-contain transition-transform duration-300 hover:scale-110" />
         </div>
         <h1 className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-slate-50 text-center mb-1">
-          بوابة إنجاز المعلمين
+          أثر
         </h1>
         <p className="text-sm font-medium text-[var(--brand-primary)] text-center mb-1">{SCHOOL_NAME}</p>
         <p className="text-sm text-slate-500 dark:text-slate-400 text-center mb-6">

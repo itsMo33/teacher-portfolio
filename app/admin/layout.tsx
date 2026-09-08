@@ -29,7 +29,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
     : fullNavItems;
 
   return (
-    <AppShell title="بوابة الإدارة" userName={session?.user?.name ?? ""} navItems={navItems}>
+    <AppShell title="أثر" userName={session?.user?.name ?? ""} navItems={navItems}>
       {children}
     </AppShell>
   );

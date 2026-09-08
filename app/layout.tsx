@@ -9,7 +9,7 @@ const tajawal = Tajawal({
 });
 
 export const metadata: Metadata = {
-  title: "بوابة إنجاز المعلمين",
+  title: "أثر",
   description: "نظام إدارة ملفات إنجاز المعلمين للمدرسة",
 };
 
