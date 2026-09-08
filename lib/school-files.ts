@@ -91,7 +91,9 @@ export function isValidSchoolManagementSlot(category: string, subcategory: strin
   const cat = getSchoolManagementCategory(category);
   if (!cat) return false;
   if (!cat.subsections) return !subcategory;
-  if (!subcategory) return false;
+  // A category with subsections still accepts an uncategorized ("عام") upload for files that
+  // don't fit any one subsection -- shown separately as a general/catch-all bucket.
+  if (!subcategory) return true;
   return cat.subsections.some((s) => s.key === subcategory);
 }
 

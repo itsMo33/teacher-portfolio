@@ -57,16 +57,19 @@ export default async function SchoolManagementPage() {
 
               {cat.subsections &&
                 (await (async () => {
-                  // Files uploaded before this category had subsections (subcategory is null) --
-                  // keep them visible under a catch-all instead of hiding them.
-                  const legacyFiles = await getSchoolFiles(cat.key, null);
-                  if (legacyFiles.length === 0) return null;
+                  // A general bucket for files that don't fit any one subsection above
+                  // (subcategory null) -- also where pre-subsection uploads still live.
+                  const generalFiles = await getSchoolFiles(cat.key, null);
                   return (
                     <div className="flex flex-col gap-2 pr-3">
-                      <h4 className="text-sm font-medium text-slate-600 dark:text-slate-300">
-                        ملفات سابقة (قبل تقسيم هذا القسم لخانات)
-                      </h4>
-                      <SchoolFileList files={legacyFiles} canDelete={!isOwned} />
+                      <h4 className="text-sm font-medium text-slate-600 dark:text-slate-300">ملفات عامة</h4>
+                      {!isOwned && (
+                        <FileUploadDropzone
+                          uploadUrl="/api/school-files/upload"
+                          extraFields={{ category: cat.key, subcategory: "" }}
+                        />
+                      )}
+                      <SchoolFileList files={generalFiles} canDelete={!isOwned} />
                     </div>
                   );
                 })())}
