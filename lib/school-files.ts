@@ -16,7 +16,23 @@ export interface SchoolManagementCategory {
 
 export const SCHOOL_MANAGEMENT_CATEGORIES: SchoolManagementCategory[] = [
   { key: "principal", labelAr: "ملف مدير المدرسة", accentColor: "#1d4ed8" },
-  { key: "teacher_affairs_agent", labelAr: "ملف وكيل شؤون المعلمين والشؤون التعليمية", accentColor: "#0f766e" },
+  {
+    key: "teacher_affairs_agent",
+    labelAr: "وكيل شؤون المعلمين والشؤون التعليمية",
+    accentColor: "#0f766e",
+    subsections: [
+      { key: "teacher_data", labelAr: "بيانات المعلمين" },
+      { key: "schedules_loads", labelAr: "الجداول والأنصبة" },
+      { key: "waiting_duty_supervision", labelAr: "الانتظار والمناوبات والإشراف" },
+      { key: "attendance_regularity", labelAr: "الدوام والانتظام" },
+      { key: "assignments_tasks", labelAr: "التكليفات والمهام" },
+      { key: "performance_followup", labelAr: "متابعة أداء المعلمين" },
+      { key: "classroom_visits", labelAr: "الزيارات الصفية" },
+      { key: "support_development", labelAr: "الدعم والتنمية المهنية" },
+      { key: "exams_evaluation", labelAr: "الاختبارات والتقويم" },
+      { key: "achievement_analysis", labelAr: "التحصيل الدراسي وتحليل النتائج" },
+    ],
+  },
   {
     key: "student_affairs_agent",
     labelAr: "وكيل شؤون الطلاب",

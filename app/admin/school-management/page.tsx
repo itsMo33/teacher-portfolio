@@ -54,6 +54,22 @@ export default async function SchoolManagementPage() {
                   );
                 })
               )}
+
+              {cat.subsections &&
+                (await (async () => {
+                  // Files uploaded before this category had subsections (subcategory is null) --
+                  // keep them visible under a catch-all instead of hiding them.
+                  const legacyFiles = await getSchoolFiles(cat.key, null);
+                  if (legacyFiles.length === 0) return null;
+                  return (
+                    <div className="flex flex-col gap-2 pr-3">
+                      <h4 className="text-sm font-medium text-slate-600 dark:text-slate-300">
+                        ملفات سابقة (قبل تقسيم هذا القسم لخانات)
+                      </h4>
+                      <SchoolFileList files={legacyFiles} canDelete={!isOwned} />
+                    </div>
+                  );
+                })())}
             </div>
           );
         })
