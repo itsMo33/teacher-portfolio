@@ -46,6 +46,7 @@ export function AppShell({
           </div>
           <div className="min-w-0">
             <h1 className="truncate text-base font-bold text-slate-900 dark:text-slate-50 sm:text-lg">{title}</h1>
+            <p className="truncate text-[11px] font-medium text-[var(--brand-primary)]">وثّق عطاءك.. ليبقى أثرك</p>
             <p className="truncate text-[11px] text-slate-400">{SCHOOL_NAME}</p>
             <p className="truncate text-xs text-slate-500 dark:text-slate-400">مرحبًا، {userName}</p>
           </div>
