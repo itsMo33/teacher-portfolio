@@ -1,5 +1,9 @@
 import Link from "next/link";
+import { auth } from "@/lib/auth/auth-options";
 import { supabaseAdmin } from "@/lib/supabase/server";
+import { getSchoolManagementCategory, getSchoolFiles } from "@/lib/school-files";
+import { FileUploadDropzone } from "@/components/portfolio/FileUploadDropzone";
+import { SchoolFileList } from "@/components/admin/SchoolFileList";
 
 interface DashboardCard {
   href: string;
@@ -22,7 +26,36 @@ const DASHBOARD_CARDS: DashboardCard[] = [
   { href: "/admin/settings", label: "الإعدادات", description: "إعدادات الحساب", accentColor: "#64748b" },
 ];
 
+async function RestrictedDashboard({ categoryKey }: { categoryKey: string }) {
+  const category = getSchoolManagementCategory(categoryKey);
+  if (!category) {
+    return <p className="text-sm text-red-600 dark:text-red-400">القسم المخصص لهذا الحساب غير موجود.</p>;
+  }
+
+  const files = await getSchoolFiles(category.key);
+
+  return (
+    <div className="max-w-2xl">
+      <h2 className="flex items-center gap-2 text-xl font-bold text-slate-900 dark:text-slate-50 mb-4">
+        <span className="inline-block h-3 w-3 shrink-0 rounded-full" style={{ backgroundColor: category.accentColor }} />
+        {category.labelAr}
+      </h2>
+      <div className="flex flex-col gap-3">
+        <FileUploadDropzone uploadUrl="/api/school-files/upload" extraFields={{ category: category.key }} />
+        <SchoolFileList files={files} />
+      </div>
+    </div>
+  );
+}
+
 export default async function AdminDashboard() {
+  const session = await auth();
+  const restrictedCategory = session?.user?.restrictedCategory;
+
+  if (restrictedCategory) {
+    return <RestrictedDashboard categoryKey={restrictedCategory} />;
+  }
+
   const { count: teacherCount } = await supabaseAdmin
     .from("users")
     .select("id", { count: "exact", head: true })

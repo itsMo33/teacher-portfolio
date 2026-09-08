@@ -28,6 +28,10 @@ export async function DELETE(req: NextRequest) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
 
+  if (session.user.restrictedCategory && file.category !== session.user.restrictedCategory) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
+
   // Soft delete only -- the file stays in storage and the row stays in the DB
   // until an admin permanently purges it from the trash.
   const { error: deleteError } = await supabaseAdmin

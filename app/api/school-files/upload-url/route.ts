@@ -24,6 +24,10 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Missing or invalid category, fileName or size" }, { status: 400 });
   }
 
+  if (session.user.restrictedCategory && category !== session.user.restrictedCategory) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
+
   if (!ACCEPTED_MIME_TYPES.includes(mimeType)) {
     const ext = "." + fileName.split(".").pop()?.toLowerCase();
     if (!ACCEPTED_EXTENSIONS.includes(ext)) {

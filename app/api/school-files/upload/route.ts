@@ -46,6 +46,10 @@ async function handleConfirm(req: NextRequest, session: Session) {
     return NextResponse.json({ error: "Missing or invalid category, filePath or fileName" }, { status: 400 });
   }
 
+  if (session.user.restrictedCategory && category !== session.user.restrictedCategory) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
+
   return finalize(session, category, filePath, fileName, mimeType);
 }
 
@@ -69,6 +73,10 @@ export async function POST(req: NextRequest) {
 
   if (!category || !file || !isValidSchoolManagementCategory(category)) {
     return NextResponse.json({ error: "Missing or invalid category/file" }, { status: 400 });
+  }
+
+  if (session.user.restrictedCategory && category !== session.user.restrictedCategory) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
   if (!ACCEPTED_MIME_TYPES.includes(file.type)) {

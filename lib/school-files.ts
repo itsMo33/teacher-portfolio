@@ -8,12 +8,17 @@ export const SCHOOL_MANAGEMENT_CATEGORIES = [
   { key: "student_affairs_agent", labelAr: "ملف وكيل شؤون الطلاب", accentColor: "#b45309" },
   { key: "student_counselor", labelAr: "ملف الموجه الطلابي", accentColor: "#7c3aed" },
   { key: "student_activity", labelAr: "ملف النشاط الطلابي", accentColor: "#be123c" },
+  { key: "security_safety", labelAr: "الأمن والسلامة", accentColor: "#0284c7" },
 ] as const;
 
 export type SchoolManagementCategoryKey = (typeof SCHOOL_MANAGEMENT_CATEGORIES)[number]["key"];
 
 export function isValidSchoolManagementCategory(category: string): category is SchoolManagementCategoryKey {
   return SCHOOL_MANAGEMENT_CATEGORIES.some((c) => c.key === category);
+}
+
+export function getSchoolManagementCategory(key: string) {
+  return SCHOOL_MANAGEMENT_CATEGORIES.find((c) => c.key === key);
 }
 
 export async function getSchoolFiles(category: string) {

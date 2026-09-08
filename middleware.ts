@@ -32,6 +32,22 @@ export default auth((req) => {
     return NextResponse.redirect(new URL("/admin", nextUrl.origin));
   }
 
+  // A restricted admin/agent account (e.g. الأمن والسلامة) can only ever see the dashboard
+  // (which renders just their one إدارة المدرسة category) and upload/delete files within it --
+  // every other admin page and API is off-limits.
+  const restrictedCategory = session?.user?.restrictedCategory;
+  if (session && restrictedCategory) {
+    const allowedApi = nextUrl.pathname.startsWith("/api/school-files");
+    const allowedPage = nextUrl.pathname === "/admin";
+
+    if (!allowedApi && !allowedPage && (isAdminPath || isProtectedApi)) {
+      if (nextUrl.pathname.startsWith("/api/")) {
+        return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+      }
+      return NextResponse.redirect(new URL("/admin", nextUrl.origin));
+    }
+  }
+
   return NextResponse.next();
 });
 

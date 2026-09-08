@@ -93,6 +93,10 @@ create table if not exists school_files (
 );
 create index if not exists idx_school_files_category on school_files(category);
 
+-- When set, this admin/agent account is scoped to a single إدارة المدرسة category
+-- (school_files.category value) and can't see or touch anything else under /admin.
+alter table users add column if not exists restricted_category text;
+
 create table if not exists activity_log (
   id uuid primary key default gen_random_uuid(),
   actor_id uuid references users(id),

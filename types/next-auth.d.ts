@@ -7,6 +7,8 @@ declare module "next-auth" {
       id: string;
       role: Role;
       nationalId: string;
+      /** When set, this admin/agent account is scoped to a single إدارة المدرسة category and sees nothing else. */
+      restrictedCategory: string | null;
     } & DefaultSession["user"];
   }
 
@@ -15,6 +17,7 @@ declare module "next-auth" {
     role: Role;
     nationalId: string;
     subject?: string | null;
+    restrictedCategory?: string | null;
   }
 }
 
@@ -23,5 +26,6 @@ declare module "next-auth/jwt" {
     id: string;
     role: Role;
     nationalId: string;
+    restrictedCategory: string | null;
   }
 }
