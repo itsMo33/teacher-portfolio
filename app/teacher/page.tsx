@@ -30,6 +30,10 @@ export default async function TeacherDashboard() {
 
   return (
     <div>
+      <div className="mb-4">
+        <h1 className="text-xl font-bold text-slate-900 dark:text-slate-50">أثر</h1>
+        <p className="text-sm font-medium text-[var(--brand-primary)]">وثّق عطاءك.. ليبقى أثرك</p>
+      </div>
       <div className="flex items-center gap-3 mb-4">
         <h2 className="text-xl font-bold text-slate-900 dark:text-slate-50">
           مرحبًا، {session!.user.name} 👋
