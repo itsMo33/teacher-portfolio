@@ -48,23 +48,15 @@ export default function LoginPage() {
       <div className="relative z-10 h-2 w-full shrink-0 bg-gradient-to-l from-[var(--brand-primary)] to-[var(--brand-accent)]" />
       <div className="relative z-10 flex flex-1 flex-col items-center justify-center px-4 py-8">
       <div className="animate-fade-in-scale w-full max-w-sm rounded-2xl bg-white/90 dark:bg-slate-900/90 backdrop-blur-sm shadow-lg p-6 sm:p-8">
-        <div className="flex justify-center mb-3">
-          <Image
-            src="/athar-logo-full.png"
-            alt="أثر — برنامج إنجاز المعلمين"
-            width={508}
-            height={714}
-            priority
-            className="h-24 sm:h-28 w-auto object-contain"
-          />
-        </div>
         <div className="flex items-center justify-center gap-5 sm:gap-6 mb-4">
           <Image src="/moe-logo.png" alt="شعار وزارة التعليم" width={90} height={51} className="h-9 sm:h-10 w-auto object-contain transition-transform duration-300 hover:scale-110" />
           <Image src="/vision2030-logo.png" alt="رؤية 2030" width={90} height={90} className="h-11 sm:h-12 w-auto object-contain transition-transform duration-300 hover:scale-110" />
+          <Image src="/athar-emblem.png" alt="شعار أثر" width={90} height={90} priority className="h-11 sm:h-12 w-auto object-contain transition-transform duration-300 hover:scale-110" />
         </div>
         <h1 className="text-xl sm:text-2xl font-bold text-slate-900 dark:text-slate-50 text-center mb-1">
           أثر
         </h1>
+        <p className="text-sm font-medium text-[var(--brand-primary)] text-center mb-1">وثّق عطاءك.. ليبقى أثرك</p>
         <p className="text-sm font-medium text-[var(--brand-primary)] text-center mb-1">{SCHOOL_NAME}</p>
         <p className="text-sm text-slate-500 dark:text-slate-400 text-center mb-6">
           سجّل الدخول برقم الهوية وكلمة المرور
