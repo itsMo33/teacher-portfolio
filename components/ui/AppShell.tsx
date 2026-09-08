@@ -42,6 +42,7 @@ export function AppShell({
           <div className="hidden shrink-0 items-center gap-2 sm:flex">
             <Image src="/moe-logo.png" alt="شعار وزارة التعليم" width={70} height={40} className="h-7 w-auto object-contain sm:h-8 transition-transform duration-300 hover:scale-110" />
             <Image src="/vision2030-logo.png" alt="رؤية 2030" width={70} height={70} className="h-8 w-auto object-contain sm:h-9 transition-transform duration-300 hover:scale-110" />
+            <Image src="/athar-emblem.png" alt="شعار أثر" width={70} height={70} className="h-8 w-auto object-contain sm:h-9 transition-transform duration-300 hover:scale-110" />
           </div>
           <div className="min-w-0">
             <h1 className="truncate text-base font-bold text-slate-900 dark:text-slate-50 sm:text-lg">{title}</h1>
