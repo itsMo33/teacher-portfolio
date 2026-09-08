@@ -75,6 +75,23 @@ export async function getHasUnviewedSchedule(teacherId: string): Promise<boolean
   return (count ?? 0) > 0;
 }
 
+/** All مسائلات attachments across every teacher, newest first, for the admin overview page. */
+export async function getAllAccountabilityAttachments() {
+  const { data } = await supabaseAdmin
+    .from("attachments")
+    .select("id, teacher_id, file_name, file_path, uploaded_at, accountability_status")
+    .eq("category", "accountability")
+    .is("deleted_at", null)
+    .order("uploaded_at", { ascending: false });
+
+  return Promise.all(
+    (data ?? []).map(async (a) => ({
+      ...a,
+      signedUrl: await getSignedUrl(PORTFOLIO_BUCKET, a.file_path),
+    }))
+  );
+}
+
 export async function getSectionAttachments(
   teacherId: string,
   category: string,

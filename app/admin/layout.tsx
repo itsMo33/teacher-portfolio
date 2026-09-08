@@ -10,6 +10,7 @@ const fullNavItems: NavItem[] = [
   { href: "/admin/teachers/new", label: "إضافة معلم" },
   { href: "/admin/teachers/import", label: "استيراد معلمين" },
   { href: "/admin/statistics", label: "الإحصائيات" },
+  { href: "/admin/accountability", label: "المسائلات" },
   { href: "/admin/reports", label: "تصدير تقرير" },
   { href: "/admin/school-management", label: "إدارة المدرسة" },
   { href: "/admin/activity-log", label: "سجل النشاط" },
