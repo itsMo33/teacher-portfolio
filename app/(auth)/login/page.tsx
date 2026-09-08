@@ -57,7 +57,7 @@ export default function LoginPage() {
           أثر
         </h1>
         <p className="text-sm font-medium text-[var(--brand-primary)] text-center mb-1">وثّق عطاءك.. ليبقى أثرك</p>
-        <p className="text-sm font-medium text-[var(--brand-primary)] text-center mb-1">{SCHOOL_NAME}</p>
+        <p className="text-sm font-medium text-slate-600 dark:text-slate-300 text-center mb-1">{SCHOOL_NAME}</p>
         <p className="text-sm text-slate-500 dark:text-slate-400 text-center mb-6">
           سجّل الدخول برقم الهوية وكلمة المرور
         </p>
