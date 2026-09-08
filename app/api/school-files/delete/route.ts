@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth/auth-options";
 import { supabaseAdmin } from "@/lib/supabase/server";
+import { getOwnedCategoryKeys } from "@/lib/school-files";
 import { logActivity } from "@/lib/audit";
 
 export async function DELETE(req: NextRequest) {
@@ -8,7 +9,7 @@ export async function DELETE(req: NextRequest) {
   if (!session) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
-  if (session.user.role === "teacher") {
+  if (session.user.role === "teacher" && !session.user.restrictedCategory) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
@@ -28,8 +29,14 @@ export async function DELETE(req: NextRequest) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
 
-  if (session.user.restrictedCategory && file.category !== session.user.restrictedCategory) {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  // A category with a designated owner (restricted_category) can only be modified by that
+  // owner -- everyone else, including full admins, gets a read-only view of it.
+  const isOwner = session.user.restrictedCategory === file.category;
+  if (!isOwner) {
+    const ownedKeys = await getOwnedCategoryKeys();
+    if (ownedKeys.has(file.category)) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
   }
 
   // Soft delete only -- the file stays in storage and the row stays in the DB

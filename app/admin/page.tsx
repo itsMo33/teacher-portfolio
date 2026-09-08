@@ -32,7 +32,7 @@ async function RestrictedDashboard({ categoryKey }: { categoryKey: string }) {
     return <p className="text-sm text-red-600 dark:text-red-400">القسم المخصص لهذا الحساب غير موجود.</p>;
   }
 
-  const files = await getSchoolFiles(category.key);
+  const subsections = category.subsections ?? [{ key: "", labelAr: "" }];
 
   return (
     <div className="max-w-2xl">
@@ -40,9 +40,24 @@ async function RestrictedDashboard({ categoryKey }: { categoryKey: string }) {
         <span className="inline-block h-3 w-3 shrink-0 rounded-full" style={{ backgroundColor: category.accentColor }} />
         {category.labelAr}
       </h2>
-      <div className="flex flex-col gap-3">
-        <FileUploadDropzone uploadUrl="/api/school-files/upload" extraFields={{ category: category.key }} />
-        <SchoolFileList files={files} />
+      <div className="flex flex-col gap-6">
+        {await Promise.all(
+          subsections.map(async (sub) => {
+            const files = await getSchoolFiles(category.key, sub.key || null);
+            return (
+              <div key={sub.key} className="flex flex-col gap-2">
+                {sub.labelAr && (
+                  <h3 className="text-sm font-medium text-slate-600 dark:text-slate-300">{sub.labelAr}</h3>
+                )}
+                <FileUploadDropzone
+                  uploadUrl="/api/school-files/upload"
+                  extraFields={{ category: category.key, subcategory: sub.key }}
+                />
+                <SchoolFileList files={files} />
+              </div>
+            );
+          })
+        )}
       </div>
     </div>
   );

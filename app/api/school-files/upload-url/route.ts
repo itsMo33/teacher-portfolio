@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth/auth-options";
 import { buildSchoolFilePath, createUploadSignedUrl, PORTFOLIO_BUCKET } from "@/lib/supabase/storage";
 import { ACCEPTED_MIME_TYPES, ACCEPTED_EXTENSIONS, MAX_FILE_SIZE_BYTES } from "@/lib/portfolio-sections";
-import { isValidSchoolManagementCategory } from "@/lib/school-files";
+import { isValidSchoolManagementSlot, getOwnedCategoryKeys } from "@/lib/school-files";
 
 /**
  * Issues a signed upload URL for a large school-management file so the browser can upload the
@@ -14,17 +14,20 @@ export async function POST(req: NextRequest) {
   if (!session) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
-  if (session.user.role === "teacher") {
+  if (session.user.role === "teacher" && !session.user.restrictedCategory) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
-  const { category, fileName, mimeType, size } = await req.json();
+  const { category, subcategory, fileName, mimeType, size } = await req.json();
 
-  if (!category || !fileName || typeof size !== "number" || !isValidSchoolManagementCategory(category)) {
-    return NextResponse.json({ error: "Missing or invalid category, fileName or size" }, { status: 400 });
+  if (!category || !fileName || typeof size !== "number" || !isValidSchoolManagementSlot(category, subcategory ?? null)) {
+    return NextResponse.json({ error: "Missing or invalid category, subcategory, fileName or size" }, { status: 400 });
   }
 
-  if (session.user.restrictedCategory && category !== session.user.restrictedCategory) {
+  const canWrite = session.user.restrictedCategory
+    ? category === session.user.restrictedCategory
+    : !(await getOwnedCategoryKeys()).has(category);
+  if (!canWrite) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
@@ -39,7 +42,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "File too large (max 10MB)" }, { status: 400 });
   }
 
-  const path = buildSchoolFilePath(category, fileName);
+  const path = buildSchoolFilePath(category, subcategory ?? null, fileName);
 
   try {
     const { signedUrl, token } = await createUploadSignedUrl(PORTFOLIO_BUCKET, path);

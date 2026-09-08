@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { auth } from "@/lib/auth/auth-options";
 import {
   getSlotCounts,
@@ -6,6 +7,7 @@ import {
   getHasUnviewedSchedule,
 } from "@/lib/portfolio-data";
 import { TEACHER_COMPLETION_SLOTS, TOTAL_TEACHER_COMPLETION_SLOTS } from "@/lib/portfolio-sections";
+import { getSchoolManagementCategory } from "@/lib/school-files";
 import { ProgressGrid } from "@/components/portfolio/ProgressGrid";
 
 export default async function TeacherDashboard() {
@@ -42,6 +44,17 @@ export default async function TeacherDashboard() {
           نسبة الإنجاز: {completionPercent}%
         </span>
       </div>
+      {session!.user.restrictedCategory && (
+        <Link
+          href="/admin"
+          className="mb-4 flex items-center gap-2 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg w-fit"
+        >
+          <span className="inline-block h-2.5 w-2.5 shrink-0 rounded-full bg-[var(--brand-primary)]" />
+          <span className="font-semibold text-slate-900 dark:text-slate-50">
+            إدارة قسم: {getSchoolManagementCategory(session!.user.restrictedCategory)?.labelAr ?? session!.user.restrictedCategory}
+          </span>
+        </Link>
+      )}
       <ProgressGrid
         slotCounts={slotCounts}
         linkPrefix="/teacher/portfolio"

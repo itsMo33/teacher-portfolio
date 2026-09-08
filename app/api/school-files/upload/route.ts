@@ -4,14 +4,30 @@ import { auth } from "@/lib/auth/auth-options";
 import { supabaseAdmin } from "@/lib/supabase/server";
 import { buildSchoolFilePath, uploadFile, PORTFOLIO_BUCKET } from "@/lib/supabase/storage";
 import { ACCEPTED_MIME_TYPES, ACCEPTED_EXTENSIONS, MAX_FILE_SIZE_BYTES } from "@/lib/portfolio-sections";
-import { isValidSchoolManagementCategory } from "@/lib/school-files";
+import { isValidSchoolManagementSlot, getOwnedCategoryKeys } from "@/lib/school-files";
 import { logActivity } from "@/lib/audit";
 
-async function finalize(session: Session, category: string, filePath: string, fileName: string, mimeType: string) {
+/** A category with a designated owner (restricted_category) can only be uploaded to by that
+ *  owner -- everyone else, including full admins, gets a read-only view of it. */
+async function canWriteToCategory(session: Session, category: string): Promise<boolean> {
+  if (session.user.restrictedCategory) return category === session.user.restrictedCategory;
+  const ownedKeys = await getOwnedCategoryKeys();
+  return !ownedKeys.has(category);
+}
+
+async function finalize(
+  session: Session,
+  category: string,
+  subcategory: string | null,
+  filePath: string,
+  fileName: string,
+  mimeType: string
+) {
   const { data, error } = await supabaseAdmin
     .from("school_files")
     .insert({
       category,
+      subcategory,
       file_path: filePath,
       file_name: fileName,
       mime_type: mimeType || "application/octet-stream",
@@ -28,7 +44,7 @@ async function finalize(session: Session, category: string, filePath: string, fi
     actorId: session.user.id,
     actorName: session.user.name ?? "",
     action: "upload_school_file",
-    details: `${category}: ${fileName}`,
+    details: `${category}${subcategory ? ` - ${subcategory}` : ""}: ${fileName}`,
   });
 
   return NextResponse.json({ file: data });
@@ -40,17 +56,17 @@ async function finalize(session: Session, category: string, filePath: string, fi
  * caps a serverless function's request body at 4.5MB -- well under the 10MB this app accepts).
  */
 async function handleConfirm(req: NextRequest, session: Session) {
-  const { category, filePath, fileName, mimeType } = await req.json();
+  const { category, subcategory, filePath, fileName, mimeType } = await req.json();
 
-  if (!category || !filePath || !fileName || !isValidSchoolManagementCategory(category)) {
-    return NextResponse.json({ error: "Missing or invalid category, filePath or fileName" }, { status: 400 });
+  if (!category || !filePath || !fileName || !isValidSchoolManagementSlot(category, subcategory ?? null)) {
+    return NextResponse.json({ error: "Missing or invalid category, subcategory, filePath or fileName" }, { status: 400 });
   }
 
-  if (session.user.restrictedCategory && category !== session.user.restrictedCategory) {
+  if (!(await canWriteToCategory(session, category))) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
-  return finalize(session, category, filePath, fileName, mimeType);
+  return finalize(session, category, subcategory ?? null, filePath, fileName, mimeType);
 }
 
 export async function POST(req: NextRequest) {
@@ -58,7 +74,7 @@ export async function POST(req: NextRequest) {
   if (!session) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
-  if (session.user.role === "teacher") {
+  if (session.user.role === "teacher" && !session.user.restrictedCategory) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
@@ -69,13 +85,14 @@ export async function POST(req: NextRequest) {
 
   const formData = await req.formData();
   const category = formData.get("category") as string | null;
+  const subcategory = (formData.get("subcategory") as string | null) || null;
   const file = formData.get("file") as File | null;
 
-  if (!category || !file || !isValidSchoolManagementCategory(category)) {
-    return NextResponse.json({ error: "Missing or invalid category/file" }, { status: 400 });
+  if (!category || !file || !isValidSchoolManagementSlot(category, subcategory)) {
+    return NextResponse.json({ error: "Missing or invalid category/subcategory/file" }, { status: 400 });
   }
 
-  if (session.user.restrictedCategory && category !== session.user.restrictedCategory) {
+  if (!(await canWriteToCategory(session, category))) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
@@ -91,9 +108,9 @@ export async function POST(req: NextRequest) {
   }
 
   const buffer = Buffer.from(await file.arrayBuffer());
-  const path = buildSchoolFilePath(category, file.name);
+  const path = buildSchoolFilePath(category, subcategory, file.name);
 
   await uploadFile(PORTFOLIO_BUCKET, path, buffer, file.type || "application/octet-stream");
 
-  return finalize(session, category, path, file.name, file.type || "application/octet-stream");
+  return finalize(session, category, subcategory, path, file.name, file.type || "application/octet-stream");
 }

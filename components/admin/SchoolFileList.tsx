@@ -11,7 +11,7 @@ export interface SchoolFileItem {
   mime_type?: string;
 }
 
-export function SchoolFileList({ files }: { files: SchoolFileItem[] }) {
+export function SchoolFileList({ files, canDelete = true }: { files: SchoolFileItem[]; canDelete?: boolean }) {
   const router = useRouter();
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
@@ -65,13 +65,15 @@ export function SchoolFileList({ files }: { files: SchoolFileItem[] }) {
                 <span className="text-xs text-slate-400">
                   {new Date(f.uploaded_at).toLocaleDateString("ar-SA")}
                 </span>
-                <button
-                  onClick={() => handleDelete(f.id)}
-                  disabled={deletingId === f.id}
-                  className="text-xs text-red-500 hover:text-red-700 disabled:opacity-50 transition-colors"
-                >
-                  حذف
-                </button>
+                {canDelete && (
+                  <button
+                    onClick={() => handleDelete(f.id)}
+                    disabled={deletingId === f.id}
+                    className="text-xs text-red-500 hover:text-red-700 disabled:opacity-50 transition-colors"
+                  >
+                    حذف
+                  </button>
+                )}
               </div>
             </li>
           );

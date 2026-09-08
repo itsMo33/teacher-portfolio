@@ -24,7 +24,12 @@ export default auth((req) => {
     return NextResponse.redirect(loginUrl);
   }
 
-  if (session && isAdminPath && role === "teacher") {
+  const restrictedCategory = session?.user?.restrictedCategory;
+
+  // A teacher additionally scoped to one إدارة المدرسة category (e.g. النشاط الطلابي) is still a
+  // normal teacher everywhere else -- only pull them out of the teacher-only redirect below so
+  // they can reach /admin for that one category; their own /api/portfolio etc. stay untouched.
+  if (session && isAdminPath && role === "teacher" && !restrictedCategory) {
     return NextResponse.redirect(new URL("/teacher", nextUrl.origin));
   }
 
@@ -34,13 +39,14 @@ export default auth((req) => {
 
   // A restricted admin/agent account (e.g. الأمن والسلامة) can only ever see the dashboard
   // (which renders just their one إدارة المدرسة category) and upload/delete files within it --
-  // every other admin page and API is off-limits.
-  const restrictedCategory = session?.user?.restrictedCategory;
+  // every other admin page and API is off-limits. For a restricted *teacher* account, only the
+  // admin pages are locked down this way -- their own teacher-facing APIs stay fully usable.
   if (session && restrictedCategory) {
     const allowedApi = nextUrl.pathname.startsWith("/api/school-files");
     const allowedPage = nextUrl.pathname === "/admin";
+    const lockedDown = role === "teacher" ? isAdminPath : isAdminPath || isProtectedApi;
 
-    if (!allowedApi && !allowedPage && (isAdminPath || isProtectedApi)) {
+    if (!allowedApi && !allowedPage && lockedDown) {
       if (nextUrl.pathname.startsWith("/api/")) {
         return NextResponse.json({ error: "Forbidden" }, { status: 403 });
       }
