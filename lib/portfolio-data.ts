@@ -23,6 +23,15 @@ export async function getSlotCounts(teacherId: string): Promise<Record<string, n
   return applyProfessionalLicenseExemption(counts, teacher?.professional_license_exempt ?? false);
 }
 
+export async function getProfessionalLicenseExempt(teacherId: string): Promise<boolean> {
+  const { data } = await supabaseAdmin
+    .from("users")
+    .select("professional_license_exempt")
+    .eq("id", teacherId)
+    .maybeSingle();
+  return data?.professional_license_exempt ?? false;
+}
+
 export async function getHasSchedule(teacherId: string): Promise<boolean> {
   const { count } = await supabaseAdmin
     .from("schedules")

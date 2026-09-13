@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import { supabaseAdmin } from "@/lib/supabase/server";
 import { PORTFOLIO_SECTIONS, TEACHER_COMPLETION_SLOTS, TOTAL_TEACHER_COMPLETION_SLOTS } from "@/lib/portfolio-sections";
-import { getSectionAttachments, getSlotCounts } from "@/lib/portfolio-data";
+import { getSectionAttachments, getSlotCounts, getProfessionalLicenseExempt } from "@/lib/portfolio-data";
 import { SCHOOL_NAME } from "@/lib/school";
 import { PrintButton } from "@/components/admin/PrintButton";
 import { PERFORMANCE_CATEGORIES } from "@/lib/teacher-performance";
@@ -32,7 +32,10 @@ export default async function TeacherPrintReportPage({
 
   const sections = PORTFOLIO_SECTIONS.filter((s) => s.key !== "schedule");
 
-  const slotCounts = await getSlotCounts(teacherId);
+  const [slotCounts, professionalLicenseExempt] = await Promise.all([
+    getSlotCounts(teacherId),
+    getProfessionalLicenseExempt(teacherId),
+  ]);
   const completionPercent = Math.round(
     (TEACHER_COMPLETION_SLOTS.reduce((sum, slot) => {
       const count = slotCounts[`${slot.section}:${slot.subsection ?? ""}`] ?? 0;
@@ -127,20 +130,26 @@ export default async function TeacherPrintReportPage({
             <tr key={section.key}>
               <td className="break-inside-avoid pt-4">
                 <h3 className="font-bold border-b border-slate-200 pb-1 mb-1">{section.labelAr}</h3>
-                {subsectionData.map(({ sub, attachments }) => (
-                  <div key={sub.key} className="pr-3 mb-1 text-sm">
-                    {sub.labelAr && <p className="font-medium text-slate-700">{sub.labelAr}</p>}
-                    {attachments.length === 0 ? (
-                      <p className="text-slate-500">✗ لا توجد مرفقات</p>
-                    ) : (
-                      <ul className="list-disc pr-5">
-                        {attachments.map((a) => (
-                          <li key={a.id}>✓ {a.file_name}</li>
-                        ))}
-                      </ul>
-                    )}
-                  </div>
-                ))}
+                {subsectionData.map(({ sub, attachments }) => {
+                  const isExemptLicense =
+                    professionalLicenseExempt && section.key === "achievement_file" && sub.key === "professional_license";
+                  return (
+                    <div key={sub.key} className="pr-3 mb-1 text-sm">
+                      {sub.labelAr && <p className="font-medium text-slate-700">{sub.labelAr}</p>}
+                      {isExemptLicense ? (
+                        <p className="text-slate-500">معفى من هذا المتطلب</p>
+                      ) : attachments.length === 0 ? (
+                        <p className="text-slate-500">✗ لا توجد مرفقات</p>
+                      ) : (
+                        <ul className="list-disc pr-5">
+                          {attachments.map((a) => (
+                            <li key={a.id}>✓ {a.file_name}</li>
+                          ))}
+                        </ul>
+                      )}
+                    </div>
+                  );
+                })}
               </td>
             </tr>
           ))}

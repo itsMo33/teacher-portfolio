@@ -19,6 +19,7 @@ export function ProgressGrid({
   hasUnviewedSchedule,
   scheduleHref = "/teacher/schedule",
   scheduleUploadedLabel = "معروض",
+  professionalLicenseExempt = false,
 }: {
   /** Maps "category:subcategory" (subcategory empty string when the section has none) to file count. */
   slotCounts: Record<string, number>;
@@ -32,6 +33,9 @@ export function ProgressGrid({
   scheduleHref?: string;
   /** Badge text shown on the schedule card when a schedule exists. Defaults to the teacher-facing wording. */
   scheduleUploadedLabel?: string;
+  /** When true, "الرخصة المهنية" shows as "معفى" instead of a file count -- the slotCounts value
+   *  for it is a synthetic 1, not a real upload, so it must never be shown as if one exists. */
+  professionalLicenseExempt?: boolean;
 }) {
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -113,11 +117,15 @@ export function ProgressGrid({
             {section.hasSubsections && (
               <ul className="text-xs text-slate-500 dark:text-slate-400 flex flex-col gap-0.5">
                 {section.subsections!.map((sub) => {
+                  const isExemptLicense =
+                    professionalLicenseExempt && section.key === "achievement_file" && sub.key === "professional_license";
                   const subCount = slotCounts[`${section.key}:${sub.key}`] ?? 0;
                   const subRequired = sub.requiredCount ?? 1;
                   const subPercent = Math.round(Math.min(subCount / subRequired, 1) * 100);
                   const subDone = subCount >= subRequired;
-                  const subText = sub.showPercent
+                  const subText = isExemptLicense
+                    ? "معفى"
+                    : sub.showPercent
                     ? `${subCount}${subRequired > 1 ? `/${subRequired}` : ""} (${subPercent}%)`
                     : subDone
                     ? TROPHY_BADGE
@@ -128,7 +136,11 @@ export function ProgressGrid({
                         {sub.labelAr}
                         {sub.note && <span className="text-amber-600 dark:text-amber-400"> ({sub.note})</span>}
                       </span>
-                      {subText && <span className="shrink-0">{subText}</span>}
+                      {subText && (
+                        <span className={`shrink-0 ${isExemptLicense ? "text-slate-400 dark:text-slate-500" : ""}`}>
+                          {subText}
+                        </span>
+                      )}
                     </li>
                   );
                 })}

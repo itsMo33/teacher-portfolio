@@ -5,6 +5,7 @@ import {
   getHasSchedule,
   getUnviewedAdminSectionKeys,
   getHasUnviewedSchedule,
+  getProfessionalLicenseExempt,
 } from "@/lib/portfolio-data";
 import { TEACHER_COMPLETION_SLOTS, TOTAL_TEACHER_COMPLETION_SLOTS } from "@/lib/portfolio-sections";
 import { getSchoolManagementCategory } from "@/lib/school-files";
@@ -12,11 +13,12 @@ import { ProgressGrid } from "@/components/portfolio/ProgressGrid";
 
 export default async function TeacherDashboard() {
   const session = await auth();
-  const [slotCounts, hasSchedule, unviewedSectionKeys, hasUnviewedSchedule] = await Promise.all([
+  const [slotCounts, hasSchedule, unviewedSectionKeys, hasUnviewedSchedule, professionalLicenseExempt] = await Promise.all([
     getSlotCounts(session!.user.id),
     getHasSchedule(session!.user.id),
     getUnviewedAdminSectionKeys(session!.user.id),
     getHasUnviewedSchedule(session!.user.id),
+    getProfessionalLicenseExempt(session!.user.id),
   ]);
 
   const restrictedCategoryLabel = session!.user.restrictedCategory
@@ -65,6 +67,7 @@ export default async function TeacherDashboard() {
         hasSchedule={hasSchedule}
         unviewedSectionKeys={unviewedSectionKeys}
         hasUnviewedSchedule={hasUnviewedSchedule}
+        professionalLicenseExempt={professionalLicenseExempt}
       />
     </div>
   );

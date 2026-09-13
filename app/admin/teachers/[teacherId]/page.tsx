@@ -2,7 +2,7 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import { supabaseAdmin } from "@/lib/supabase/server";
 import { TEACHER_COMPLETION_SLOTS, TOTAL_TEACHER_COMPLETION_SLOTS } from "@/lib/portfolio-sections";
-import { getSlotCounts, getHasSchedule, getUnviewedByAdminSectionKeys } from "@/lib/portfolio-data";
+import { getSlotCounts, getHasSchedule, getUnviewedByAdminSectionKeys, getProfessionalLicenseExempt } from "@/lib/portfolio-data";
 import { ProgressGrid } from "@/components/portfolio/ProgressGrid";
 import { DeleteTeacherButton } from "@/components/admin/DeleteTeacherButton";
 import { MarkAdminViewedOnMount } from "@/components/admin/MarkAdminViewedOnMount";
@@ -24,10 +24,11 @@ export default async function AdminTeacherPortfolioPage({
 
   if (!teacher) notFound();
 
-  const [slotCounts, hasSchedule, unviewedSectionKeys] = await Promise.all([
+  const [slotCounts, hasSchedule, unviewedSectionKeys, professionalLicenseExempt] = await Promise.all([
     getSlotCounts(teacherId),
     getHasSchedule(teacherId),
     getUnviewedByAdminSectionKeys(teacherId),
+    getProfessionalLicenseExempt(teacherId),
   ]);
 
   const completionPercent = Math.round(
@@ -85,6 +86,7 @@ export default async function AdminTeacherPortfolioPage({
         unviewedSectionKeys={unviewedSectionKeys}
         scheduleHref={`/admin/teachers/${teacherId}/schedule`}
         scheduleUploadedLabel="مرفوع"
+        professionalLicenseExempt={professionalLicenseExempt}
       />
     </div>
   );

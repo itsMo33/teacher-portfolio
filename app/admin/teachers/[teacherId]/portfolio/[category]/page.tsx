@@ -2,7 +2,7 @@ import { notFound, redirect } from "next/navigation";
 import Link from "next/link";
 import { supabaseAdmin } from "@/lib/supabase/server";
 import { getSection } from "@/lib/portfolio-sections";
-import { getSectionAttachments } from "@/lib/portfolio-data";
+import { getSectionAttachments, getProfessionalLicenseExempt } from "@/lib/portfolio-data";
 import { AttachmentList } from "@/components/portfolio/AttachmentList";
 import { FileUploadDropzone } from "@/components/portfolio/FileUploadDropzone";
 
@@ -28,6 +28,8 @@ export default async function AdminTeacherPortfolioSectionPage({
   if (!teacher) notFound();
 
   const subsections = section.hasSubsections ? section.subsections! : [{ key: "", labelAr: "" }];
+
+  const professionalLicenseExempt = section.key === "achievement_file" ? await getProfessionalLicenseExempt(teacherId) : false;
 
   const subsectionData = await Promise.all(
     subsections.map(async (sub) => ({
@@ -85,28 +87,34 @@ export default async function AdminTeacherPortfolioSectionPage({
         </div>
       )}
 
-      {subsectionData.map(({ sub, attachments }) => (
-        <div key={sub.key} className="flex flex-col gap-3">
-          {sub.labelAr && (
-            <div>
-              <h3 className="font-semibold text-slate-700 dark:text-slate-200">{sub.labelAr}</h3>
-              {sub.note && <p className="text-xs text-amber-600 dark:text-amber-400 mt-0.5">{sub.note}</p>}
-            </div>
-          )}
-          {!section.teacherWritable && (
-            <FileUploadDropzone
-              uploadUrl="/api/portfolio/upload"
-              extraFields={{ category: section.key, subcategory: sub.key, teacherId }}
+      {subsectionData.map(({ sub, attachments }) => {
+        const isExemptLicense = professionalLicenseExempt && sub.key === "professional_license";
+        return (
+          <div key={sub.key} className="flex flex-col gap-3">
+            {sub.labelAr && (
+              <div>
+                <h3 className="font-semibold text-slate-700 dark:text-slate-200">{sub.labelAr}</h3>
+                {sub.note && <p className="text-xs text-amber-600 dark:text-amber-400 mt-0.5">{sub.note}</p>}
+              </div>
+            )}
+            {isExemptLicense && (
+              <p className="text-sm text-slate-500 dark:text-slate-400">معفى من هذا المتطلب</p>
+            )}
+            {!section.teacherWritable && (
+              <FileUploadDropzone
+                uploadUrl="/api/portfolio/upload"
+                extraFields={{ category: section.key, subcategory: sub.key, teacherId }}
+              />
+            )}
+            <AttachmentList
+              attachments={attachments}
+              canDelete={!section.teacherWritable}
+              showViewedStatus={!section.teacherWritable}
+              editableAccountabilityStatus={section.key === "accountability"}
             />
-          )}
-          <AttachmentList
-            attachments={attachments}
-            canDelete={!section.teacherWritable}
-            showViewedStatus={!section.teacherWritable}
-            editableAccountabilityStatus={section.key === "accountability"}
-          />
-        </div>
-      ))}
+          </div>
+        );
+      })}
     </div>
   );
 }
