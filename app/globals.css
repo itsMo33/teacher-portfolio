@@ -118,4 +118,9 @@ body {
     border: 1px solid #000 !important;
     color: #000 !important;
   }
+  /* Repeating-header reports that don't want every section boxed like a data table. */
+  .print-plain th,
+  .print-plain td {
+    border: none !important;
+  }
 }
