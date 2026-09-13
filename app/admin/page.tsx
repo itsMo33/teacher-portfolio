@@ -28,7 +28,7 @@ const DASHBOARD_CARDS: DashboardCard[] = [
 ];
 
 async function RestrictedDashboard({ categoryKey }: { categoryKey: string }) {
-  const category = getSchoolManagementCategory(categoryKey);
+  const category = await getSchoolManagementCategory(categoryKey);
   if (!category) {
     return <p className="text-sm text-red-600 dark:text-red-400">القسم المخصص لهذا الحساب غير موجود.</p>;
   }

@@ -132,3 +132,63 @@ create table if not exists substitute_assignments (
 );
 create index if not exists idx_substitute_assignments_active on substitute_assignments(active);
 create index if not exists idx_substitute_assignments_substitute on substitute_assignments(substitute);
+
+-- إدارة المدرسة categories, now admin-editable instead of hardcoded in lib/school-files.ts.
+-- `key` is a stable internal id (never shown to the admin, never edited) that school_files.category
+-- and users.restricted_category values reference -- deleting a category does NOT touch those rows,
+-- so their files just become unreachable through the UI until the category is re-created with the
+-- same key (which the app never does automatically).
+create table if not exists school_management_categories (
+  key text primary key,
+  label_ar text not null,
+  accent_color text not null default '#2563eb',
+  subsections jsonb not null default '[]'::jsonb,
+  sort_order integer not null default 0,
+  created_at timestamptz not null default now()
+);
+
+-- One-time seed matching the categories that used to be hardcoded -- idempotent, so re-running
+-- this file after an admin has since edited/deleted one of these does nothing.
+insert into school_management_categories (key, label_ar, accent_color, subsections, sort_order) values
+  ('principal', 'ملف مدير المدرسة', '#1d4ed8', '[]', 0),
+  ('teacher_affairs_agent', 'وكيل شؤون المعلمين والشؤون التعليمية', '#0f766e', '[
+    {"key": "teacher_data", "labelAr": "بيانات المعلمين"},
+    {"key": "schedules_loads", "labelAr": "الجداول والأنصبة"},
+    {"key": "waiting_duty_supervision", "labelAr": "الانتظار والمناوبات والإشراف"},
+    {"key": "attendance_regularity", "labelAr": "الدوام والانتظام"},
+    {"key": "assignments_tasks", "labelAr": "التكليفات والمهام"},
+    {"key": "performance_followup", "labelAr": "متابعة أداء المعلمين"},
+    {"key": "classroom_visits", "labelAr": "الزيارات الصفية"},
+    {"key": "support_development", "labelAr": "الدعم والتنمية المهنية"},
+    {"key": "exams_evaluation", "labelAr": "الاختبارات والتقويم"},
+    {"key": "achievement_analysis", "labelAr": "التحصيل الدراسي وتحليل النتائج"}
+  ]', 1),
+  ('student_affairs_agent', 'وكيل شؤون الطلاب', '#b45309', '[
+    {"key": "plan", "labelAr": "خطة شؤون الطلاب"},
+    {"key": "attendance", "labelAr": "الحضور والغياب والمواظبة"},
+    {"key": "conduct_discipline", "labelAr": "السلوك والانضباط"},
+    {"key": "struggling_students", "labelAr": "متابعة الطلاب المتعثرين"},
+    {"key": "programs_activities", "labelAr": "البرامج والأنشطة الطلابية"},
+    {"key": "parent_communication", "labelAr": "التواصل مع أولياء الأمور"},
+    {"key": "meetings_minutes", "labelAr": "الاجتماعات والمحاضر"}
+  ]', 2),
+  ('student_counselor', 'ملف الموجه الطلابي', '#7c3aed', '[]', 3),
+  ('student_activity', 'ملف النشاط الطلابي', '#be123c', '[]', 4),
+  ('security_safety', 'الأمن والسلامة', '#0284c7', '[]', 5),
+  ('school_health', 'الصحة المدرسية', '#0ea5e9', '[]', 6),
+  ('school_labs', 'المختبرات المدرسية', '#059669', '[
+    {"key": "weekly_visits", "labelAr": "الزيارات الأسبوعية"},
+    {"key": "inventory_equipment", "labelAr": "الجرد والتجهيزات"}
+  ]', 7),
+  ('student_guidance', 'التوجيه الطلابي', '#c026d3', '[
+    {"key": "operational_plan", "labelAr": "الخطة التشغيلية"},
+    {"key": "programs_events", "labelAr": "البرامج والفعاليات"},
+    {"key": "individual_cases", "labelAr": "الحالات الفردية"},
+    {"key": "absence_tardiness", "labelAr": "الغياب والتأخر"},
+    {"key": "behavior_attendance", "labelAr": "السلوك والمواظبة"},
+    {"key": "academic_struggles", "labelAr": "التعثر الدراسي والخطط العلاجية"},
+    {"key": "academic_career_guidance", "labelAr": "التوجيه التعليمي والمهني"},
+    {"key": "parent_communication", "labelAr": "التواصل مع أولياء الأمور"},
+    {"key": "meetings_minutes", "labelAr": "الاجتماعات والمحاضر"}
+  ]', 8)
+on conflict (key) do nothing;

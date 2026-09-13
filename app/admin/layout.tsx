@@ -25,7 +25,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   // A scoped account (e.g. الأمن والسلامة) only ever sees its own single section -- no other
   // admin tool exists for it, in the sidebar or otherwise.
   const navItems: NavItem[] = restrictedCategory
-    ? [{ href: "/admin", label: getSchoolManagementCategory(restrictedCategory)?.labelAr ?? "لوحة تحكم" }]
+    ? [{ href: "/admin", label: (await getSchoolManagementCategory(restrictedCategory))?.labelAr ?? "لوحة تحكم" }]
     : fullNavItems;
 
   return (

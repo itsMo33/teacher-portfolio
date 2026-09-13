@@ -58,7 +58,7 @@ async function finalize(
 async function handleConfirm(req: NextRequest, session: Session) {
   const { category, subcategory, filePath, fileName, mimeType } = await req.json();
 
-  if (!category || !filePath || !fileName || !isValidSchoolManagementSlot(category, subcategory ?? null)) {
+  if (!category || !filePath || !fileName || !(await isValidSchoolManagementSlot(category, subcategory ?? null))) {
     return NextResponse.json({ error: "Missing or invalid category, subcategory, filePath or fileName" }, { status: 400 });
   }
 
@@ -88,7 +88,7 @@ export async function POST(req: NextRequest) {
   const subcategory = (formData.get("subcategory") as string | null) || null;
   const file = formData.get("file") as File | null;
 
-  if (!category || !file || !isValidSchoolManagementSlot(category, subcategory)) {
+  if (!category || !file || !(await isValidSchoolManagementSlot(category, subcategory))) {
     return NextResponse.json({ error: "Missing or invalid category/subcategory/file" }, { status: 400 });
   }
 

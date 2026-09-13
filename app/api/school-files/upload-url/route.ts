@@ -20,7 +20,7 @@ export async function POST(req: NextRequest) {
 
   const { category, subcategory, fileName, mimeType, size } = await req.json();
 
-  if (!category || !fileName || typeof size !== "number" || !isValidSchoolManagementSlot(category, subcategory ?? null)) {
+  if (!category || !fileName || typeof size !== "number" || !(await isValidSchoolManagementSlot(category, subcategory ?? null))) {
     return NextResponse.json({ error: "Missing or invalid category, subcategory, fileName or size" }, { status: 400 });
   }
 

@@ -19,6 +19,10 @@ export default async function TeacherDashboard() {
     getHasUnviewedSchedule(session!.user.id),
   ]);
 
+  const restrictedCategoryLabel = session!.user.restrictedCategory
+    ? (await getSchoolManagementCategory(session!.user.restrictedCategory))?.labelAr ?? session!.user.restrictedCategory
+    : null;
+
   const completionPercent = Math.round(
     (TEACHER_COMPLETION_SLOTS.reduce((sum, slot) => {
       const count = slotCounts[`${slot.section}:${slot.subsection ?? ""}`] ?? 0;
@@ -51,7 +55,7 @@ export default async function TeacherDashboard() {
         >
           <span className="inline-block h-2.5 w-2.5 shrink-0 rounded-full bg-[var(--brand-primary)]" />
           <span className="font-semibold text-slate-900 dark:text-slate-50">
-            إدارة قسم: {getSchoolManagementCategory(session!.user.restrictedCategory)?.labelAr ?? session!.user.restrictedCategory}
+            إدارة قسم: {restrictedCategoryLabel}
           </span>
         </Link>
       )}

@@ -14,82 +14,35 @@ export interface SchoolManagementCategory {
   subsections?: SchoolManagementSubsection[];
 }
 
-export const SCHOOL_MANAGEMENT_CATEGORIES: SchoolManagementCategory[] = [
-  { key: "principal", labelAr: "ملف مدير المدرسة", accentColor: "#1d4ed8" },
-  {
-    key: "teacher_affairs_agent",
-    labelAr: "وكيل شؤون المعلمين والشؤون التعليمية",
-    accentColor: "#0f766e",
-    subsections: [
-      { key: "teacher_data", labelAr: "بيانات المعلمين" },
-      { key: "schedules_loads", labelAr: "الجداول والأنصبة" },
-      { key: "waiting_duty_supervision", labelAr: "الانتظار والمناوبات والإشراف" },
-      { key: "attendance_regularity", labelAr: "الدوام والانتظام" },
-      { key: "assignments_tasks", labelAr: "التكليفات والمهام" },
-      { key: "performance_followup", labelAr: "متابعة أداء المعلمين" },
-      { key: "classroom_visits", labelAr: "الزيارات الصفية" },
-      { key: "support_development", labelAr: "الدعم والتنمية المهنية" },
-      { key: "exams_evaluation", labelAr: "الاختبارات والتقويم" },
-      { key: "achievement_analysis", labelAr: "التحصيل الدراسي وتحليل النتائج" },
-    ],
-  },
-  {
-    key: "student_affairs_agent",
-    labelAr: "وكيل شؤون الطلاب",
-    accentColor: "#b45309",
-    subsections: [
-      { key: "plan", labelAr: "خطة شؤون الطلاب" },
-      { key: "attendance", labelAr: "الحضور والغياب والمواظبة" },
-      { key: "conduct_discipline", labelAr: "السلوك والانضباط" },
-      { key: "struggling_students", labelAr: "متابعة الطلاب المتعثرين" },
-      { key: "programs_activities", labelAr: "البرامج والأنشطة الطلابية" },
-      { key: "parent_communication", labelAr: "التواصل مع أولياء الأمور" },
-      { key: "meetings_minutes", labelAr: "الاجتماعات والمحاضر" },
-    ],
-  },
-  { key: "student_counselor", labelAr: "ملف الموجه الطلابي", accentColor: "#7c3aed" },
-  { key: "student_activity", labelAr: "ملف النشاط الطلابي", accentColor: "#be123c" },
-  { key: "security_safety", labelAr: "الأمن والسلامة", accentColor: "#0284c7" },
-  { key: "school_health", labelAr: "الصحة المدرسية", accentColor: "#0ea5e9" },
-  {
-    key: "school_labs",
-    labelAr: "المختبرات المدرسية",
-    accentColor: "#059669",
-    subsections: [
-      { key: "weekly_visits", labelAr: "الزيارات الأسبوعية" },
-      { key: "inventory_equipment", labelAr: "الجرد والتجهيزات" },
-    ],
-  },
-  {
-    key: "student_guidance",
-    labelAr: "التوجيه الطلابي",
-    accentColor: "#c026d3",
-    subsections: [
-      { key: "operational_plan", labelAr: "الخطة التشغيلية" },
-      { key: "programs_events", labelAr: "البرامج والفعاليات" },
-      { key: "individual_cases", labelAr: "الحالات الفردية" },
-      { key: "absence_tardiness", labelAr: "الغياب والتأخر" },
-      { key: "behavior_attendance", labelAr: "السلوك والمواظبة" },
-      { key: "academic_struggles", labelAr: "التعثر الدراسي والخطط العلاجية" },
-      { key: "academic_career_guidance", labelAr: "التوجيه التعليمي والمهني" },
-      { key: "parent_communication", labelAr: "التواصل مع أولياء الأمور" },
-      { key: "meetings_minutes", labelAr: "الاجتماعات والمحاضر" },
-    ],
-  },
-];
+/** إدارة المدرسة categories, stored in the school_management_categories table so admins can add,
+ *  rename, and delete them from the UI instead of needing a code change every time. */
+export async function getSchoolManagementCategories(): Promise<SchoolManagementCategory[]> {
+  const { data } = await supabaseAdmin
+    .from("school_management_categories")
+    .select("key, label_ar, accent_color, subsections")
+    .order("sort_order", { ascending: true });
 
-export type SchoolManagementCategoryKey = (typeof SCHOOL_MANAGEMENT_CATEGORIES)[number]["key"];
-
-export function getSchoolManagementCategory(key: string) {
-  return SCHOOL_MANAGEMENT_CATEGORIES.find((c) => c.key === key);
+  return (data ?? []).map((row) => ({
+    key: row.key,
+    labelAr: row.label_ar,
+    accentColor: row.accent_color,
+    subsections: (row.subsections as SchoolManagementSubsection[] | null)?.length
+      ? (row.subsections as SchoolManagementSubsection[])
+      : undefined,
+  }));
 }
 
-export function isValidSchoolManagementCategory(category: string): boolean {
-  return SCHOOL_MANAGEMENT_CATEGORIES.some((c) => c.key === category);
+export async function getSchoolManagementCategory(key: string): Promise<SchoolManagementCategory | undefined> {
+  const categories = await getSchoolManagementCategories();
+  return categories.find((c) => c.key === key);
 }
 
-export function isValidSchoolManagementSlot(category: string, subcategory: string | null): boolean {
-  const cat = getSchoolManagementCategory(category);
+export async function isValidSchoolManagementCategory(category: string): Promise<boolean> {
+  return (await getSchoolManagementCategory(category)) !== undefined;
+}
+
+export async function isValidSchoolManagementSlot(category: string, subcategory: string | null): Promise<boolean> {
+  const cat = await getSchoolManagementCategory(category);
   if (!cat) return false;
   if (!cat.subsections) return !subcategory;
   // A category with subsections still accepts an uncategorized ("عام") upload for files that
