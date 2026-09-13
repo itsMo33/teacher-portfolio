@@ -4,6 +4,7 @@ import { PORTFOLIO_SECTIONS, TEACHER_COMPLETION_SLOTS, TOTAL_TEACHER_COMPLETION_
 import { getSectionAttachments, getSlotCounts } from "@/lib/portfolio-data";
 import { SCHOOL_NAME } from "@/lib/school";
 import { PrintButton } from "@/components/admin/PrintButton";
+import { PERFORMANCE_CATEGORIES } from "@/lib/teacher-performance";
 
 export default async function TeacherPrintReportPage({
   params,
@@ -53,6 +54,20 @@ export default async function TeacherPrintReportPage({
       return { section, subsectionData };
     })
   );
+
+  const { data: performanceRecords } = await supabaseAdmin
+    .from("teacher_performance_records")
+    .select("category, status")
+    .eq("teacher_id", teacherId);
+
+  const performanceStats = PERFORMANCE_CATEGORIES.map((c) => {
+    const recs = (performanceRecords ?? []).filter((r) => r.category === c.key);
+    return {
+      category: c,
+      presentCount: recs.filter((r) => r.status === "present").length,
+      absentCount: recs.filter((r) => r.status === "absent").length,
+    };
+  });
 
   return (
     <div className="max-w-3xl mx-auto bg-white text-slate-900 print:max-w-none">
@@ -114,6 +129,18 @@ export default async function TeacherPrintReportPage({
                 )}
               </div>
             ))}
+          </div>
+        ))}
+      </div>
+
+      <div className="break-inside-avoid mt-4 pt-2 border-t border-slate-300">
+        <h3 className="font-bold border-b border-slate-200 pb-1 mb-1">متابعة الأداء</h3>
+        {performanceStats.map(({ category: c, presentCount, absentCount }) => (
+          <div key={c.key} className="pr-3 mb-1 text-sm flex items-center justify-between">
+            <span className="font-medium text-slate-700">{c.labelAr}</span>
+            <span className="text-slate-600">
+              {c.mode === "assumed-present" ? `غياب: ${absentCount} مرة` : `حضور: ${presentCount} — غياب: ${absentCount}`}
+            </span>
           </div>
         ))}
       </div>

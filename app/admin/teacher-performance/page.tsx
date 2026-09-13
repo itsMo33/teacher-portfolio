@@ -204,7 +204,7 @@ export default function TeacherPerformancePage() {
             </button>
           </div>
         </div>
-        {viewMode === "track" && (
+        {viewMode === "track" ? (
           <a
             href={`/admin/teacher-performance/print?category=${activeCategory}&date=${date}`}
             target="_blank"
@@ -213,6 +213,17 @@ export default function TeacherPerformancePage() {
           >
             طباعة {category.labelAr}
           </a>
+        ) : (
+          statsTeacherId && (
+            <a
+              href={`/admin/teacher-performance/stats-print?teacherId=${statsTeacherId}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="shrink-0 rounded-lg border border-slate-300 dark:border-slate-700 px-3 py-1.5 text-sm text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800"
+            >
+              طباعة الإحصائيات
+            </a>
+          )
         )}
       </div>
 
