@@ -10,6 +10,7 @@ import {
   PeriodKey,
   TEACHER_BY_NAME,
   TEACHER_NAMES_SORTED,
+  matchShortName,
 } from "@/lib/substitute-data";
 import {
   AbsenceGroup,
@@ -125,6 +126,7 @@ export default function SubstituteSchedulePage() {
   const [loaded, setLoaded] = useState(false);
   const [confirmingReset, setConfirmingReset] = useState(false);
   const [showPrintToast, setShowPrintToast] = useState(false);
+  const [exportingLoadReport, setExportingLoadReport] = useState(false);
   const resetTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const toastTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -212,6 +214,41 @@ export default function SubstituteSchedulePage() {
     setShowPrintToast(true);
     if (toastTimeoutRef.current) clearTimeout(toastTimeoutRef.current);
     toastTimeoutRef.current = setTimeout(() => setShowPrintToast(false), 12000);
+  }
+
+  async function handleExportLoadReport() {
+    setExportingLoadReport(true);
+    try {
+      const res = await fetch("/api/teachers");
+      if (!res.ok) throw new Error("failed to load teachers");
+      const { teachers } = (await res.json()) as {
+        teachers: { name: string; national_id: string; subject: string | null }[];
+      };
+
+      const escapeCsv = (value: string | number) => `"${String(value).replace(/"/g, '""')}"`;
+      const header = ["اسم المعلم", "رقم الهوية", "المادة", "عدد الحصص (النصاب)", "عدد الانتظار هذا الأسبوع", "إجمالي النصاب"];
+      const rows = teachers.map((t) => {
+        const shortName = matchShortName(t.name);
+        const official = shortName ? OFFICIAL_LOAD[shortName] ?? 0 : 0;
+        const subCount = shortName ? assignments.filter((a) => a.substitute === shortName).length : 0;
+        return [t.name, t.national_id, t.subject ?? "", official, subCount, official + subCount].map(escapeCsv);
+      });
+
+      const csv = [header.map(escapeCsv), ...rows].map((r) => r.join(",")).join("\r\n");
+      const blob = new Blob(["﻿" + csv], { type: "text/csv;charset=utf-8;" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "احصائية-النصاب-والانتظار.csv";
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    } catch {
+      alert("تعذّر تصدير الملف، حاول مرة أخرى");
+    } finally {
+      setExportingLoadReport(false);
+    }
   }
 
   const groups = useMemo(() => buildAbsenceGroups(assignments), [assignments]);
@@ -389,6 +426,14 @@ export default function SubstituteSchedulePage() {
               className="rounded-lg border border-slate-300 dark:border-slate-700 px-3 py-1.5 text-sm text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800"
             >
               طباعة السجل
+            </button>
+            <button
+              type="button"
+              onClick={handleExportLoadReport}
+              disabled={exportingLoadReport}
+              className="rounded-lg border border-slate-300 dark:border-slate-700 px-3 py-1.5 text-sm text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 disabled:opacity-50"
+            >
+              {exportingLoadReport ? "جارٍ التصدير..." : "تصدير إحصائية النصاب"}
             </button>
             <button
               type="button"

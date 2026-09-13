@@ -50,6 +50,7 @@ export const SCHOOL_MANAGEMENT_CATEGORIES: SchoolManagementCategory[] = [
   { key: "student_counselor", labelAr: "ملف الموجه الطلابي", accentColor: "#7c3aed" },
   { key: "student_activity", labelAr: "ملف النشاط الطلابي", accentColor: "#be123c" },
   { key: "security_safety", labelAr: "الأمن والسلامة", accentColor: "#0284c7" },
+  { key: "school_health", labelAr: "الصحة المدرسية", accentColor: "#0ea5e9" },
   {
     key: "school_labs",
     labelAr: "المختبرات المدرسية",

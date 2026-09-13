@@ -55,3 +55,47 @@ export const TEACHER_NAMES_SORTED = [...TEACHERS.map((t) => t.name)].sort((a, b)
 export const TEACHER_BY_NAME: Record<string, SubstituteTeacher> = Object.fromEntries(
   TEACHERS.map((t) => [t.name, t])
 );
+
+function normalizeArabic(s: string): string {
+  return s.replace(/[أإآ]/g, "ا").replace(/ة/g, "ه").trim();
+}
+
+function editDistance(a: string, b: string): number {
+  const m = a.length;
+  const n = b.length;
+  const dp: number[][] = Array.from({ length: m + 1 }, () => new Array(n + 1).fill(0));
+  for (let i = 0; i <= m; i++) dp[i][0] = i;
+  for (let j = 0; j <= n; j++) dp[0][j] = j;
+  for (let i = 1; i <= m; i++) {
+    for (let j = 1; j <= n; j++) {
+      dp[i][j] = a[i - 1] === b[j - 1] ? dp[i - 1][j - 1] : 1 + Math.min(dp[i - 1][j], dp[i][j - 1], dp[i - 1][j - 1]);
+    }
+  }
+  return dp[m][n];
+}
+
+/**
+ * The `users` table stores full three-part names ("الأول الأب الأخير"), while this module's
+ * TEACHERS/OFFICIAL_LOAD use shortened two-part names ("الأول الأخير") transcribed from the
+ * school's own schedule documents -- the two never line up exactly. Match by first-word equality
+ * plus a fuzzy (edit-distance) comparison of the last word, which tolerates both the dropped
+ * middle name and minor "ال"/"آل" family-name spelling drift between the two sources.
+ */
+export function matchShortName(fullName: string): string | null {
+  const fullWords = normalizeArabic(fullName).split(/\s+/).filter(Boolean);
+  if (fullWords.length === 0) return null;
+  const fullFirst = fullWords[0];
+  const fullLast = fullWords[fullWords.length - 1];
+
+  let best: { name: string; dist: number } | null = null;
+  for (const shortName of Object.keys(OFFICIAL_LOAD)) {
+    const shortWords = normalizeArabic(shortName).split(/\s+/).filter(Boolean);
+    if (shortWords.length === 0) continue;
+    if (editDistance(shortWords[0], fullFirst) > 2) continue;
+    const dist = editDistance(shortWords[shortWords.length - 1], fullLast);
+    if (dist <= 2 && (!best || dist < best.dist)) {
+      best = { name: shortName, dist };
+    }
+  }
+  return best?.name ?? null;
+}
