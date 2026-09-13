@@ -12,20 +12,14 @@ interface DashboardCard {
   accentColor: string;
 }
 
+// Only the most-used tools live on the dashboard as cards -- everything else (including these
+// five) stays reachable from the sidebar nav (see fullNavItems in app/admin/layout.tsx).
 const DASHBOARD_CARDS: DashboardCard[] = [
   { href: "/admin/teachers", label: "قائمة المعلمين", description: "استعراض جميع المعلمين ونسب إنجازهم", accentColor: "#2563eb" },
-  { href: "/admin/uploads", label: "رفع ملفات للمعلمين", description: "رفع ملفات إدارية نيابة عن المعلمين", accentColor: "#0891b2" },
   { href: "/admin/substitute-schedule", label: "جدول الانتظار", description: "إسناد المعلمين المنتظرين لتغطية الحصص", accentColor: "#0d9488" },
-  { href: "/admin/teacher-performance", label: "متابعة أداء المعلمين", description: "الطابور الصباحي، الإشراف، المناوبة، وغيرها", accentColor: "#9333ea" },
-  { href: "/admin/teachers/new", label: "إضافة معلم", description: "إنشاء حساب معلم جديد", accentColor: "#059669" },
-  { href: "/admin/teachers/import", label: "استيراد معلمين", description: "استيراد عدة معلمين دفعة واحدة", accentColor: "#65a30d" },
   { href: "/admin/statistics", label: "الإحصائيات", description: "نسب رفع الملفات لكل قسم بين المعلمين", accentColor: "#d97706" },
-  { href: "/admin/accountability", label: "المسائلات", description: "كل معلم عليه مسائلة، مع حالتها", accentColor: "#dc2626" },
-  { href: "/admin/reports", label: "تصدير تقرير", description: "تصدير تقرير إنجاز شامل بصيغة إكسل", accentColor: "#ea580c" },
+  { href: "/admin/teacher-performance", label: "متابعة أداء المعلمين", description: "الطابور الصباحي، الإشراف، المناوبة، وغيرها", accentColor: "#9333ea" },
   { href: "/admin/school-management", label: "إدارة المدرسة", description: "ملفات مدير المدرسة والوكلاء والموجه الطلابي", accentColor: "#7c3aed" },
-  { href: "/admin/activity-log", label: "سجل النشاط", description: "سجل كل العمليات التي تمت في النظام", accentColor: "#c026d3" },
-  { href: "/admin/trash", label: "سلة المحذوفات", description: "استعادة أو حذف الحسابات والملفات المحذوفة نهائيًا", accentColor: "#dc2626" },
-  { href: "/admin/settings", label: "الإعدادات", description: "إعدادات الحساب", accentColor: "#64748b" },
 ];
 
 async function RestrictedDashboard({ categoryKey }: { categoryKey: string }) {
