@@ -35,10 +35,12 @@ export default async function TeacherPerformancePrintPage({
     day: "numeric",
   });
 
-  const rows = (teachers ?? []).map((t) => ({
-    name: t.name,
-    status: statusByTeacher.get(t.id) ?? defaultStatus,
-  }));
+  // A teacher never marked at all (blank/not-applicable in an "explicit" category) is left out of
+  // the printed report entirely -- only assumed-present categories, where everyone always resolves
+  // to present or absent, ever print every teacher.
+  const rows = (teachers ?? [])
+    .map((t) => ({ name: t.name, status: statusByTeacher.get(t.id) ?? defaultStatus }))
+    .filter((r) => r.status !== null);
 
   return (
     <div className="max-w-2xl mx-auto bg-white text-slate-900 print:max-w-none">
@@ -46,14 +48,16 @@ export default async function TeacherPerformancePrintPage({
         <PrintButton />
       </div>
 
-      <div className="border-b border-slate-300 pb-4 mb-4 text-center">
-        <p className="text-sm text-slate-500">{SCHOOL_NAME}</p>
-        <h1 className="text-xl font-bold">تقرير متابعة أداء المعلمين — {category.labelAr}</h1>
-        <p className="text-sm text-slate-600 mt-1">{dateLabel}</p>
-      </div>
-
       <table className="w-full text-sm border-collapse">
+        {/* thead repeats on every printed page, so the title stays visible even past page 1. */}
         <thead>
+          <tr>
+            <th colSpan={3} className="border-b border-slate-300 pb-4 pt-2 text-center font-normal">
+              <p className="text-sm text-slate-500">{SCHOOL_NAME}</p>
+              <p className="text-xl font-bold text-slate-900">تقرير متابعة أداء المعلمين — {category.labelAr}</p>
+              <p className="text-sm text-slate-600 mt-1">{dateLabel}</p>
+            </th>
+          </tr>
           <tr className="border-b border-slate-300">
             <th className="text-right py-2 px-2">م</th>
             <th className="text-right py-2 px-2">اسم المعلم</th>
@@ -65,9 +69,7 @@ export default async function TeacherPerformancePrintPage({
             <tr key={r.name} className="border-b border-slate-100">
               <td className="py-1.5 px-2 tabular-nums">{i + 1}</td>
               <td className="py-1.5 px-2">{r.name}</td>
-              <td className="py-1.5 px-2">
-                {r.status === "present" ? "✓ حاضر" : r.status === "absent" ? "✗ غائب" : ""}
-              </td>
+              <td className="py-1.5 px-2">{r.status === "present" ? "✓ حاضر" : "✗ غائب"}</td>
             </tr>
           ))}
         </tbody>
