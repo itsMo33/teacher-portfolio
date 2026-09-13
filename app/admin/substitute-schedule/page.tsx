@@ -23,25 +23,11 @@ import {
 } from "@/lib/substitute-logic";
 import { SCHOOL_NAME } from "@/lib/school";
 
-const STORAGE_KEY = "makkah-substitute-log-v1";
-
-function loadAssignments(): SubstituteAssignment[] {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return [];
-    const parsed = JSON.parse(raw);
-    return Array.isArray(parsed) ? parsed : [];
-  } catch {
-    return [];
-  }
-}
-
-function saveAssignments(assignments: SubstituteAssignment[]) {
-  try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(assignments));
-  } catch {
-    // localStorage unavailable (private mode, disabled, etc.) — silently skip persistence.
-  }
+async function fetchAssignments(all = false): Promise<SubstituteAssignment[]> {
+  const res = await fetch(`/api/substitute-assignments${all ? "?all=1" : ""}`);
+  if (!res.ok) throw new Error("failed to load assignments");
+  const { assignments } = (await res.json()) as { assignments: SubstituteAssignment[] };
+  return assignments;
 }
 
 function candidateInfoLabel(c: Candidate): string {
@@ -127,19 +113,24 @@ export default function SubstituteSchedulePage() {
   const [confirmingReset, setConfirmingReset] = useState(false);
   const [showPrintToast, setShowPrintToast] = useState(false);
   const [exportingLoadReport, setExportingLoadReport] = useState(false);
+  const [resetting, setResetting] = useState(false);
   const resetTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const toastTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
-    // One-time hydration from localStorage, which doesn't exist during SSR.
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setAssignments(loadAssignments());
-    setLoaded(true);
+    let cancelled = false;
+    fetchAssignments()
+      .then((data) => {
+        if (!cancelled) setAssignments(data);
+      })
+      .catch(() => {})
+      .finally(() => {
+        if (!cancelled) setLoaded(true);
+      });
+    return () => {
+      cancelled = true;
+    };
   }, []);
-
-  useEffect(() => {
-    if (loaded) saveAssignments(assignments);
-  }, [assignments, loaded]);
 
   useEffect(() => {
     return () => {
@@ -164,37 +155,63 @@ export default function SubstituteSchedulePage() {
     [assignments]
   );
 
-  function handleAssign(day: DayKey, period: PeriodKey, absent: string, section: string, substituteName: string, rank: number) {
-    setAssignments((prev) => {
-      const filtered = prev.filter((a) => !(a.day === day && a.period === period && a.absentTeacher === absent));
-      return [
-        ...filtered,
-        {
-          day,
-          period,
-          absentTeacher: absent,
-          section,
-          substitute: substituteName,
-          rank,
-          timestamp: new Date().toISOString(),
-        },
-      ];
-    });
+  async function handleAssign(
+    day: DayKey,
+    period: PeriodKey,
+    absent: string,
+    section: string,
+    substituteName: string,
+    rank: number
+  ) {
+    try {
+      const res = await fetch("/api/substitute-assignments", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ day, period, absentTeacher: absent, section, substitute: substituteName, rank }),
+      });
+      if (!res.ok) throw new Error("assign failed");
+      const { assignment } = (await res.json()) as { assignment: SubstituteAssignment };
+      setAssignments((prev) => [
+        ...prev.filter((a) => !(a.day === day && a.period === period && a.absentTeacher === absent)),
+        assignment,
+      ]);
+    } catch {
+      alert("تعذّر حفظ الإسناد، حاول مرة أخرى");
+    }
   }
 
-  function handleCancel(day: DayKey, period: PeriodKey, absent: string) {
-    setAssignments((prev) => prev.filter((a) => !(a.day === day && a.period === period && a.absentTeacher === absent)));
+  async function handleCancel(day: DayKey, period: PeriodKey, absent: string) {
+    try {
+      const res = await fetch("/api/substitute-assignments", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ day, period, absentTeacher: absent }),
+      });
+      if (!res.ok) throw new Error("cancel failed");
+      setAssignments((prev) => prev.filter((a) => !(a.day === day && a.period === period && a.absentTeacher === absent)));
+    } catch {
+      alert("تعذّر إلغاء الإسناد، حاول مرة أخرى");
+    }
   }
 
-  function handleResetClick() {
-    if (confirmingReset) {
-      setAssignments([]);
-      setConfirmingReset(false);
-      if (resetTimeoutRef.current) clearTimeout(resetTimeoutRef.current);
+  async function handleResetClick() {
+    if (!confirmingReset) {
+      setConfirmingReset(true);
+      resetTimeoutRef.current = setTimeout(() => setConfirmingReset(false), 4000);
       return;
     }
-    setConfirmingReset(true);
-    resetTimeoutRef.current = setTimeout(() => setConfirmingReset(false), 4000);
+    if (resetTimeoutRef.current) clearTimeout(resetTimeoutRef.current);
+    setConfirmingReset(false);
+    setResetting(true);
+    try {
+      const res = await fetch("/api/substitute-assignments/reset", { method: "POST" });
+      if (!res.ok) throw new Error("reset failed");
+      setAssignments([]);
+    } catch {
+      alert("تعذّر بدء أسبوع جديد، حاول مرة أخرى");
+    } finally {
+      setResetting(false);
+    }
   }
 
   function handlePrint() {
@@ -224,13 +241,14 @@ export default function SubstituteSchedulePage() {
       const { teachers } = (await res.json()) as {
         teachers: { name: string; national_id: string; subject: string | null }[];
       };
+      const allAssignments = await fetchAssignments(true);
 
       const escapeCsv = (value: string | number) => `"${String(value).replace(/"/g, '""')}"`;
       const header = ["اسم المعلم", "رقم الهوية", "المادة", "عدد الحصص (النصاب)", "عدد حصص الانتظار", "إجمالي النصاب"];
       const rows = teachers.map((t) => {
         const shortName = matchShortName(t.name);
         const official = shortName ? OFFICIAL_LOAD[shortName] ?? 0 : 0;
-        const subCount = shortName ? assignments.filter((a) => a.substitute === shortName).length : 0;
+        const subCount = shortName ? allAssignments.filter((a) => a.substitute === shortName).length : 0;
         return [t.name, t.national_id, t.subject ?? "", official, subCount, official + subCount].map(escapeCsv);
       });
 
@@ -438,13 +456,14 @@ export default function SubstituteSchedulePage() {
             <button
               type="button"
               onClick={handleResetClick}
-              className={`rounded-lg border px-3 py-1.5 text-sm transition-colors ${
+              disabled={resetting}
+              className={`rounded-lg border px-3 py-1.5 text-sm transition-colors disabled:opacity-50 ${
                 confirmingReset
                   ? "border-red-500 bg-red-500 text-white"
                   : "border-slate-300 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800"
               }`}
             >
-              {confirmingReset ? "اضغط مرة أخرى للتأكيد" : "بدء أسبوع جديد"}
+              {resetting ? "جارٍ الأرشفة..." : confirmingReset ? "اضغط مرة أخرى للتأكيد" : "بدء أسبوع جديد"}
             </button>
           </div>
         </div>
@@ -458,7 +477,11 @@ export default function SubstituteSchedulePage() {
           </div>
         )}
 
-        {groups.length === 0 ? (
+        {!loaded ? (
+          <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-6 text-center text-sm text-slate-400">
+            جارٍ التحميل...
+          </div>
+        ) : groups.length === 0 ? (
           <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-6 text-center text-sm text-slate-400">
             لا توجد إسنادات مسجّلة بعد
           </div>

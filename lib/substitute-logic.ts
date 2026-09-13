@@ -2,6 +2,7 @@ import { DAYS, DayKey, OFFICIAL_LOAD, PERIODS, PeriodKey, TEACHER_BY_NAME } from
 import { ALWAYS_AVAILABLE_PERIODS, ALWAYS_AVAILABLE_TEACHERS, STATIC_RANK_TABLE } from "./substitute-static-schedule";
 
 export interface SubstituteAssignment {
+  id: string;
   day: DayKey;
   period: PeriodKey;
   absentTeacher: string;

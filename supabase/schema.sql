@@ -112,3 +112,23 @@ create table if not exists activity_log (
   created_at timestamptz not null default now()
 );
 create index if not exists idx_activity_log_created_at on activity_log(created_at desc);
+
+-- جدول الانتظار assignments, persisted so totals survive "بدء أسبوع جديد" and aren't stuck in
+-- one admin's browser. `active` rows are the current, still-editable week shown on screen;
+-- "بدء أسبوع جديد" archives them (active=false) instead of deleting them, so every assignment
+-- ever made keeps counting toward a teacher's total انتظار history. A row is only ever hard-deleted
+-- while still active (an in-progress correction or a genuine cancel before the day happens) --
+-- once archived it's a permanent historical record.
+create table if not exists substitute_assignments (
+  id uuid primary key default gen_random_uuid(),
+  day text not null,
+  period text not null,
+  absent_teacher text not null,
+  section text not null,
+  substitute text not null,
+  rank integer not null,
+  active boolean not null default true,
+  created_at timestamptz not null default now()
+);
+create index if not exists idx_substitute_assignments_active on substitute_assignments(active);
+create index if not exists idx_substitute_assignments_substitute on substitute_assignments(substitute);
