@@ -15,8 +15,8 @@ export default async function SchoolManagementPage() {
     <div className="flex flex-col gap-8 max-w-2xl">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-xl font-bold text-slate-900 dark:text-slate-50">إدارة المدرسة</h2>
-          <p className="text-sm text-slate-500">ملفات خاصة بإدارة المدرسة، لا يطّلع عليها المعلمون</p>
+          <h2 className="text-xl font-bold text-slate-900 dark:text-slate-50">الإنجاز المدرسي</h2>
+          <p className="text-sm text-slate-500">ملفات خاصة بالإنجاز المدرسي، لا يطّلع عليها المعلمون</p>
         </div>
         <Link
           href="/admin/school-management/manage"

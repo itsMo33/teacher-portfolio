@@ -130,7 +130,7 @@ export default function ManageSchoolCategoriesPage() {
     <div className="flex flex-col gap-6 max-w-2xl">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-xl font-bold text-slate-900 dark:text-slate-50">إدارة أقسام إدارة المدرسة</h2>
+          <h2 className="text-xl font-bold text-slate-900 dark:text-slate-50">إدارة أقسام الإنجاز المدرسي</h2>
           <p className="text-sm text-slate-500">أضف أقسامًا جديدة، غيّر الأسماء والألوان، أو أضف/احذف فروعًا داخل كل قسم</p>
         </div>
         <Link
