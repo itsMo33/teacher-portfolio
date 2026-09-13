@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import { PERFORMANCE_CATEGORIES, PerformanceCategory } from "@/lib/teacher-performance";
 
 interface Teacher {
@@ -105,13 +106,21 @@ export default function TeacherPerformancePage() {
 
   return (
     <div className="flex flex-col gap-6 max-w-3xl">
-      <div>
-        <h2 className="text-xl font-bold text-slate-900 dark:text-slate-50">متابعة أداء المعلمين</h2>
-        <p className="text-sm text-slate-500">
-          {category.mode === "assumed-present"
-            ? "كل المعلمين مسجّلين حاضرين افتراضيًا -- اضغط على اسم المعلم الغائب لتحويله لغائب"
-            : "كل المعلمين فاضين افتراضيًا -- اضغط لتسجيل حاضر، اضغط مرة ثانية لتسجيل غائب، وثالثة للرجوع فاضي"}
-        </p>
+      <div className="flex items-center justify-between gap-3">
+        <div>
+          <h2 className="text-xl font-bold text-slate-900 dark:text-slate-50">متابعة أداء المعلمين</h2>
+          <p className="text-sm text-slate-500">
+            {category.mode === "assumed-present"
+              ? "كل المعلمين مسجّلين حاضرين افتراضيًا -- اضغط على اسم المعلم الغائب لتحويله لغائب"
+              : "كل المعلمين فاضين افتراضيًا -- اضغط لتسجيل حاضر، اضغط مرة ثانية لتسجيل غائب، وثالثة للرجوع فاضي"}
+          </p>
+        </div>
+        <Link
+          href="/admin"
+          className="shrink-0 rounded-lg border border-slate-300 dark:border-slate-700 px-3 py-1.5 text-sm text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800"
+        >
+          رجوع
+        </Link>
       </div>
 
       <div className="flex flex-wrap items-center justify-between gap-3">

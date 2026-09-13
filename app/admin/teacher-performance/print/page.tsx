@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import Link from "next/link";
 import { supabaseAdmin } from "@/lib/supabase/server";
 import { getPerformanceCategory } from "@/lib/teacher-performance";
 import { SCHOOL_NAME } from "@/lib/school";
@@ -44,7 +45,13 @@ export default async function TeacherPerformancePrintPage({
 
   return (
     <div className="max-w-2xl mx-auto bg-white text-slate-900 print:max-w-none">
-      <div className="no-print mb-4 flex justify-end">
+      <div className="no-print mb-4 flex items-center justify-between">
+        <Link
+          href="/admin/teacher-performance"
+          className="rounded-lg border border-slate-300 px-3 py-1.5 text-sm text-slate-600 hover:bg-slate-50"
+        >
+          رجوع
+        </Link>
         <PrintButton />
       </div>
 
