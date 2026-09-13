@@ -226,7 +226,7 @@ export default function SubstituteSchedulePage() {
       };
 
       const escapeCsv = (value: string | number) => `"${String(value).replace(/"/g, '""')}"`;
-      const header = ["اسم المعلم", "رقم الهوية", "المادة", "عدد الحصص (النصاب)", "عدد الانتظار هذا الأسبوع", "إجمالي النصاب"];
+      const header = ["اسم المعلم", "رقم الهوية", "المادة", "عدد الحصص (النصاب)", "عدد حصص الانتظار", "إجمالي النصاب"];
       const rows = teachers.map((t) => {
         const shortName = matchShortName(t.name);
         const official = shortName ? OFFICIAL_LOAD[shortName] ?? 0 : 0;
