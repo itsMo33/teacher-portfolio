@@ -1,0 +1,77 @@
+import { notFound } from "next/navigation";
+import { supabaseAdmin } from "@/lib/supabase/server";
+import { getPerformanceCategory } from "@/lib/teacher-performance";
+import { SCHOOL_NAME } from "@/lib/school";
+import { PrintButton } from "@/components/admin/PrintButton";
+
+const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+
+export default async function TeacherPerformancePrintPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ category?: string; date?: string }>;
+}) {
+  const { category: categoryKey, date } = await searchParams;
+
+  const category = categoryKey ? getPerformanceCategory(categoryKey) : undefined;
+  if (!category || !date || !DATE_RE.test(date)) notFound();
+
+  const [{ data: teachers }, { data: records }] = await Promise.all([
+    supabaseAdmin.from("users").select("id, name").eq("role", "teacher").is("deleted_at", null).order("name"),
+    supabaseAdmin
+      .from("teacher_performance_records")
+      .select("teacher_id, status")
+      .eq("category", category.key)
+      .eq("record_date", date),
+  ]);
+
+  const statusByTeacher = new Map((records ?? []).map((r) => [r.teacher_id, r.status as "present" | "absent"]));
+  const defaultStatus = category.mode === "assumed-present" ? "present" : null;
+
+  const dateLabel = new Date(`${date}T00:00:00`).toLocaleDateString("ar-SA", {
+    weekday: "long",
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+  });
+
+  const rows = (teachers ?? []).map((t) => ({
+    name: t.name,
+    status: statusByTeacher.get(t.id) ?? defaultStatus,
+  }));
+
+  return (
+    <div className="max-w-2xl mx-auto bg-white text-slate-900 print:max-w-none">
+      <div className="no-print mb-4 flex justify-end">
+        <PrintButton />
+      </div>
+
+      <div className="border-b border-slate-300 pb-4 mb-4 text-center">
+        <p className="text-sm text-slate-500">{SCHOOL_NAME}</p>
+        <h1 className="text-xl font-bold">تقرير متابعة أداء المعلمين — {category.labelAr}</h1>
+        <p className="text-sm text-slate-600 mt-1">{dateLabel}</p>
+      </div>
+
+      <table className="w-full text-sm border-collapse">
+        <thead>
+          <tr className="border-b border-slate-300">
+            <th className="text-right py-2 px-2">م</th>
+            <th className="text-right py-2 px-2">اسم المعلم</th>
+            <th className="text-right py-2 px-2">الحالة</th>
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((r, i) => (
+            <tr key={r.name} className="border-b border-slate-100">
+              <td className="py-1.5 px-2 tabular-nums">{i + 1}</td>
+              <td className="py-1.5 px-2">{r.name}</td>
+              <td className="py-1.5 px-2">
+                {r.status === "present" ? "✓ حاضر" : r.status === "absent" ? "✗ غائب" : ""}
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
