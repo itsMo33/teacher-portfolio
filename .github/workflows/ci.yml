@@ -1,0 +1,40 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    env:
+      # Placeholder values so module-level env checks (e.g. lib/supabase/server.ts) don't throw
+      # during the build -- no real database is contacted by typecheck/lint/test/build.
+      SUPABASE_URL: https://placeholder.supabase.co
+      SUPABASE_SERVICE_ROLE_KEY: placeholder-service-role-key
+      NEXTAUTH_SECRET: placeholder-secret-for-ci-build-only
+      NEXTAUTH_URL: http://localhost:3000
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies (fails on any peer-dependency conflict)
+        run: npm ci
+
+      - name: Lint
+        run: npx eslint .
+
+      - name: Type-check
+        run: npx tsc --noEmit
+
+      - name: Run tests
+        run: npx vitest run
+
+      - name: Build
+        run: npm run build
