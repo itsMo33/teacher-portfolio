@@ -69,6 +69,7 @@ export default async function TeacherPrintReportPage({
       category: c,
       presentCount: recs.filter((r) => r.status === "present").length,
       absentCount: recs.filter((r) => r.status === "absent").length,
+      lateCount: recs.filter((r) => r.status === "late").length,
     };
   });
 
@@ -156,11 +157,15 @@ export default async function TeacherPrintReportPage({
           <tr>
             <td className="break-inside-avoid mt-4 pt-4 border-t border-slate-300">
               <h3 className="font-bold border-b border-slate-200 pb-1 mb-1">متابعة الأداء</h3>
-              {performanceStats.map(({ category: c, presentCount, absentCount }) => (
+              {performanceStats.map(({ category: c, presentCount, absentCount, lateCount }) => (
                 <div key={c.key} className="pr-3 mb-1 text-sm flex items-center justify-between">
                   <span className="font-medium text-slate-700">{c.labelAr}</span>
                   <span className="text-slate-600">
-                    {c.mode === "assumed-present" ? `غياب: ${absentCount} مرة` : `حضور: ${presentCount} — غياب: ${absentCount}`}
+                    {c.mode === "assumed-present"
+                      ? `غياب: ${absentCount} مرة`
+                      : c.mode === "period-exception"
+                        ? `متأخر: ${lateCount} — لم يحضر: ${absentCount}`
+                        : `حضور: ${presentCount} — غياب: ${absentCount}`}
                   </span>
                 </div>
               ))}

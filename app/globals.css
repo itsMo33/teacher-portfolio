@@ -77,10 +77,41 @@ body {
   animation: pulse-dot 1.8s ease-in-out infinite;
 }
 
+@keyframes logo-breathe {
+  0%,
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.05);
+    opacity: 0.85;
+  }
+}
+
+@keyframes loading-bar-sweep {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+.animate-logo-breathe {
+  animation: logo-breathe 1.6s ease-in-out infinite;
+}
+
+.animate-loading-bar-sweep {
+  animation: loading-bar-sweep 1.3s ease-in-out infinite;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .animate-fade-in-up,
   .animate-fade-in-scale,
-  .animate-pulse-dot {
+  .animate-pulse-dot,
+  .animate-logo-breathe,
+  .animate-loading-bar-sweep {
     animation: none !important;
   }
   * {

@@ -17,7 +17,7 @@ export default async function TeacherPerformanceStatsPrintPage({
     supabaseAdmin.from("users").select("id, name, national_id, subject").eq("id", teacherId).eq("role", "teacher").is("deleted_at", null).maybeSingle(),
     supabaseAdmin
       .from("teacher_performance_records")
-      .select("category, record_date, status")
+      .select("category, record_date, status, period")
       .eq("teacher_id", teacherId)
       .order("record_date", { ascending: false }),
   ]);
@@ -30,6 +30,7 @@ export default async function TeacherPerformanceStatsPrintPage({
       category: c,
       presentCount: recs.filter((r) => r.status === "present").length,
       absentCount: recs.filter((r) => r.status === "absent").length,
+      lateCount: recs.filter((r) => r.status === "late").length,
       records: recs,
     };
   });
@@ -64,20 +65,25 @@ export default async function TeacherPerformanceStatsPrintPage({
           </tr>
         </thead>
         <tbody>
-          {byCategory.map(({ category: c, presentCount, absentCount, records: recs }) => (
+          {byCategory.map(({ category: c, presentCount, absentCount, lateCount, records: recs }) => (
             <tr key={c.key}>
               <td colSpan={2} className="py-3 px-2 align-top border-b border-slate-200">
                 <div className="flex items-center justify-between">
                   <h3 className="font-bold">{c.labelAr}</h3>
                   <span className="text-slate-600">
-                    {c.mode === "assumed-present" ? `غياب: ${absentCount} مرة` : `حضور: ${presentCount} — غياب: ${absentCount}`}
+                    {c.mode === "assumed-present"
+                      ? `غياب: ${absentCount} مرة`
+                      : c.mode === "period-exception"
+                        ? `متأخر: ${lateCount} — لم يحضر: ${absentCount}`
+                        : `حضور: ${presentCount} — غياب: ${absentCount}`}
                   </span>
                 </div>
                 {recs.length > 0 ? (
                   <ul className="mt-1 flex flex-wrap gap-x-4 gap-y-1 pr-3 text-xs text-slate-600">
                     {recs.map((r) => (
-                      <li key={r.record_date}>
-                        {r.status === "present" ? "✓" : "✗"}{" "}
+                      <li key={`${r.record_date}-${r.period ?? ""}`}>
+                        {r.status === "present" ? "✓" : r.status === "late" ? "متأخر" : r.status === "absent" && c.mode === "period-exception" ? "لم يحضر" : "✗"}
+                        {r.period ? ` (الحصة ${r.period})` : ""}{" "}
                         {new Date(`${r.record_date}T00:00:00`).toLocaleDateString("ar-SA", {
                           year: "numeric",
                           month: "long",

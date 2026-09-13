@@ -217,3 +217,13 @@ create table if not exists teacher_performance_records (
   unique (teacher_id, category, record_date)
 );
 create index if not exists idx_teacher_performance_records_date on teacher_performance_records(record_date);
+
+-- الالتزام بزمن الحصة needs a third status (متأخر) plus which class period the violation happened
+-- in -- a teacher can be late for one period and absent from another on the same day, so the old
+-- one-row-per-(teacher,category,date) uniqueness has to widen to include period. period is '' (not
+-- null) for every other category, keeping a plain unique constraint instead of a functional index.
+alter table teacher_performance_records add column if not exists period text not null default '';
+alter table teacher_performance_records drop constraint if exists teacher_performance_records_status_check;
+alter table teacher_performance_records add constraint teacher_performance_records_status_check check (status in ('present', 'absent', 'late'));
+alter table teacher_performance_records drop constraint if exists teacher_performance_records_teacher_id_category_record_date_key;
+alter table teacher_performance_records add constraint teacher_performance_records_teacher_id_category_record_date_period_key unique (teacher_id, category, record_date, period);

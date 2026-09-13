@@ -21,13 +21,10 @@ export default async function TeacherPerformancePrintPage({
     supabaseAdmin.from("users").select("id, name").eq("role", "teacher").is("deleted_at", null).order("name"),
     supabaseAdmin
       .from("teacher_performance_records")
-      .select("teacher_id, status")
+      .select("teacher_id, status, period")
       .eq("category", category.key)
       .eq("record_date", date),
   ]);
-
-  const statusByTeacher = new Map((records ?? []).map((r) => [r.teacher_id, r.status as "present" | "absent"]));
-  const defaultStatus = category.mode === "assumed-present" ? "present" : null;
 
   const dateLabel = new Date(`${date}T00:00:00`).toLocaleDateString("ar-SA", {
     weekday: "long",
@@ -36,12 +33,27 @@ export default async function TeacherPerformancePrintPage({
     day: "numeric",
   });
 
-  // A teacher never marked at all (blank/not-applicable in an "explicit" category) is left out of
-  // the printed report entirely -- only assumed-present categories, where everyone always resolves
-  // to present or absent, ever print every teacher.
-  const rows = (teachers ?? [])
-    .map((t) => ({ name: t.name, status: statusByTeacher.get(t.id) ?? defaultStatus }))
-    .filter((r) => r.status !== null);
+  const nameById = new Map((teachers ?? []).map((t) => [t.id, t.name]));
+
+  const isPeriodMode = category.mode === "period-exception";
+
+  // Period-exception: one row per actual violation (a teacher can have several in one day), sorted
+  // by teacher then period -- everyone else is compliant by default and isn't listed at all.
+  const periodRows = isPeriodMode
+    ? (records ?? [])
+        .map((r) => ({ name: nameById.get(r.teacher_id) ?? "", period: r.period, status: r.status as "late" | "absent" }))
+        .filter((r) => r.name)
+        .sort((a, b) => a.name.localeCompare(b.name, "ar") || a.period.localeCompare(b.period))
+    : [];
+
+  // Other modes: one row per teacher for that day (rules unchanged from before).
+  const statusByTeacher = new Map((records ?? []).map((r) => [r.teacher_id, r.status as "present" | "absent"]));
+  const defaultStatus = category.mode === "assumed-present" ? "present" : null;
+  const simpleRows = !isPeriodMode
+    ? (teachers ?? [])
+        .map((t) => ({ name: t.name, status: statusByTeacher.get(t.id) ?? defaultStatus }))
+        .filter((r) => r.status !== null)
+    : [];
 
   return (
     <div className="max-w-2xl mx-auto bg-white text-slate-900 print:max-w-none">
@@ -59,26 +71,44 @@ export default async function TeacherPerformancePrintPage({
         {/* thead repeats on every printed page, so the title stays visible even past page 1. */}
         <thead>
           <tr>
-            <th colSpan={3} className="border-b border-slate-300 pb-4 pt-2 text-center font-normal">
+            <th colSpan={isPeriodMode ? 4 : 3} className="border-b border-slate-300 pb-4 pt-2 text-center font-normal">
               <p className="text-sm text-slate-500">{SCHOOL_NAME}</p>
               <p className="text-xl font-bold text-slate-900">تقرير متابعة أداء المعلمين — {category.labelAr}</p>
               <p className="text-sm text-slate-600 mt-1">{dateLabel}</p>
             </th>
           </tr>
-          <tr className="border-b border-slate-300">
-            <th className="text-right py-2 px-2">م</th>
-            <th className="text-right py-2 px-2">اسم المعلم</th>
-            <th className="text-right py-2 px-2">الحالة</th>
-          </tr>
+          {isPeriodMode ? (
+            <tr className="border-b border-slate-300">
+              <th className="text-right py-2 px-2">م</th>
+              <th className="text-right py-2 px-2">اسم المعلم</th>
+              <th className="text-right py-2 px-2">الحصة</th>
+              <th className="text-right py-2 px-2">الحالة</th>
+            </tr>
+          ) : (
+            <tr className="border-b border-slate-300">
+              <th className="text-right py-2 px-2">م</th>
+              <th className="text-right py-2 px-2">اسم المعلم</th>
+              <th className="text-right py-2 px-2">الحالة</th>
+            </tr>
+          )}
         </thead>
         <tbody>
-          {rows.map((r, i) => (
-            <tr key={r.name} className="border-b border-slate-100">
-              <td className="py-1.5 px-2 tabular-nums">{i + 1}</td>
-              <td className="py-1.5 px-2">{r.name}</td>
-              <td className="py-1.5 px-2">{r.status === "present" ? "✓ حاضر" : "✗ غائب"}</td>
-            </tr>
-          ))}
+          {isPeriodMode
+            ? periodRows.map((r, i) => (
+                <tr key={`${r.name}-${r.period}`} className="border-b border-slate-100">
+                  <td className="py-1.5 px-2 tabular-nums">{i + 1}</td>
+                  <td className="py-1.5 px-2">{r.name}</td>
+                  <td className="py-1.5 px-2 tabular-nums">{r.period}</td>
+                  <td className="py-1.5 px-2">{r.status === "late" ? "متأخر" : "لم يحضر"}</td>
+                </tr>
+              ))
+            : simpleRows.map((r, i) => (
+                <tr key={r.name} className="border-b border-slate-100">
+                  <td className="py-1.5 px-2 tabular-nums">{i + 1}</td>
+                  <td className="py-1.5 px-2">{r.name}</td>
+                  <td className="py-1.5 px-2">{r.status === "present" ? "✓ حاضر" : "✗ غائب"}</td>
+                </tr>
+              ))}
         </tbody>
       </table>
     </div>

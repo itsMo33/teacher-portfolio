@@ -24,13 +24,18 @@ export async function GET(req: NextRequest) {
 
   const { data, error: fetchError } = await supabaseAdmin
     .from("teacher_performance_records")
-    .select("category, record_date, status")
+    .select("category, record_date, status, period")
     .eq("teacher_id", teacherId)
     .order("record_date", { ascending: false });
 
   if (fetchError) return NextResponse.json({ error: fetchError.message }, { status: 500 });
 
   return NextResponse.json({
-    records: (data ?? []).map((r) => ({ category: r.category, date: r.record_date, status: r.status })),
+    records: (data ?? []).map((r) => ({
+      category: r.category,
+      date: r.record_date,
+      status: r.status,
+      period: r.period || null,
+    })),
   });
 }
