@@ -187,6 +187,18 @@ export const PORTFOLIO_SECTIONS: PortfolioSection[] = [
   },
 ];
 
+/** Some teachers are exempt from the "الرخصة المهنية" requirement (per school/MOE policy) and
+ *  shouldn't be counted as missing it in completion percentages or statistics. */
+export const PROFESSIONAL_LICENSE_SLOT_KEY = "achievement_file:professional_license";
+
+export function applyProfessionalLicenseExemption(
+  slotCounts: Record<string, number>,
+  isExempt: boolean
+): Record<string, number> {
+  if (!isExempt) return slotCounts;
+  return { ...slotCounts, [PROFESSIONAL_LICENSE_SLOT_KEY]: Math.max(slotCounts[PROFESSIONAL_LICENSE_SLOT_KEY] ?? 0, 1) };
+}
+
 export function getSection(key: string): PortfolioSection | undefined {
   return PORTFOLIO_SECTIONS.find((s) => s.key === key);
 }

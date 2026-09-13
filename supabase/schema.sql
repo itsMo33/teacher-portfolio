@@ -192,3 +192,8 @@ insert into school_management_categories (key, label_ar, accent_color, subsectio
     {"key": "meetings_minutes", "labelAr": "الاجتماعات والمحاضر"}
   ]', 8)
 on conflict (key) do nothing;
+
+-- Some teachers are exempt from the "الرخصة المهنية" requirement per school/MOE policy -- when
+-- set, they're treated as having satisfied that one subsection in every completion percentage and
+-- statistics view, without needing to actually upload anything there.
+alter table users add column if not exists professional_license_exempt boolean not null default false;

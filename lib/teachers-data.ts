@@ -4,6 +4,7 @@ import {
   TEACHER_COMPLETION_SLOTS,
   TOTAL_TEACHER_COMPLETION_SLOTS,
   PORTFOLIO_SECTIONS,
+  applyProfessionalLicenseExemption,
 } from "@/lib/portfolio-sections";
 
 const TEACHER_WRITABLE_CATEGORIES = PORTFOLIO_SECTIONS.filter((s) => s.teacherWritable).map((s) => s.key);
@@ -27,7 +28,7 @@ export interface TeacherWithCompletion {
 export async function getTeachersWithCompletion(): Promise<TeacherWithCompletion[]> {
   const { data: teachers } = await supabaseAdmin
     .from("users")
-    .select("id, name, national_id, subject")
+    .select("id, name, national_id, subject, professional_license_exempt")
     .eq("role", "teacher")
     .is("deleted_at", null)
     .order("name");
@@ -59,7 +60,10 @@ export async function getTeachersWithCompletion(): Promise<TeacherWithCompletion
   }
 
   return (teachers ?? []).map((t) => {
-    const slotCounts = slotCountsByTeacher.get(t.id) ?? {};
+    const slotCounts = applyProfessionalLicenseExemption(
+      slotCountsByTeacher.get(t.id) ?? {},
+      t.professional_license_exempt ?? false
+    );
     const filledSlots = new Set(Object.keys(slotCounts));
     const totalFiles = Object.values(slotCounts).reduce((sum, n) => sum + n, 0);
     const slotRatioSum = TEACHER_COMPLETION_SLOTS.reduce((sum, slot) => {
