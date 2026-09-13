@@ -79,8 +79,9 @@ function buildSlipHtml(group: AbsenceGroup, dateStr: string): string {
   </div>`;
 }
 
-function buildPrintHtml(assignments: SubstituteAssignment[]): string {
-  const groups = buildAbsenceGroups(assignments);
+function buildPrintHtml(assignments: SubstituteAssignment[], day: DayKey | null): string {
+  const scoped = day ? assignments.filter((a) => a.day === day) : assignments;
+  const groups = buildAbsenceGroups(scoped);
   const dateStr = new Date().toLocaleDateString("ar-SA", { year: "numeric", month: "long", day: "numeric" });
   const slips = groups.map((g) => buildSlipHtml(g, dateStr)).join("");
 
@@ -201,7 +202,7 @@ export default function SubstituteSchedulePage() {
       // ignore
     }
     try {
-      const html = buildPrintHtml(assignments);
+      const html = buildPrintHtml(assignments, selectedDay);
       const blob = new Blob([html], { type: "text/html" });
       const url = URL.createObjectURL(blob);
       window.open(url, "_blank");
@@ -222,10 +223,10 @@ export default function SubstituteSchedulePage() {
   return (
     <div className="flex flex-col gap-6">
       <div className="print-only">
-        <h1 className="text-lg font-bold">{SCHOOL_NAME} — سجل إسناد الانتظار</h1>
+        <h1 className="text-lg font-bold">{SCHOOL_NAME} — سجل إسناد الانتظار{selectedDay ? ` — يوم ${selectedDay}` : ""}</h1>
         <p>
           تاريخ الطباعة: {new Date().toLocaleDateString("ar-SA", { year: "numeric", month: "long", day: "numeric" })} · عدد
-          الإسنادات: {assignments.length}
+          الإسنادات: {selectedDay ? assignments.filter((a) => a.day === selectedDay).length : assignments.length}
         </p>
       </div>
 
@@ -420,7 +421,9 @@ export default function SubstituteSchedulePage() {
           groups.map((group) => (
             <div
               key={`${group.day}-${group.absentTeacher}`}
-              className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4"
+              className={`rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4 ${
+                selectedDay && group.day !== selectedDay ? "no-print" : ""
+              }`}
             >
               <div className="flex flex-wrap items-start justify-between gap-2 mb-3 text-sm">
                 <div>
