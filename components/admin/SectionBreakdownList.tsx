@@ -1,8 +1,10 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 
 export interface SectionBreakdownTeacher {
+  id: string;
   name: string;
   /** How many of this section's subsections the teacher completed (1 for sections without subsections). */
   doneCount: number;
@@ -59,10 +61,14 @@ export function SectionBreakdownList({ sections, total }: { sections: SectionBre
                         ? "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300"
                         : "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300";
                   return (
-                    <span key={t.name} className={`rounded-full px-2.5 py-1 text-xs ${colorClass}`}>
+                    <Link
+                      key={t.id}
+                      href={`/admin/teachers/${t.id}/portfolio/${s.key}`}
+                      className={`rounded-full px-2.5 py-1 text-xs transition-opacity hover:opacity-75 ${colorClass}`}
+                    >
                       {t.name}
                       {t.totalCount > 1 && ` (${t.doneCount}/${t.totalCount})`}
-                    </span>
+                    </Link>
                   );
                 })}
               </div>

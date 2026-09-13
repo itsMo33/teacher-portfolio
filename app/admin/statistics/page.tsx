@@ -16,7 +16,7 @@ export default async function AdminStatisticsPage() {
             (sub) => (t.slotCounts[`${section.key}:${sub.key}`] ?? 0) >= (sub.requiredCount ?? 1)
           ).length
         : Math.min(t.slotCounts[`${section.key}:`] ?? 0, totalCount);
-      return { name: t.name, doneCount, totalCount };
+      return { id: t.id, name: t.name, doneCount, totalCount };
     });
     teacherStatuses.sort((a, b) => b.doneCount / b.totalCount - a.doneCount / a.totalCount);
     // Any upload counts here, even partial -- a teacher who uploaded 1 of 17 weekly plans still
