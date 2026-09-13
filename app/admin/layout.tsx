@@ -7,6 +7,7 @@ const fullNavItems: NavItem[] = [
   { href: "/admin/teachers", label: "قائمة المعلمين" },
   { href: "/admin/uploads", label: "رفع ملفات للمعلمين" },
   { href: "/admin/substitute-schedule", label: "جدول الانتظار" },
+  { href: "/admin/teacher-performance", label: "متابعة أداء المعلمين" },
   { href: "/admin/teachers/new", label: "إضافة معلم" },
   { href: "/admin/teachers/import", label: "استيراد معلمين" },
   { href: "/admin/statistics", label: "الإحصائيات" },

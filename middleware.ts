@@ -16,6 +16,7 @@ export default auth((req) => {
     nextUrl.pathname.startsWith("/api/school-files") ||
     nextUrl.pathname.startsWith("/api/school-management-categories") ||
     nextUrl.pathname.startsWith("/api/substitute-assignments") ||
+    nextUrl.pathname.startsWith("/api/teacher-performance") ||
     nextUrl.pathname.startsWith("/api/ai");
 
   if (!session && (isAdminPath || isTeacherPath || isProtectedApi)) {
@@ -70,6 +71,7 @@ export const config = {
     "/api/school-files/:path*",
     "/api/school-management-categories/:path*",
     "/api/substitute-assignments/:path*",
+    "/api/teacher-performance/:path*",
     "/api/ai/:path*",
   ],
 };

@@ -16,6 +16,7 @@ const DASHBOARD_CARDS: DashboardCard[] = [
   { href: "/admin/teachers", label: "قائمة المعلمين", description: "استعراض جميع المعلمين ونسب إنجازهم", accentColor: "#2563eb" },
   { href: "/admin/uploads", label: "رفع ملفات للمعلمين", description: "رفع ملفات إدارية نيابة عن المعلمين", accentColor: "#0891b2" },
   { href: "/admin/substitute-schedule", label: "جدول الانتظار", description: "إسناد المعلمين المنتظرين لتغطية الحصص", accentColor: "#0d9488" },
+  { href: "/admin/teacher-performance", label: "متابعة أداء المعلمين", description: "الطابور الصباحي، الإشراف، المناوبة، وغيرها", accentColor: "#9333ea" },
   { href: "/admin/teachers/new", label: "إضافة معلم", description: "إنشاء حساب معلم جديد", accentColor: "#059669" },
   { href: "/admin/teachers/import", label: "استيراد معلمين", description: "استيراد عدة معلمين دفعة واحدة", accentColor: "#65a30d" },
   { href: "/admin/statistics", label: "الإحصائيات", description: "نسب رفع الملفات لكل قسم بين المعلمين", accentColor: "#d97706" },

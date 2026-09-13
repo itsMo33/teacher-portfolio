@@ -197,3 +197,23 @@ on conflict (key) do nothing;
 -- set, they're treated as having satisfied that one subsection in every completion percentage and
 -- statistics view, without needing to actually upload anything there.
 alter table users add column if not exists professional_license_exempt boolean not null default false;
+
+-- متابعة أداء المعلمين: daily attendance/compliance marks, admin-only (never surfaced to the
+-- teacher's own account). One row per (teacher, category, date); its absence has a
+-- category-specific default meaning enforced in application code, not here:
+--   - morning_lineup / class_time_commitment: no row = present (✓) by default; a row only ever
+--     records an exception ('absent') -- the admin is unchecking someone out of an assumed-present
+--     roster, not building the roster up from nothing.
+--   - supervision / duty / waiting_period_activation: no row = not applicable that day (blank);
+--     a row explicitly records 'present' or 'absent' only for a teacher who actually had that duty.
+create table if not exists teacher_performance_records (
+  id uuid primary key default gen_random_uuid(),
+  teacher_id uuid not null references users(id) on delete cascade,
+  category text not null check (category in ('morning_lineup', 'supervision', 'duty', 'waiting_period_activation', 'class_time_commitment')),
+  record_date date not null,
+  status text not null check (status in ('present', 'absent')),
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  unique (teacher_id, category, record_date)
+);
+create index if not exists idx_teacher_performance_records_date on teacher_performance_records(record_date);
