@@ -9,7 +9,6 @@ const navItems: NavItem[] = [
     label: s.labelAr,
   })),
   { href: "/teacher/schedule", label: "الجدول المدرسي" },
-  { href: "/teacher/ai-assistant", label: "المساعد الذكي" },
   { href: "/teacher/settings", label: "الإعدادات" },
 ];
 
