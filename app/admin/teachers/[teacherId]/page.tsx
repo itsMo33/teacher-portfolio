@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
+import { auth } from "@/lib/auth/auth-options";
 import { supabaseAdmin } from "@/lib/supabase/server";
 import { TEACHER_COMPLETION_SLOTS, TOTAL_TEACHER_COMPLETION_SLOTS } from "@/lib/portfolio-sections";
 import { getSlotCounts, getHasSchedule, getUnviewedByAdminSectionKeys, getProfessionalLicenseExempt } from "@/lib/portfolio-data";
@@ -13,6 +14,8 @@ export default async function AdminTeacherPortfolioPage({
   params: Promise<{ teacherId: string }>;
 }) {
   const { teacherId } = await params;
+  const session = await auth();
+  const readOnly = !!session?.user?.demoViewOnly;
 
   const { data: teacher } = await supabaseAdmin
     .from("users")
@@ -57,7 +60,7 @@ export default async function AdminTeacherPortfolioPage({
               نسبة الإنجاز: {completionPercent}%
             </span>
           </div>
-          <DeleteTeacherButton teacherId={teacherId} teacherName={teacher.name} />
+          {!readOnly && <DeleteTeacherButton teacherId={teacherId} teacherName={teacher.name} />}
         </div>
         <p className="text-sm text-slate-500">
           {teacher.national_id} {teacher.subject ? `· ${teacher.subject}` : ""}

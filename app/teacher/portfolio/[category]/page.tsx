@@ -18,6 +18,7 @@ export default async function TeacherPortfolioSectionPage({
 
   const session = await auth();
   const teacherId = session!.user.id;
+  const readOnly = !!session!.user.demoViewOnly;
 
   const subsections = section.hasSubsections ? section.subsections! : [{ key: "", labelAr: "" }];
 
@@ -72,13 +73,13 @@ export default async function TeacherPortfolioSectionPage({
             {isExemptLicense && (
               <p className="text-sm text-slate-500 dark:text-slate-400">معفى من هذا المتطلب</p>
             )}
-            {section.teacherWritable && !isExemptLicense && (
+            {section.teacherWritable && !isExemptLicense && !readOnly && (
               <FileUploadDropzone
                 uploadUrl="/api/portfolio/upload"
                 extraFields={{ category: section.key, subcategory: sub.key }}
               />
             )}
-            <AttachmentList attachments={attachments} canDelete={section.teacherWritable} />
+            <AttachmentList attachments={attachments} canDelete={section.teacherWritable && !readOnly} />
           </div>
         );
       })}

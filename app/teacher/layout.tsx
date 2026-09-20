@@ -16,7 +16,12 @@ export default async function TeacherLayout({ children }: { children: React.Reac
   const session = await auth();
 
   return (
-    <AppShell title="أثر" userName={session?.user?.name ?? ""} navItems={navItems}>
+    <AppShell
+      title="أثر"
+      userName={session?.user?.name ?? ""}
+      navItems={navItems}
+      demoViewOnly={session?.user?.demoViewOnly}
+    >
       {children}
     </AppShell>
   );

@@ -27,15 +27,22 @@ export default auth((req) => {
   }
 
   const restrictedCategory = session?.user?.restrictedCategory;
+  const demoViewOnly = session?.user?.demoViewOnly ?? false;
+
+  // A demo/presentation account can browse both /teacher and /admin no matter its role, but can
+  // never change anything -- block every mutating request up front, before any other rule runs.
+  if (demoViewOnly && req.method !== "GET" && req.method !== "HEAD" && nextUrl.pathname.startsWith("/api/")) {
+    return NextResponse.json({ error: "هذا حساب عرض فقط -- لا يمكن التعديل" }, { status: 403 });
+  }
 
   // A teacher additionally scoped to one إدارة المدرسة category (e.g. النشاط الطلابي) is still a
   // normal teacher everywhere else -- only pull them out of the teacher-only redirect below so
   // they can reach /admin for that one category; their own /api/portfolio etc. stay untouched.
-  if (session && isAdminPath && role === "teacher" && !restrictedCategory) {
+  if (session && isAdminPath && role === "teacher" && !restrictedCategory && !demoViewOnly) {
     return NextResponse.redirect(new URL("/teacher", nextUrl.origin));
   }
 
-  if (session && isTeacherPath && role !== "teacher") {
+  if (session && isTeacherPath && role !== "teacher" && !demoViewOnly) {
     return NextResponse.redirect(new URL("/admin", nextUrl.origin));
   }
 

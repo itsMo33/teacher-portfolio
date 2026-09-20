@@ -7,7 +7,8 @@ import { SchoolFileList } from "@/components/admin/SchoolFileList";
 
 export default async function SchoolManagementPage() {
   const session = await auth();
-  if (!session || session.user.role === "teacher") redirect("/admin");
+  if (!session || (session.user.role === "teacher" && !session.user.demoViewOnly)) redirect("/admin");
+  const readOnly = !!session.user.demoViewOnly;
 
   const [ownedKeys, categories] = await Promise.all([getOwnedCategoryKeys(), getSchoolManagementCategories()]);
 
@@ -18,12 +19,14 @@ export default async function SchoolManagementPage() {
           <h2 className="text-xl font-bold text-slate-900 dark:text-slate-50">الإنجاز المدرسي</h2>
           <p className="text-sm text-slate-500">ملفات خاصة بالإنجاز المدرسي، لا يطّلع عليها المعلمون</p>
         </div>
-        <Link
-          href="/admin/school-management/manage"
-          className="shrink-0 rounded-lg border border-slate-300 dark:border-slate-700 px-3 py-1.5 text-sm text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800"
-        >
-          إدارة الأقسام
-        </Link>
+        {!readOnly && (
+          <Link
+            href="/admin/school-management/manage"
+            className="shrink-0 rounded-lg border border-slate-300 dark:border-slate-700 px-3 py-1.5 text-sm text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800"
+          >
+            إدارة الأقسام
+          </Link>
+        )}
       </div>
 
       {await Promise.all(
@@ -52,13 +55,13 @@ export default async function SchoolManagementPage() {
                       {sub.labelAr && (
                         <h4 className="text-sm font-medium text-slate-600 dark:text-slate-300">{sub.labelAr}</h4>
                       )}
-                      {!isOwned && (
+                      {!isOwned && !readOnly && (
                         <FileUploadDropzone
                           uploadUrl="/api/school-files/upload"
                           extraFields={{ category: cat.key, subcategory: sub.key }}
                         />
                       )}
-                      <SchoolFileList files={files} canDelete={!isOwned} />
+                      <SchoolFileList files={files} canDelete={!isOwned && !readOnly} />
                     </div>
                   );
                 })
@@ -72,13 +75,13 @@ export default async function SchoolManagementPage() {
                   return (
                     <div className="flex flex-col gap-2 pr-3">
                       <h4 className="text-sm font-medium text-slate-600 dark:text-slate-300">ملفات عامة</h4>
-                      {!isOwned && (
+                      {!isOwned && !readOnly && (
                         <FileUploadDropzone
                           uploadUrl="/api/school-files/upload"
                           extraFields={{ category: cat.key, subcategory: "" }}
                         />
                       )}
-                      <SchoolFileList files={generalFiles} canDelete={!isOwned} />
+                      <SchoolFileList files={generalFiles} canDelete={!isOwned && !readOnly} />
                     </div>
                   );
                 })())}

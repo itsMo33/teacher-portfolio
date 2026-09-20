@@ -30,7 +30,12 @@ export default async function AdminLayout({ children }: { children: React.ReactN
     : fullNavItems;
 
   return (
-    <AppShell title="أثر" userName={session?.user?.name ?? ""} navItems={navItems}>
+    <AppShell
+      title="أثر"
+      userName={session?.user?.name ?? ""}
+      navItems={navItems}
+      demoViewOnly={session?.user?.demoViewOnly}
+    >
       {children}
     </AppShell>
   );

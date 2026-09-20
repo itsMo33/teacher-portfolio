@@ -1,5 +1,6 @@
 import { notFound, redirect } from "next/navigation";
 import Link from "next/link";
+import { auth } from "@/lib/auth/auth-options";
 import { supabaseAdmin } from "@/lib/supabase/server";
 import { getSection } from "@/lib/portfolio-sections";
 import { getSectionAttachments, getProfessionalLicenseExempt } from "@/lib/portfolio-data";
@@ -12,6 +13,8 @@ export default async function AdminTeacherPortfolioSectionPage({
   params: Promise<{ teacherId: string; category: string }>;
 }) {
   const { teacherId, category } = await params;
+  const session = await auth();
+  const readOnly = !!session!.user.demoViewOnly;
 
   const section = getSection(category);
   if (!section) notFound();
@@ -100,7 +103,7 @@ export default async function AdminTeacherPortfolioSectionPage({
             {isExemptLicense && (
               <p className="text-sm text-slate-500 dark:text-slate-400">معفى من هذا المتطلب</p>
             )}
-            {!section.teacherWritable && (
+            {!section.teacherWritable && !readOnly && (
               <FileUploadDropzone
                 uploadUrl="/api/portfolio/upload"
                 extraFields={{ category: section.key, subcategory: sub.key, teacherId }}
@@ -108,9 +111,9 @@ export default async function AdminTeacherPortfolioSectionPage({
             )}
             <AttachmentList
               attachments={attachments}
-              canDelete={!section.teacherWritable}
+              canDelete={!section.teacherWritable && !readOnly}
               showViewedStatus={!section.teacherWritable}
-              editableAccountabilityStatus={section.key === "accountability"}
+              editableAccountabilityStatus={section.key === "accountability" && !readOnly}
             />
           </div>
         );

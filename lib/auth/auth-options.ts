@@ -21,7 +21,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
 
         const { data: user, error } = await supabaseAdmin
           .from("users")
-          .select("id, national_id, password_hash, role, name, subject, restricted_category")
+          .select("id, national_id, password_hash, role, name, subject, restricted_category, demo_view_only")
           .eq("national_id", nationalId)
           .is("deleted_at", null)
           .maybeSingle();
@@ -38,6 +38,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           nationalId: user.national_id,
           subject: user.subject,
           restrictedCategory: user.restricted_category,
+          demoViewOnly: user.demo_view_only ?? false,
         };
       },
     }),
@@ -49,6 +50,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         token.role = (user as { role: Role }).role;
         token.nationalId = (user as { nationalId: string }).nationalId;
         token.restrictedCategory = (user as { restrictedCategory: string | null }).restrictedCategory ?? null;
+        token.demoViewOnly = (user as { demoViewOnly?: boolean }).demoViewOnly ?? false;
       }
       return token;
     },
@@ -58,6 +60,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         session.user.role = token.role as Role;
         session.user.nationalId = token.nationalId as string;
         session.user.restrictedCategory = (token.restrictedCategory as string | null) ?? null;
+        session.user.demoViewOnly = (token.demoViewOnly as boolean) ?? false;
       }
       return session;
     },

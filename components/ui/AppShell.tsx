@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
+import { usePathname } from "next/navigation";
 import { SignOutButton } from "./SignOutButton";
 import { Footer } from "./Footer";
 import { SCHOOL_NAME } from "@/lib/school";
@@ -16,18 +17,34 @@ export function AppShell({
   title,
   userName,
   navItems,
+  demoViewOnly = false,
   children,
 }: {
   title: string;
   userName: string;
   navItems: NavItem[];
+  /** Presentation account: can browse both /teacher and /admin, but every write is blocked server-side. */
+  demoViewOnly?: boolean;
   children: React.ReactNode;
 }) {
   const [menuOpen, setMenuOpen] = useState(false);
+  const pathname = usePathname();
+  const isOnAdminSide = pathname.startsWith("/admin");
 
   return (
     <div className="flex min-h-screen flex-col bg-slate-50 dark:bg-slate-950 overflow-x-hidden">
       <div className="no-print h-1.5 w-full shrink-0 bg-gradient-to-l from-[var(--brand-primary)] to-[var(--brand-accent)]" />
+      {demoViewOnly && (
+        <div className="no-print flex flex-wrap items-center justify-between gap-2 bg-amber-100 dark:bg-amber-900/40 px-4 py-2 text-sm text-amber-800 dark:text-amber-200">
+          <span>🔒 حساب عرض فقط -- لا يمكن إضافة أو حذف أو تعديل أي شيء</span>
+          <Link
+            href={isOnAdminSide ? "/teacher" : "/admin"}
+            className="rounded-lg border border-amber-400 dark:border-amber-700 px-2.5 py-1 text-xs font-medium hover:bg-amber-200 dark:hover:bg-amber-900/60"
+          >
+            {isOnAdminSide ? "التبديل لعرض المعلم" : "التبديل لعرض الإدارة"}
+          </Link>
+        </div>
+      )}
       <header className="no-print flex items-center justify-between gap-2 border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-3 sm:px-6 py-3">
         <div className="flex min-w-0 items-center gap-2 sm:gap-4">
           <button

@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
+import { auth } from "@/lib/auth/auth-options";
 import { supabaseAdmin } from "@/lib/supabase/server";
 import { PORTFOLIO_SECTIONS, getSection } from "@/lib/portfolio-sections";
 import { getSectionAttachments } from "@/lib/portfolio-data";
@@ -16,6 +17,8 @@ export default async function AdminUploadsForTeacherPage({
   params: Promise<{ teacherId: string }>;
 }) {
   const { teacherId } = await params;
+  const session = await auth();
+  const readOnly = !!session?.user?.demoViewOnly;
 
   const { data: teacher } = await supabaseAdmin
     .from("users")
@@ -66,7 +69,7 @@ export default async function AdminUploadsForTeacherPage({
             الملف الحالي: {schedule.file_name}
           </a>
         )}
-        <FileUploadDropzone uploadUrl={`/api/schedule/${teacherId}`} />
+        {!readOnly && <FileUploadDropzone uploadUrl={`/api/schedule/${teacherId}`} />}
       </div>
 
       {await Promise.all(
@@ -127,15 +130,17 @@ export default async function AdminUploadsForTeacherPage({
                           )}
                         </h4>
                       )}
-                      <FileUploadDropzone
-                        uploadUrl="/api/portfolio/upload"
-                        extraFields={{ category: section.key, subcategory: sub.key, teacherId }}
-                      />
+                      {!readOnly && (
+                        <FileUploadDropzone
+                          uploadUrl="/api/portfolio/upload"
+                          extraFields={{ category: section.key, subcategory: sub.key, teacherId }}
+                        />
+                      )}
                       <AttachmentList
                         attachments={attachments}
-                        canDelete
+                        canDelete={!readOnly}
                         showViewedStatus
-                        editableAccountabilityStatus={section.key === "accountability"}
+                        editableAccountabilityStatus={section.key === "accountability" && !readOnly}
                       />
                     </div>
                   );

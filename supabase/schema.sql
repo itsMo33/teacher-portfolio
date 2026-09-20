@@ -227,3 +227,8 @@ alter table teacher_performance_records drop constraint if exists teacher_perfor
 alter table teacher_performance_records add constraint teacher_performance_records_status_check check (status in ('present', 'absent', 'late'));
 alter table teacher_performance_records drop constraint if exists teacher_performance_records_teacher_id_category_record_date_key;
 alter table teacher_performance_records add constraint teacher_performance_records_teacher_id_category_record_date_period_key unique (teacher_id, category, record_date, period);
+
+-- Demo/presentation accounts: can browse both /teacher and /admin regardless of role, but every
+-- mutating request is blocked at the middleware level (see middleware.ts) -- for showing the whole
+-- system to an outside audience without any risk of real data being changed.
+alter table users add column if not exists demo_view_only boolean not null default false;
