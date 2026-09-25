@@ -154,4 +154,9 @@ body {
   .print-plain td {
     border: none !important;
   }
+  /* One cell (usually a repeating title/date header) inside an otherwise-boxed table that
+     shouldn't get the default border -- unlike .print-plain, this doesn't affect its siblings. */
+  .print-no-border {
+    border: none !important;
+  }
 }

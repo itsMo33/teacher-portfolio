@@ -31,10 +31,10 @@ export default async function PrintAllSchedulesPage() {
         <PrintButton />
       </div>
 
-      <table className="print-plain w-full border-collapse">
+      <table className="w-full border-collapse">
         <thead>
           <tr>
-            <td colSpan={SCHEDULE_DAYS.length * SCHEDULE_PERIODS.length + 1} className="pb-4">
+            <td colSpan={SCHEDULE_DAYS.length * SCHEDULE_PERIODS.length + 1} className="print-no-border pb-4">
               <div className="border-b border-slate-300 pb-4 mb-4 text-center">
                 <p className="text-sm text-slate-500">{SCHOOL_NAME}</p>
                 <h1 className="text-xl font-bold">الجدول العام لكل المعلمين</h1>

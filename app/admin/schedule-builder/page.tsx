@@ -777,6 +777,8 @@ function GridTab({
   const [pickTeacherId, setPickTeacherId] = useState("");
   const [pickSubjectId, setPickSubjectId] = useState("");
   const [printTeacherId, setPrintTeacherId] = useState("");
+  const [draggingSlotId, setDraggingSlotId] = useState<string | null>(null);
+  const [dragOverKey, setDragOverKey] = useState<string | null>(null);
   const [generating, setGenerating] = useState(false);
   const [generateResult, setGenerateResult] = useState<{
     placedCount: number;
@@ -859,6 +861,8 @@ function GridTab({
   }
 
   async function handleMoveCell(slotId: string, destDay: ScheduleDay, destPeriod: SchedulePeriod) {
+    const movingSlot = slots.find((s) => s.id === slotId);
+    if (movingSlot && movingSlot.day === destDay && movingSlot.period === destPeriod) return;
     try {
       const res = await fetch("/api/schedule-builder/slots/move", {
         method: "POST",
@@ -867,7 +871,7 @@ function GridTab({
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
-      await loadSlots(sectionId);
+      setSlots((prev) => prev.map((s) => (s.id === slotId ? data.slot : s)));
       setError("");
     } catch (e) {
       setError(e instanceof Error ? e.message : "تعذّر نقل الحصة");
@@ -1027,6 +1031,9 @@ function GridTab({
                   <td className="p-2 font-medium text-slate-700 dark:text-slate-200">{day}</td>
                   {SCHEDULE_PERIODS.map((period) => {
                     const slot = slotFor(day, period);
+                    const cellKey = `${day}::${period}`;
+                    const isDragging = !!slot && draggingSlotId === slot.id;
+                    const isDragOverTarget = dragOverKey === cellKey;
                     return (
                       <td key={period} className="p-1">
                         <button
@@ -1036,19 +1043,31 @@ function GridTab({
                           onDragStart={(e) => {
                             if (!slot) return;
                             e.dataTransfer.setData("text/plain", slot.id);
+                            e.dataTransfer.effectAllowed = "move";
+                            setDraggingSlotId(slot.id);
                           }}
+                          onDragEnd={() => {
+                            setDraggingSlotId(null);
+                            setDragOverKey(null);
+                          }}
+                          onDragEnter={() => setDragOverKey(cellKey)}
+                          onDragLeave={() => setDragOverKey((prev) => (prev === cellKey ? null : prev))}
                           onDragOver={(e) => e.preventDefault()}
                           onDrop={(e) => {
                             e.preventDefault();
                             const slotId = e.dataTransfer.getData("text/plain");
+                            setDraggingSlotId(null);
+                            setDragOverKey(null);
                             if (!slotId) return;
                             handleMoveCell(slotId, day, period);
                           }}
                           className={`w-full rounded-lg border px-2 py-2 text-xs transition-colors ${
-                            slot
-                              ? "cursor-grab border-[var(--brand-primary)]/40 bg-[var(--brand-primary)]/10 text-slate-800 dark:text-slate-100"
-                              : "border-dashed border-slate-300 dark:border-slate-700 text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800"
-                          }`}
+                            isDragOverTarget
+                              ? "border-amber-400 bg-amber-400/20 ring-2 ring-amber-400"
+                              : slot
+                                ? "cursor-grab border-[var(--brand-primary)]/40 bg-[var(--brand-primary)]/10 text-slate-800 dark:text-slate-100"
+                                : "border-dashed border-slate-300 dark:border-slate-700 text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800"
+                          } ${isDragging ? "opacity-30" : ""}`}
                         >
                           {slot ? (
                             <>
@@ -1166,6 +1185,8 @@ function MasterGridTab({
   );
   const [pickSectionId, setPickSectionId] = useState("");
   const [pickSubjectId, setPickSubjectId] = useState("");
+  const [draggingSlot, setDraggingSlot] = useState<{ id: string; teacherId: string } | null>(null);
+  const [dragOverKey, setDragOverKey] = useState<string | null>(null);
 
   const loadAllSlots = useCallback(() => {
     return fetch("/api/schedule-builder/slots?all=true")
@@ -1219,7 +1240,14 @@ function MasterGridTab({
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
-      await loadAllSlots();
+      setSlots((prev) => [
+        ...prev.filter(
+          (s) =>
+            !(s.teacherId === editingCell.teacherId && s.day === editingCell.day && s.period === editingCell.period) &&
+            !(s.sectionId === pickSectionId && s.day === editingCell.day && s.period === editingCell.period)
+        ),
+        data.slot,
+      ]);
       setEditingCell(null);
       setError("");
     } catch (e) {
@@ -1241,7 +1269,7 @@ function MasterGridTab({
         body: JSON.stringify({ sectionId: existing.sectionId, day: editingCell.day, period: editingCell.period }),
       });
       if (!res.ok) throw new Error((await res.json()).error);
-      await loadAllSlots();
+      setSlots((prev) => prev.filter((s) => s.id !== existing.id));
       setEditingCell(null);
       setError("");
     } catch (e) {
@@ -1255,6 +1283,7 @@ function MasterGridTab({
       setError("ما يمكن نقل حصة لمعلم آخر بالسحب -- هذا يغيّر مالك الحصة، عدّلها من الخانة نفسها بدل السحب");
       return;
     }
+    if (movingSlot && movingSlot.day === destDay && movingSlot.period === destPeriod) return;
     try {
       const res = await fetch("/api/schedule-builder/slots/move", {
         method: "POST",
@@ -1263,7 +1292,7 @@ function MasterGridTab({
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
-      await loadAllSlots();
+      setSlots((prev) => prev.map((s) => (s.id === slotId ? data.slot : s)));
       setError("");
     } catch (e) {
       setError(e instanceof Error ? e.message : "تعذّر نقل الحصة");
@@ -1310,6 +1339,9 @@ function MasterGridTab({
                   {SCHEDULE_DAYS.map((day) =>
                     SCHEDULE_PERIODS.map((period) => {
                       const slot = slotFor(teacher.id, day, period);
+                      const cellKey = `${teacher.id}::${day}::${period}`;
+                      const isDragging = draggingSlot?.id === slot?.id && !!slot;
+                      const isDragOverTarget = dragOverKey === cellKey && draggingSlot?.teacherId === teacher.id;
                       return (
                         <td key={`${day}-${period}`} className="p-0.5">
                           <button
@@ -1319,19 +1351,35 @@ function MasterGridTab({
                             onDragStart={(e) => {
                               if (!slot) return;
                               e.dataTransfer.setData("text/plain", slot.id);
+                              e.dataTransfer.effectAllowed = "move";
+                              setDraggingSlot({ id: slot.id, teacherId: teacher.id });
+                            }}
+                            onDragEnd={() => {
+                              setDraggingSlot(null);
+                              setDragOverKey(null);
+                            }}
+                            onDragEnter={() => {
+                              if (draggingSlot?.teacherId === teacher.id) setDragOverKey(cellKey);
+                            }}
+                            onDragLeave={() => {
+                              setDragOverKey((prev) => (prev === cellKey ? null : prev));
                             }}
                             onDragOver={(e) => e.preventDefault()}
                             onDrop={(e) => {
                               e.preventDefault();
                               const slotId = e.dataTransfer.getData("text/plain");
+                              setDraggingSlot(null);
+                              setDragOverKey(null);
                               if (!slotId) return;
                               handleMoveCell(slotId, teacher.id, day, period);
                             }}
                             className={`w-full min-w-[34px] rounded border px-1 py-1.5 transition-colors ${
-                              slot
-                                ? "cursor-grab border-[var(--brand-primary)]/40 bg-[var(--brand-primary)]/10 text-slate-800 dark:text-slate-100"
-                                : "border-dashed border-slate-300 dark:border-slate-700 text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800"
-                            }`}
+                              isDragOverTarget
+                                ? "border-amber-400 bg-amber-400/20 ring-2 ring-amber-400"
+                                : slot
+                                  ? "cursor-grab border-[var(--brand-primary)]/40 bg-[var(--brand-primary)]/10 text-slate-800 dark:text-slate-100"
+                                  : "border-dashed border-slate-300 dark:border-slate-700 text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800"
+                            } ${isDragging ? "opacity-30" : ""}`}
                           >
                             {slot ? sectionNameById.get(slot.sectionId) ?? "" : "+"}
                           </button>
