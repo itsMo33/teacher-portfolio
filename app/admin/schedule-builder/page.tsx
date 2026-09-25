@@ -87,7 +87,7 @@ export default function ScheduleBuilderPage() {
   }, [loadAll]);
 
   return (
-    <div className="flex flex-col gap-6 max-w-4xl">
+    <div className={`flex flex-col gap-6 ${tab === "master" ? "" : "max-w-4xl"}`}>
       <div className="flex items-center justify-between gap-3">
         <div>
           <h2 className="text-xl font-bold text-slate-900 dark:text-slate-50">جدول مدرسي</h2>
@@ -1311,7 +1311,7 @@ function MasterGridTab({
         </div>
       ) : (
         <div className="overflow-x-auto rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900">
-          <table className="w-full min-w-[1400px] text-[11px] text-center border-collapse">
+          <table className="w-full min-w-[1150px] text-[10px] text-center border-collapse">
             <thead>
               <tr className="border-b border-slate-200 dark:border-slate-800">
                 <th className="p-1"></th>
@@ -1373,7 +1373,7 @@ function MasterGridTab({
                               if (!slotId) return;
                               handleMoveCell(slotId, teacher.id, day, period);
                             }}
-                            className={`w-full min-w-[34px] rounded border px-1 py-1.5 transition-colors ${
+                            className={`w-full min-w-[27px] rounded border px-0.5 py-1 transition-colors ${
                               isDragOverTarget
                                 ? "border-amber-400 bg-amber-400/20 ring-2 ring-amber-400"
                                 : slot
