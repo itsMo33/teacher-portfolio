@@ -218,7 +218,13 @@ function SectionsTab({
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex items-center gap-2 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4">
+      <form
+        onSubmit={(e) => {
+          e.preventDefault();
+          handleAdd();
+        }}
+        className="flex items-center gap-2 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4"
+      >
         <input
           type="text"
           value={newName}
@@ -227,14 +233,13 @@ function SectionsTab({
           className="flex-1 rounded-lg border border-slate-300 dark:border-slate-700 bg-transparent px-3 py-2 text-sm text-slate-900 dark:text-slate-50 focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]"
         />
         <button
-          type="button"
-          onClick={handleAdd}
+          type="submit"
           disabled={busy || !newName.trim()}
           className="shrink-0 rounded-lg bg-[var(--brand-primary)] hover:bg-[var(--brand-primary-dark)] text-white text-sm px-4 py-2 transition-colors disabled:opacity-50"
         >
           إضافة
         </button>
-      </div>
+      </form>
 
       <div className="flex flex-wrap gap-2">
         {sections.map((s) => (
@@ -341,7 +346,13 @@ function SubjectsTab({
     <div className="flex flex-col gap-6">
       <div className="flex flex-col gap-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4">
         <h3 className="font-bold text-slate-800 dark:text-slate-100">المواد</h3>
-        <div className="flex items-center gap-2">
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            handleAddSubject();
+          }}
+          className="flex items-center gap-2"
+        >
           <input
             type="text"
             value={newSubject}
@@ -350,14 +361,13 @@ function SubjectsTab({
             className="flex-1 rounded-lg border border-slate-300 dark:border-slate-700 bg-transparent px-3 py-2 text-sm text-slate-900 dark:text-slate-50 focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]"
           />
           <button
-            type="button"
-            onClick={handleAddSubject}
+            type="submit"
             disabled={busy || !newSubject.trim()}
             className="shrink-0 rounded-lg bg-[var(--brand-primary)] hover:bg-[var(--brand-primary-dark)] text-white text-sm px-4 py-2 transition-colors disabled:opacity-50"
           >
             إضافة
           </button>
-        </div>
+        </form>
         <div className="flex flex-wrap gap-2">
           {subjects.map((s) => (
             <span
@@ -514,7 +524,13 @@ function RequirementsTab({
 
         {sectionId && (
           <>
-            <div className="flex flex-wrap items-center gap-2">
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                handleAdd();
+              }}
+              className="flex flex-wrap items-center gap-2"
+            >
               <select
                 value={subjectId}
                 onChange={(e) => {
@@ -557,15 +573,14 @@ function RequirementsTab({
               )}
               {teacherId && (
                 <button
-                  type="button"
-                  onClick={handleAdd}
+                  type="submit"
                   disabled={busy}
                   className="rounded-lg bg-[var(--brand-primary)] hover:bg-[var(--brand-primary-dark)] text-white text-sm px-4 py-2 transition-colors disabled:opacity-50"
                 >
                   حفظ
                 </button>
               )}
-            </div>
+            </form>
             {subjectId && teachersForSubject.length === 0 && (
               <p className="text-xs text-amber-600 dark:text-amber-400">
                 ما فيه معلم مسجّل لهذه المادة -- سجّله من تبويب &quot;المواد والمعلمين&quot;
@@ -668,7 +683,13 @@ function ConstraintsTab({
 
         {teacherId && (
           <>
-            <div className="flex flex-wrap items-center gap-2">
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                handleAdd();
+              }}
+              className="flex flex-wrap items-center gap-2"
+            >
               <select
                 value={day}
                 onChange={(e) => setDay(e.target.value)}
@@ -694,14 +715,13 @@ function ConstraintsTab({
                 ))}
               </select>
               <button
-                type="button"
-                onClick={handleAdd}
+                type="submit"
                 disabled={busy || (!day && !period)}
                 className="rounded-lg bg-[var(--brand-primary)] hover:bg-[var(--brand-primary-dark)] text-white text-sm px-4 py-2 transition-colors disabled:opacity-50"
               >
                 إضافة قيد
               </button>
-            </div>
+            </form>
             {!day && !period && <p className="text-xs text-slate-400">حدد يومًا أو حصة (أو الاثنين) لتفعيل الإضافة</p>}
 
             <div className="flex flex-col gap-1 pt-2">
