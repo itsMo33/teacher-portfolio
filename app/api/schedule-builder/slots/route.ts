@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth/auth-options";
 import { supabaseAdmin } from "@/lib/supabase/server";
-import { SCHEDULE_DAYS, SCHEDULE_PERIODS } from "@/lib/schedule-builder";
+import { SCHEDULE_DAYS, SCHEDULE_PERIODS, SLOT_SELECT, toSlot } from "@/lib/schedule-builder";
 
 async function requireAccess() {
   const session = await auth();
@@ -14,44 +14,22 @@ async function requireAccess() {
   return { session };
 }
 
-const SLOT_SELECT = "id, teacher_id, subject_id, section_id, day, period, users(name), subjects(name_ar)";
-
-function toSlot(row: {
-  id: string;
-  teacher_id: string;
-  subject_id: string;
-  section_id: string;
-  day: string;
-  period: string;
-  users: { name: string } | { name: string }[] | null;
-  subjects: { name_ar: string } | { name_ar: string }[] | null;
-}) {
-  const teacher = Array.isArray(row.users) ? row.users[0] : row.users;
-  const subject = Array.isArray(row.subjects) ? row.subjects[0] : row.subjects;
-  return {
-    id: row.id,
-    teacherId: row.teacher_id,
-    teacherName: teacher?.name ?? "",
-    subjectId: row.subject_id,
-    subjectName: subject?.name_ar ?? "",
-    sectionId: row.section_id,
-    day: row.day,
-    period: row.period,
-  };
-}
-
+/** ?sectionId= / ?teacherId= filter to one; ?all=true (used by the master-grid view) returns
+ *  every slot across every section and teacher. */
 export async function GET(req: NextRequest) {
   const { error } = await requireAccess();
   if (error) return error;
 
   const sectionId = req.nextUrl.searchParams.get("sectionId");
   const teacherId = req.nextUrl.searchParams.get("teacherId");
-  if (!sectionId && !teacherId) {
-    return NextResponse.json({ error: "Provide sectionId or teacherId" }, { status: 400 });
+  const all = req.nextUrl.searchParams.get("all") === "true";
+  if (!sectionId && !teacherId && !all) {
+    return NextResponse.json({ error: "Provide sectionId, teacherId, or all=true" }, { status: 400 });
   }
 
   let query = supabaseAdmin.from("schedule_slots").select(SLOT_SELECT);
-  query = sectionId ? query.eq("section_id", sectionId) : query.eq("teacher_id", teacherId!);
+  if (sectionId) query = query.eq("section_id", sectionId);
+  else if (teacherId) query = query.eq("teacher_id", teacherId);
 
   const { data, error: fetchError } = await query;
   if (fetchError) return NextResponse.json({ error: fetchError.message }, { status: 500 });

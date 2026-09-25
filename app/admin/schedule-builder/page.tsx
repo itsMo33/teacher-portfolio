@@ -47,7 +47,7 @@ interface Constraint {
   period: string | null;
 }
 
-type Tab = "sections" | "subjects" | "requirements" | "constraints" | "grid";
+type Tab = "sections" | "subjects" | "requirements" | "constraints" | "grid" | "master";
 
 export default function ScheduleBuilderPage() {
   const [tab, setTab] = useState<Tab>("sections");
@@ -109,6 +109,7 @@ export default function ScheduleBuilderPage() {
             { key: "requirements", label: "المتطلبات" },
             { key: "constraints", label: "القيود" },
             { key: "grid", label: "بناء الجدول" },
+            { key: "master", label: "الجدول العام" },
           ] as { key: Tab; label: string }[]
         ).map((t) => (
           <button
@@ -164,8 +165,16 @@ export default function ScheduleBuilderPage() {
           setConstraints={setConstraints}
           setError={setError}
         />
-      ) : (
+      ) : tab === "grid" ? (
         <GridTab teachers={teachers} subjects={subjects} sections={sections} assignments={assignments} setError={setError} />
+      ) : (
+        <MasterGridTab
+          teachers={teachers}
+          subjects={subjects}
+          sections={sections}
+          assignments={assignments}
+          setError={setError}
+        />
       )}
     </div>
   );
@@ -849,6 +858,22 @@ function GridTab({
     }
   }
 
+  async function handleMoveCell(slotId: string, destDay: ScheduleDay, destPeriod: SchedulePeriod) {
+    try {
+      const res = await fetch("/api/schedule-builder/slots/move", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ slotId, day: destDay, period: destPeriod }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+      await loadSlots(sectionId);
+      setError("");
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "تعذّر نقل الحصة");
+    }
+  }
+
   async function handleGenerate(clearFirst: boolean) {
     if (clearFirst && !confirm("هذا سيمسح الجدول الحالي بالكامل (كل الشعب) ويبنيه من جديد تلقائيًا -- متأكد؟")) return;
     setGenerating(true);
@@ -1007,9 +1032,21 @@ function GridTab({
                         <button
                           type="button"
                           onClick={() => openCell(day, period)}
+                          draggable={!!slot}
+                          onDragStart={(e) => {
+                            if (!slot) return;
+                            e.dataTransfer.setData("text/plain", slot.id);
+                          }}
+                          onDragOver={(e) => e.preventDefault()}
+                          onDrop={(e) => {
+                            e.preventDefault();
+                            const slotId = e.dataTransfer.getData("text/plain");
+                            if (!slotId) return;
+                            handleMoveCell(slotId, day, period);
+                          }}
                           className={`w-full rounded-lg border px-2 py-2 text-xs transition-colors ${
                             slot
-                              ? "border-[var(--brand-primary)]/40 bg-[var(--brand-primary)]/10 text-slate-800 dark:text-slate-100"
+                              ? "cursor-grab border-[var(--brand-primary)]/40 bg-[var(--brand-primary)]/10 text-slate-800 dark:text-slate-100"
                               : "border-dashed border-slate-300 dark:border-slate-700 text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800"
                           }`}
                         >
@@ -1081,6 +1118,285 @@ function GridTab({
               حفظ
             </button>
             {slotFor(editingCell.day, editingCell.period) && (
+              <button
+                type="button"
+                onClick={handleClearCell}
+                className="rounded-lg border border-red-300 dark:border-red-800 text-red-600 dark:text-red-400 text-sm px-4 py-2 hover:bg-red-50 dark:hover:bg-red-900/20"
+              >
+                إفراغ الخانة
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={() => setEditingCell(null)}
+              className="rounded-lg border border-slate-300 dark:border-slate-700 text-slate-600 dark:text-slate-300 text-sm px-4 py-2 hover:bg-slate-50 dark:hover:bg-slate-800"
+            >
+              إلغاء
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/** Every teacher as its own row, every (day, period) as a column -- an overview of the whole
+ *  school at once, matching the "الجدول العام" master-grid view. A filled cell can be dragged to
+ *  another column in the SAME row to reschedule that teacher's lesson (their section/subject stay
+ *  the same, only the time changes); dropping is refused with an alert if the destination is
+ *  already taken. Dragging a cell onto a different teacher's row is rejected client-side, since a
+ *  drag here can only move a lesson's time, not hand it to another teacher. */
+function MasterGridTab({
+  teachers,
+  subjects,
+  sections,
+  assignments,
+  setError,
+}: {
+  teachers: Teacher[];
+  subjects: Subject[];
+  sections: Section[];
+  assignments: Assignment[];
+  setError: (e: string) => void;
+}) {
+  const [slots, setSlots] = useState<Slot[]>([]);
+  const [loaded, setLoaded] = useState(false);
+  const [editingCell, setEditingCell] = useState<{ teacherId: string; day: ScheduleDay; period: SchedulePeriod } | null>(
+    null
+  );
+  const [pickSectionId, setPickSectionId] = useState("");
+  const [pickSubjectId, setPickSubjectId] = useState("");
+
+  const loadAllSlots = useCallback(() => {
+    return fetch("/api/schedule-builder/slots?all=true")
+      .then((r) => r.json())
+      .then((data) => setSlots(data.slots ?? []))
+      .catch(() => setSlots([]))
+      .finally(() => setLoaded(true));
+  }, []);
+
+  useEffect(() => {
+    loadAllSlots();
+  }, [loadAllSlots]);
+
+  const sortedTeachers = useMemo(() => [...teachers].sort((a, b) => a.name.localeCompare(b.name, "ar")), [teachers]);
+  const sectionNameById = useMemo(() => new Map(sections.map((s) => [s.id, s.nameAr])), [sections]);
+
+  const slotFor = useCallback(
+    (teacherId: string, day: ScheduleDay, period: SchedulePeriod) =>
+      slots.find((s) => s.teacherId === teacherId && s.day === day && s.period === period) ?? null,
+    [slots]
+  );
+
+  const pickTeacherSubjects = useMemo(
+    () =>
+      editingCell
+        ? subjects.filter((s) => assignments.some((a) => a.teacherId === editingCell.teacherId && a.subjectId === s.id))
+        : [],
+    [subjects, assignments, editingCell]
+  );
+
+  function openCell(teacherId: string, day: ScheduleDay, period: SchedulePeriod) {
+    const existing = slotFor(teacherId, day, period);
+    setEditingCell({ teacherId, day, period });
+    setPickSectionId(existing?.sectionId ?? "");
+    setPickSubjectId(existing?.subjectId ?? "");
+  }
+
+  async function handleSaveCell() {
+    if (!editingCell || !pickSectionId || !pickSubjectId) return;
+    try {
+      const res = await fetch("/api/schedule-builder/slots", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          sectionId: pickSectionId,
+          day: editingCell.day,
+          period: editingCell.period,
+          teacherId: editingCell.teacherId,
+          subjectId: pickSubjectId,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+      await loadAllSlots();
+      setEditingCell(null);
+      setError("");
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "تعذّر الحفظ");
+    }
+  }
+
+  async function handleClearCell() {
+    if (!editingCell) return;
+    const existing = slotFor(editingCell.teacherId, editingCell.day, editingCell.period);
+    if (!existing) {
+      setEditingCell(null);
+      return;
+    }
+    try {
+      const res = await fetch("/api/schedule-builder/slots", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ sectionId: existing.sectionId, day: editingCell.day, period: editingCell.period }),
+      });
+      if (!res.ok) throw new Error((await res.json()).error);
+      await loadAllSlots();
+      setEditingCell(null);
+      setError("");
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "تعذّر الحذف");
+    }
+  }
+
+  async function handleMoveCell(slotId: string, destTeacherId: string, destDay: ScheduleDay, destPeriod: SchedulePeriod) {
+    const movingSlot = slots.find((s) => s.id === slotId);
+    if (movingSlot && movingSlot.teacherId !== destTeacherId) {
+      setError("ما يمكن نقل حصة لمعلم آخر بالسحب -- هذا يغيّر مالك الحصة، عدّلها من الخانة نفسها بدل السحب");
+      return;
+    }
+    try {
+      const res = await fetch("/api/schedule-builder/slots/move", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ slotId, day: destDay, period: destPeriod }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+      await loadAllSlots();
+      setError("");
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "تعذّر نقل الحصة");
+    }
+  }
+
+  return (
+    <div className="flex flex-col gap-4">
+      <p className="text-xs text-slate-500">
+        كل معلم بصف مستقل -- اضغط خانة فاضية لتسجيل حصة، أو اسحب حصة موجودة لخانة ثانية بنفس صف المعلم لتغيير وقتها.
+      </p>
+
+      {!loaded ? (
+        <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-6 text-center text-sm text-slate-400">
+          جارٍ التحميل...
+        </div>
+      ) : (
+        <div className="overflow-x-auto rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900">
+          <table className="w-full min-w-[1400px] text-[11px] text-center border-collapse">
+            <thead>
+              <tr className="border-b border-slate-200 dark:border-slate-800">
+                <th className="p-1"></th>
+                {SCHEDULE_DAYS.map((day) => (
+                  <th key={day} colSpan={SCHEDULE_PERIODS.length} className="p-1 text-slate-600 dark:text-slate-300">
+                    {day}
+                  </th>
+                ))}
+              </tr>
+              <tr className="border-b border-slate-200 dark:border-slate-800">
+                <th className="p-1 text-slate-600 dark:text-slate-300">المعلم</th>
+                {SCHEDULE_DAYS.map((day) =>
+                  SCHEDULE_PERIODS.map((period) => (
+                    <th key={`${day}-${period}`} className="p-1 text-slate-500">
+                      {period}
+                    </th>
+                  ))
+                )}
+              </tr>
+            </thead>
+            <tbody>
+              {sortedTeachers.map((teacher) => (
+                <tr key={teacher.id} className="border-b border-slate-100 dark:border-slate-800">
+                  <td className="p-1 font-medium text-slate-700 dark:text-slate-200 whitespace-nowrap">{teacher.name}</td>
+                  {SCHEDULE_DAYS.map((day) =>
+                    SCHEDULE_PERIODS.map((period) => {
+                      const slot = slotFor(teacher.id, day, period);
+                      return (
+                        <td key={`${day}-${period}`} className="p-0.5">
+                          <button
+                            type="button"
+                            onClick={() => openCell(teacher.id, day, period)}
+                            draggable={!!slot}
+                            onDragStart={(e) => {
+                              if (!slot) return;
+                              e.dataTransfer.setData("text/plain", slot.id);
+                            }}
+                            onDragOver={(e) => e.preventDefault()}
+                            onDrop={(e) => {
+                              e.preventDefault();
+                              const slotId = e.dataTransfer.getData("text/plain");
+                              if (!slotId) return;
+                              handleMoveCell(slotId, teacher.id, day, period);
+                            }}
+                            className={`w-full min-w-[34px] rounded border px-1 py-1.5 transition-colors ${
+                              slot
+                                ? "cursor-grab border-[var(--brand-primary)]/40 bg-[var(--brand-primary)]/10 text-slate-800 dark:text-slate-100"
+                                : "border-dashed border-slate-300 dark:border-slate-700 text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800"
+                            }`}
+                          >
+                            {slot ? sectionNameById.get(slot.sectionId) ?? "" : "+"}
+                          </button>
+                        </td>
+                      );
+                    })
+                  )}
+                </tr>
+              ))}
+              {sortedTeachers.length === 0 && (
+                <tr>
+                  <td colSpan={SCHEDULE_DAYS.length * SCHEDULE_PERIODS.length + 1} className="p-4 text-center text-sm text-slate-400">
+                    ما فيه معلمين
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {editingCell && (
+        <div className="flex flex-col gap-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4">
+          <h3 className="font-bold text-slate-800 dark:text-slate-100">
+            {teachers.find((t) => t.id === editingCell.teacherId)?.name} -- {editingCell.day} -- الحصة {editingCell.period}
+          </h3>
+          <select
+            value={pickSectionId}
+            onChange={(e) => setPickSectionId(e.target.value)}
+            className="rounded-lg border border-slate-300 dark:border-slate-700 bg-transparent px-3 py-2 text-sm text-slate-900 dark:text-slate-50 focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]"
+          >
+            <option value="">— اختر شعبة —</option>
+            {sections.map((s) => (
+              <option key={s.id} value={s.id}>
+                {s.nameAr}
+              </option>
+            ))}
+          </select>
+          <select
+            value={pickSubjectId}
+            onChange={(e) => setPickSubjectId(e.target.value)}
+            className="rounded-lg border border-slate-300 dark:border-slate-700 bg-transparent px-3 py-2 text-sm text-slate-900 dark:text-slate-50 focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]"
+          >
+            <option value="">— اختر مادة —</option>
+            {pickTeacherSubjects.map((s) => (
+              <option key={s.id} value={s.id}>
+                {s.nameAr}
+              </option>
+            ))}
+          </select>
+          {pickTeacherSubjects.length === 0 && (
+            <p className="text-xs text-amber-600 dark:text-amber-400">
+              هذا المعلم ما له مواد مسجّلة -- أضف له مادة من تبويب &quot;المواد والمعلمين&quot;
+            </p>
+          )}
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={handleSaveCell}
+              disabled={!pickSectionId || !pickSubjectId}
+              className="rounded-lg bg-[var(--brand-primary)] hover:bg-[var(--brand-primary-dark)] text-white text-sm px-4 py-2 transition-colors disabled:opacity-50"
+            >
+              حفظ
+            </button>
+            {slotFor(editingCell.teacherId, editingCell.day, editingCell.period) && (
               <button
                 type="button"
                 onClick={handleClearCell}

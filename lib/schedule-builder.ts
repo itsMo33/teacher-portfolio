@@ -43,3 +43,31 @@ export interface ScheduleRequirement {
   teacherName: string;
   periodsPerWeek: number;
 }
+
+export const SLOT_SELECT = "id, teacher_id, subject_id, section_id, day, period, users(name), subjects(name_ar)";
+
+interface SlotRow {
+  id: string;
+  teacher_id: string;
+  subject_id: string;
+  section_id: string;
+  day: string;
+  period: string;
+  users: { name: string } | { name: string }[] | null;
+  subjects: { name_ar: string } | { name_ar: string }[] | null;
+}
+
+export function toSlot(row: SlotRow): ScheduleSlot {
+  const teacher = Array.isArray(row.users) ? row.users[0] : row.users;
+  const subject = Array.isArray(row.subjects) ? row.subjects[0] : row.subjects;
+  return {
+    id: row.id,
+    teacherId: row.teacher_id,
+    teacherName: teacher?.name ?? "",
+    subjectId: row.subject_id,
+    subjectName: subject?.name_ar ?? "",
+    sectionId: row.section_id,
+    day: row.day as ScheduleDay,
+    period: row.period as SchedulePeriod,
+  };
+}
