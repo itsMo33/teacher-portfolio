@@ -1310,22 +1310,31 @@ function MasterGridTab({
           جارٍ التحميل...
         </div>
       ) : (
-        <div className="overflow-x-auto rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900">
+        <div className="max-h-[75vh] overflow-auto rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900">
           <table className="w-full min-w-[1150px] text-[10px] text-center border-collapse">
             <thead>
-              <tr className="border-b border-slate-200 dark:border-slate-800">
-                <th className="p-1"></th>
+              <tr className="h-7 border-b border-slate-200 dark:border-slate-800">
+                <th className="sticky right-0 top-0 z-30 h-7 bg-white p-1 dark:bg-slate-900"></th>
                 {SCHEDULE_DAYS.map((day) => (
-                  <th key={day} colSpan={SCHEDULE_PERIODS.length} className="p-1 text-slate-600 dark:text-slate-300">
+                  <th
+                    key={day}
+                    colSpan={SCHEDULE_PERIODS.length}
+                    className="sticky top-0 z-20 h-7 bg-white p-1 text-slate-600 dark:bg-slate-900 dark:text-slate-300"
+                  >
                     {day}
                   </th>
                 ))}
               </tr>
-              <tr className="border-b border-slate-200 dark:border-slate-800">
-                <th className="p-1 text-slate-600 dark:text-slate-300">المعلم</th>
+              <tr className="h-6 border-b border-slate-200 dark:border-slate-800">
+                <th className="sticky right-0 top-7 z-30 h-6 bg-white p-1 text-slate-600 dark:bg-slate-900 dark:text-slate-300">
+                  المعلم
+                </th>
                 {SCHEDULE_DAYS.map((day) =>
                   SCHEDULE_PERIODS.map((period) => (
-                    <th key={`${day}-${period}`} className="p-1 text-slate-500">
+                    <th
+                      key={`${day}-${period}`}
+                      className="sticky top-7 z-20 h-6 bg-white p-1 text-slate-500 dark:bg-slate-900"
+                    >
                       {period}
                     </th>
                   ))
@@ -1335,7 +1344,9 @@ function MasterGridTab({
             <tbody>
               {sortedTeachers.map((teacher) => (
                 <tr key={teacher.id} className="border-b border-slate-100 dark:border-slate-800">
-                  <td className="p-1 font-medium text-slate-700 dark:text-slate-200 whitespace-nowrap">{teacher.name}</td>
+                  <td className="sticky right-0 z-10 bg-white p-1 font-medium text-slate-700 whitespace-nowrap dark:bg-slate-900 dark:text-slate-200">
+                    {teacher.name}
+                  </td>
                   {SCHEDULE_DAYS.map((day) =>
                     SCHEDULE_PERIODS.map((period) => {
                       const slot = slotFor(teacher.id, day, period);
