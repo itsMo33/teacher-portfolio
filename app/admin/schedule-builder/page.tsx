@@ -767,6 +767,7 @@ function GridTab({
   const [editingCell, setEditingCell] = useState<{ day: ScheduleDay; period: SchedulePeriod } | null>(null);
   const [pickTeacherId, setPickTeacherId] = useState("");
   const [pickSubjectId, setPickSubjectId] = useState("");
+  const [printTeacherId, setPrintTeacherId] = useState("");
   const [generating, setGenerating] = useState(false);
   const [generateResult, setGenerateResult] = useState<{
     placedCount: number;
@@ -939,6 +940,31 @@ function GridTab({
             className="rounded-lg border border-slate-300 dark:border-slate-700 px-3 py-1.5 text-sm text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800"
           >
             طباعة جدول الشعبة
+          </a>
+        )}
+      </div>
+
+      <div className="flex flex-wrap items-center gap-3">
+        <select
+          value={printTeacherId}
+          onChange={(e) => setPrintTeacherId(e.target.value)}
+          className="rounded-lg border border-slate-300 dark:border-slate-700 bg-transparent px-3 py-2 text-sm text-slate-900 dark:text-slate-50 focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]"
+        >
+          <option value="">— اختر معلماً لطباعة جدوله —</option>
+          {teachers.map((t) => (
+            <option key={t.id} value={t.id}>
+              {t.name}
+            </option>
+          ))}
+        </select>
+        {printTeacherId && (
+          <a
+            href={`/admin/schedule-builder/print-teacher?teacherId=${printTeacherId}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="rounded-lg border border-slate-300 dark:border-slate-700 px-3 py-1.5 text-sm text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800"
+          >
+            طباعة جدول المعلم
           </a>
         )}
       </div>
