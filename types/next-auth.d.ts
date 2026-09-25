@@ -12,6 +12,9 @@ declare module "next-auth" {
       /** When true, this account can browse both /teacher and /admin regardless of its role, but
        *  every mutating request (any non-GET to a protected route) is blocked -- for demos/presentations. */
       demoViewOnly: boolean;
+      /** When true, a teacher-role account can additionally reach /admin/schedule-builder to build
+       *  the real weekly جدول مدرسي, on top of their normal teacher access. */
+      canBuildSchedule: boolean;
     } & DefaultSession["user"];
   }
 
@@ -22,6 +25,7 @@ declare module "next-auth" {
     subject?: string | null;
     restrictedCategory?: string | null;
     demoViewOnly?: boolean;
+    canBuildSchedule?: boolean;
   }
 }
 
@@ -32,5 +36,6 @@ declare module "next-auth/jwt" {
     nationalId: string;
     restrictedCategory: string | null;
     demoViewOnly: boolean;
+    canBuildSchedule: boolean;
   }
 }

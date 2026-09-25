@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { auth } from "@/lib/auth/auth-options";
 import { supabaseAdmin } from "@/lib/supabase/server";
 import { getSchoolManagementCategory, getSchoolFiles } from "@/lib/school-files";
@@ -81,6 +82,12 @@ export default async function AdminDashboard() {
 
   if (restrictedCategory) {
     return <RestrictedDashboard categoryKey={restrictedCategory} />;
+  }
+
+  // A teacher granted only جدول مدرسي access (e.g. مؤيد) has exactly one admin tool -- send them
+  // straight there instead of showing the full dashboard, most of which middleware would 403 anyway.
+  if (session?.user?.role === "teacher" && session?.user?.canBuildSchedule) {
+    redirect("/admin/schedule-builder");
   }
 
   const { count: teacherCount } = await supabaseAdmin

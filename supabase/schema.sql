@@ -232,3 +232,45 @@ alter table teacher_performance_records add constraint teacher_performance_recor
 -- mutating request is blocked at the middleware level (see middleware.ts) -- for showing the whole
 -- system to an outside audience without any risk of real data being changed.
 alter table users add column if not exists demo_view_only boolean not null default false;
+
+-- جدول مدرسي builder: مؤيد (or any account granted this) builds the real weekly timetable from
+-- scratch -- which teacher+subject covers which شعبة (section) at each (day, period). Two unique
+-- constraints give hard conflict prevention: a section can't have two classes in the same slot,
+-- and a teacher can't teach two sections in the same slot.
+create table if not exists subjects (
+  id uuid primary key default gen_random_uuid(),
+  name_ar text not null unique,
+  created_at timestamptz not null default now()
+);
+
+create table if not exists teacher_subjects (
+  teacher_id uuid not null references users(id) on delete cascade,
+  subject_id uuid not null references subjects(id) on delete cascade,
+  primary key (teacher_id, subject_id)
+);
+
+create table if not exists class_sections (
+  id uuid primary key default gen_random_uuid(),
+  name_ar text not null unique,
+  sort_order integer not null default 0,
+  created_at timestamptz not null default now()
+);
+
+create table if not exists schedule_slots (
+  id uuid primary key default gen_random_uuid(),
+  teacher_id uuid not null references users(id) on delete cascade,
+  subject_id uuid not null references subjects(id),
+  section_id uuid not null references class_sections(id) on delete cascade,
+  day text not null check (day in ('احد', 'اثنين', 'ثلاثاء', 'اربعاء', 'خميس')),
+  period text not null check (period in ('1', '2', '3', '4', '5', '6', '7')),
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  unique (section_id, day, period),
+  unique (teacher_id, day, period)
+);
+create index if not exists idx_schedule_slots_teacher on schedule_slots(teacher_id);
+create index if not exists idx_schedule_slots_section on schedule_slots(section_id);
+
+-- Grants access to the /admin/schedule-builder tool -- additive like restricted_category, so a
+-- teacher-role account (e.g. مؤيد) can carry this alongside their normal teacher access.
+alter table users add column if not exists can_build_schedule boolean not null default false;
