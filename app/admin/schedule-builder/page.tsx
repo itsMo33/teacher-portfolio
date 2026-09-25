@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { SCHEDULE_DAYS, SCHEDULE_PERIODS, ScheduleDay, SchedulePeriod, sectionColor } from "@/lib/schedule-builder";
 
@@ -48,6 +48,37 @@ interface Constraint {
 }
 
 type Tab = "sections" | "subjects" | "requirements" | "constraints" | "grid" | "master";
+
+function isTeacherUnavailable(constraints: Constraint[], teacherId: string, day: ScheduleDay, period: SchedulePeriod) {
+  return constraints.some(
+    (c) => c.teacherId === teacherId && (c.day === null || c.day === day) && (c.period === null || c.period === period)
+  );
+}
+
+/** Every (day, period) where a lesson could legally move to -- the section it belongs to isn't
+ *  already using that slot, the teacher isn't already teaching something else there (in any other
+ *  section), and it isn't one of the teacher's declared unavailable times. Used to light up valid
+ *  drop targets the moment a drag starts, and to answer "وين أقدر أنقلها؟" without any dragging. */
+function findFreeSlots(
+  sectionSlots: Slot[],
+  teacherSlots: Slot[],
+  constraints: Constraint[],
+  teacherId: string,
+  excludeSlotId: string
+): Set<string> {
+  const sectionBusy = new Set(sectionSlots.filter((s) => s.id !== excludeSlotId).map((s) => `${s.day}::${s.period}`));
+  const teacherBusy = new Set(teacherSlots.filter((s) => s.id !== excludeSlotId).map((s) => `${s.day}::${s.period}`));
+  const free = new Set<string>();
+  for (const day of SCHEDULE_DAYS) {
+    for (const period of SCHEDULE_PERIODS) {
+      const key = `${day}::${period}`;
+      if (sectionBusy.has(key) || teacherBusy.has(key)) continue;
+      if (isTeacherUnavailable(constraints, teacherId, day, period)) continue;
+      free.add(key);
+    }
+  }
+  return free;
+}
 
 export default function ScheduleBuilderPage() {
   const [tab, setTab] = useState<Tab>("sections");
@@ -166,13 +197,21 @@ export default function ScheduleBuilderPage() {
           setError={setError}
         />
       ) : tab === "grid" ? (
-        <GridTab teachers={teachers} subjects={subjects} sections={sections} assignments={assignments} setError={setError} />
+        <GridTab
+          teachers={teachers}
+          subjects={subjects}
+          sections={sections}
+          assignments={assignments}
+          constraints={constraints}
+          setError={setError}
+        />
       ) : (
         <MasterGridTab
           teachers={teachers}
           subjects={subjects}
           sections={sections}
           assignments={assignments}
+          constraints={constraints}
           setError={setError}
         />
       )}
@@ -762,12 +801,14 @@ function GridTab({
   subjects,
   sections,
   assignments,
+  constraints,
   setError,
 }: {
   teachers: Teacher[];
   subjects: Subject[];
   sections: Section[];
   assignments: Assignment[];
+  constraints: Constraint[];
   setError: (e: string) => void;
 }) {
   const [sectionId, setSectionId] = useState("");
@@ -779,6 +820,8 @@ function GridTab({
   const [printTeacherId, setPrintTeacherId] = useState("");
   const [draggingSlotId, setDraggingSlotId] = useState<string | null>(null);
   const [dragOverKey, setDragOverKey] = useState<string | null>(null);
+  const [freeSlotKeys, setFreeSlotKeys] = useState<Set<string> | null>(null);
+  const teacherSlotsCache = useRef<Map<string, Slot[]>>(new Map());
   const [conflictPopup, setConflictPopup] = useState<{
     message: string;
     slotId: string;
@@ -816,6 +859,20 @@ function GridTab({
     [subjects, assignments, pickTeacherId]
   );
 
+  async function getTeacherSlots(teacherId: string): Promise<Slot[]> {
+    const cached = teacherSlotsCache.current.get(teacherId);
+    if (cached) return cached;
+    const data = await fetch(`/api/schedule-builder/slots?teacherId=${teacherId}`).then((r) => r.json());
+    const result: Slot[] = data.slots ?? [];
+    teacherSlotsCache.current.set(teacherId, result);
+    return result;
+  }
+
+  async function showFreeSlotsFor(slot: Slot) {
+    const teacherSlots = await getTeacherSlots(slot.teacherId);
+    setFreeSlotKeys(findFreeSlots(slots, teacherSlots, constraints, slot.teacherId, slot.id));
+  }
+
   function openCell(day: ScheduleDay, period: SchedulePeriod) {
     const existing = slotFor(day, period);
     setEditingCell({ day, period });
@@ -843,6 +900,7 @@ function GridTab({
         ...prev.filter((s) => !(s.day === editingCell.day && s.period === editingCell.period)),
         data.slot,
       ]);
+      teacherSlotsCache.current.clear();
       setEditingCell(null);
       setError("");
     } catch (e) {
@@ -860,6 +918,7 @@ function GridTab({
       });
       if (!res.ok) throw new Error((await res.json()).error);
       setSlots((prev) => prev.filter((s) => !(s.day === editingCell.day && s.period === editingCell.period)));
+      teacherSlotsCache.current.clear();
       setEditingCell(null);
       setError("");
     } catch (e) {
@@ -894,7 +953,10 @@ function GridTab({
         const next = prev.map((s) => (s.id === slotId ? data.slot : s));
         return data.removedConflict ? next.filter((s) => s.id !== data.removedConflict.conflictSlotId) : next;
       });
+      teacherSlotsCache.current.clear();
       setConflictPopup(null);
+      setFreeSlotKeys(null);
+      setEditingCell(null);
       setError("");
     } catch (e) {
       setError(e instanceof Error ? e.message : "تعذّر نقل الحصة");
@@ -1058,6 +1120,7 @@ function GridTab({
                     const isDragging = !!slot && draggingSlotId === slot.id;
                     const isDragOverTarget = dragOverKey === cellKey;
                     const isConflictHighlight = conflictPopup?.highlightKey === cellKey;
+                    const isFreeSuggestion = !slot && freeSlotKeys?.has(cellKey);
                     return (
                       <td key={period} className="p-1">
                         <button
@@ -1070,10 +1133,12 @@ function GridTab({
                             e.dataTransfer.setData("text/plain", slot.id);
                             e.dataTransfer.effectAllowed = "move";
                             setDraggingSlotId(slot.id);
+                            showFreeSlotsFor(slot);
                           }}
                           onDragEnd={() => {
                             setDraggingSlotId(null);
                             setDragOverKey(null);
+                            setFreeSlotKeys(null);
                           }}
                           onDragEnter={() => setDragOverKey(cellKey)}
                           onDragLeave={() => setDragOverKey((prev) => (prev === cellKey ? null : prev))}
@@ -1083,6 +1148,7 @@ function GridTab({
                             const slotId = e.dataTransfer.getData("text/plain");
                             setDraggingSlotId(null);
                             setDragOverKey(null);
+                            setFreeSlotKeys(null);
                             if (!slotId) return;
                             handleMoveCell(slotId, day, period);
                           }}
@@ -1091,9 +1157,11 @@ function GridTab({
                               ? "animate-pulse ring-4 ring-red-500"
                               : isDragOverTarget
                                 ? "border-amber-400 bg-amber-400/20 ring-2 ring-amber-400"
-                                : slot
-                                  ? "cursor-grab border-[var(--brand-primary)]/40 bg-[var(--brand-primary)]/10 text-slate-800 dark:text-slate-100"
-                                  : "border-dashed border-slate-300 dark:border-slate-700 text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800"
+                                : isFreeSuggestion
+                                  ? "border-emerald-400 bg-emerald-400/20 ring-2 ring-emerald-400"
+                                  : slot
+                                    ? "cursor-grab border-[var(--brand-primary)]/40 bg-[var(--brand-primary)]/10 text-slate-800 dark:text-slate-100"
+                                    : "border-dashed border-slate-300 dark:border-slate-700 text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800"
                           } ${isDragging ? "opacity-30" : ""}`}
                         >
                           {slot ? (
@@ -1154,7 +1222,7 @@ function GridTab({
               هذا المعلم ما له مواد مسجّلة -- أضف له مادة من تبويب &quot;المواد والمعلمين&quot;
             </p>
           )}
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <button
               type="button"
               onClick={handleSaveCell}
@@ -1164,22 +1232,59 @@ function GridTab({
               حفظ
             </button>
             {slotFor(editingCell.day, editingCell.period) && (
-              <button
-                type="button"
-                onClick={handleClearCell}
-                className="rounded-lg border border-red-300 dark:border-red-800 text-red-600 dark:text-red-400 text-sm px-4 py-2 hover:bg-red-50 dark:hover:bg-red-900/20"
-              >
-                إفراغ الخانة
-              </button>
+              <>
+                <button
+                  type="button"
+                  onClick={handleClearCell}
+                  className="rounded-lg border border-red-300 dark:border-red-800 text-red-600 dark:text-red-400 text-sm px-4 py-2 hover:bg-red-50 dark:hover:bg-red-900/20"
+                >
+                  إفراغ الخانة
+                </button>
+                <button
+                  type="button"
+                  onClick={() => showFreeSlotsFor(slotFor(editingCell.day, editingCell.period)!)}
+                  className="rounded-lg border border-emerald-300 dark:border-emerald-800 text-emerald-700 dark:text-emerald-400 text-sm px-4 py-2 hover:bg-emerald-50 dark:hover:bg-emerald-900/20"
+                >
+                  وين أقدر أنقلها؟
+                </button>
+              </>
             )}
             <button
               type="button"
-              onClick={() => setEditingCell(null)}
+              onClick={() => {
+                setEditingCell(null);
+                setFreeSlotKeys(null);
+              }}
               className="rounded-lg border border-slate-300 dark:border-slate-700 text-slate-600 dark:text-slate-300 text-sm px-4 py-2 hover:bg-slate-50 dark:hover:bg-slate-800"
             >
               إلغاء
             </button>
           </div>
+          {freeSlotKeys && (
+            <div className="flex flex-col gap-2 border-t border-slate-200 dark:border-slate-800 pt-3">
+              {freeSlotKeys.size === 0 ? (
+                <p className="text-xs text-amber-600 dark:text-amber-400">ما فيه أي مكان فاضٍ لنقل هذي الحصة -- الأسبوع مليان لهذا المعلم أو الشعبة.</p>
+              ) : (
+                <>
+                  <p className="text-xs text-slate-500">الأماكن الفاضية (مضيئة بالأخضر بالجدول فوق) -- اضغط عشان تنقل مباشرة:</p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {SCHEDULE_DAYS.flatMap((day) =>
+                      SCHEDULE_PERIODS.filter((period) => freeSlotKeys.has(`${day}::${period}`)).map((period) => (
+                        <button
+                          key={`${day}-${period}`}
+                          type="button"
+                          onClick={() => handleMoveCell(slotFor(editingCell.day, editingCell.period)!.id, day, period)}
+                          className="rounded-full border border-emerald-300 dark:border-emerald-800 text-emerald-700 dark:text-emerald-400 text-xs px-2.5 py-1 hover:bg-emerald-50 dark:hover:bg-emerald-900/20"
+                        >
+                          {day} -- {period}
+                        </button>
+                      ))
+                    )}
+                  </div>
+                </>
+              )}
+            </div>
+          )}
         </div>
       )}
 
@@ -1228,12 +1333,14 @@ function MasterGridTab({
   subjects,
   sections,
   assignments,
+  constraints,
   setError,
 }: {
   teachers: Teacher[];
   subjects: Subject[];
   sections: Section[];
   assignments: Assignment[];
+  constraints: Constraint[];
   setError: (e: string) => void;
 }) {
   const [slots, setSlots] = useState<Slot[]>([]);
@@ -1245,6 +1352,7 @@ function MasterGridTab({
   const [pickSubjectId, setPickSubjectId] = useState("");
   const [draggingSlot, setDraggingSlot] = useState<{ id: string; teacherId: string } | null>(null);
   const [dragOverKey, setDragOverKey] = useState<string | null>(null);
+  const [freeSlotKeys, setFreeSlotKeys] = useState<Set<string> | null>(null);
   const [conflictPopup, setConflictPopup] = useState<{
     message: string;
     slotId: string;
@@ -1281,6 +1389,12 @@ function MasterGridTab({
       slots.find((s) => s.teacherId === teacherId && s.day === day && s.period === period) ?? null,
     [slots]
   );
+
+  function showFreeSlotsFor(slot: Slot) {
+    const sectionSlots = slots.filter((s) => s.sectionId === slot.sectionId);
+    const teacherSlots = slots.filter((s) => s.teacherId === slot.teacherId);
+    setFreeSlotKeys(findFreeSlots(sectionSlots, teacherSlots, constraints, slot.teacherId, slot.id));
+  }
 
   const pickTeacherSubjects = useMemo(
     () =>
@@ -1386,11 +1500,15 @@ function MasterGridTab({
         return data.removedConflict ? next.filter((s) => s.id !== data.removedConflict.conflictSlotId) : next;
       });
       setConflictPopup(null);
+      setFreeSlotKeys(null);
+      setEditingCell(null);
       setError("");
     } catch (e) {
       setError(e instanceof Error ? e.message : "تعذّر نقل الحصة");
     }
   }
+
+  const freeSlotTeacherId = draggingSlot?.teacherId ?? editingCell?.teacherId ?? null;
 
   return (
     <div className="flex flex-col gap-4">
@@ -1447,6 +1565,8 @@ function MasterGridTab({
                       const isDragging = draggingSlot?.id === slot?.id && !!slot;
                       const isDragOverTarget = dragOverKey === cellKey && draggingSlot?.teacherId === teacher.id;
                       const isConflictHighlight = conflictPopup?.highlightKey === cellKey;
+                      const isFreeSuggestion =
+                        !slot && teacher.id === freeSlotTeacherId && freeSlotKeys?.has(`${day}::${period}`);
                       const bgColor = slot ? sectionColorById.get(slot.sectionId) : undefined;
                       return (
                         <td key={`${day}-${period}`} className="p-0.5">
@@ -1460,10 +1580,12 @@ function MasterGridTab({
                               e.dataTransfer.setData("text/plain", slot.id);
                               e.dataTransfer.effectAllowed = "move";
                               setDraggingSlot({ id: slot.id, teacherId: teacher.id });
+                              showFreeSlotsFor(slot);
                             }}
                             onDragEnd={() => {
                               setDraggingSlot(null);
                               setDragOverKey(null);
+                              setFreeSlotKeys(null);
                             }}
                             onDragEnter={() => {
                               if (draggingSlot?.teacherId === teacher.id) setDragOverKey(cellKey);
@@ -1477,6 +1599,7 @@ function MasterGridTab({
                               const slotId = e.dataTransfer.getData("text/plain");
                               setDraggingSlot(null);
                               setDragOverKey(null);
+                              setFreeSlotKeys(null);
                               if (!slotId) return;
                               handleMoveCell(slotId, teacher.id, day, period);
                             }}
@@ -1486,9 +1609,11 @@ function MasterGridTab({
                                 ? "animate-pulse ring-4 ring-red-500"
                                 : isDragOverTarget
                                   ? "border-amber-400 bg-amber-400/20 ring-2 ring-amber-400"
-                                  : slot
-                                    ? "cursor-grab text-slate-900"
-                                    : "border-dashed border-slate-300 dark:border-slate-700 text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800"
+                                  : isFreeSuggestion
+                                    ? "border-emerald-400 bg-emerald-400/20 ring-2 ring-emerald-400"
+                                    : slot
+                                      ? "cursor-grab text-slate-900"
+                                      : "border-dashed border-slate-300 dark:border-slate-700 text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800"
                             } ${isDragging ? "opacity-30" : ""}`}
                           >
                             {slot ? sectionNameById.get(slot.sectionId) ?? "" : "+"}
@@ -1545,7 +1670,7 @@ function MasterGridTab({
               هذا المعلم ما له مواد مسجّلة -- أضف له مادة من تبويب &quot;المواد والمعلمين&quot;
             </p>
           )}
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <button
               type="button"
               onClick={handleSaveCell}
@@ -1555,22 +1680,66 @@ function MasterGridTab({
               حفظ
             </button>
             {slotFor(editingCell.teacherId, editingCell.day, editingCell.period) && (
-              <button
-                type="button"
-                onClick={handleClearCell}
-                className="rounded-lg border border-red-300 dark:border-red-800 text-red-600 dark:text-red-400 text-sm px-4 py-2 hover:bg-red-50 dark:hover:bg-red-900/20"
-              >
-                إفراغ الخانة
-              </button>
+              <>
+                <button
+                  type="button"
+                  onClick={handleClearCell}
+                  className="rounded-lg border border-red-300 dark:border-red-800 text-red-600 dark:text-red-400 text-sm px-4 py-2 hover:bg-red-50 dark:hover:bg-red-900/20"
+                >
+                  إفراغ الخانة
+                </button>
+                <button
+                  type="button"
+                  onClick={() => showFreeSlotsFor(slotFor(editingCell.teacherId, editingCell.day, editingCell.period)!)}
+                  className="rounded-lg border border-emerald-300 dark:border-emerald-800 text-emerald-700 dark:text-emerald-400 text-sm px-4 py-2 hover:bg-emerald-50 dark:hover:bg-emerald-900/20"
+                >
+                  وين أقدر أنقلها؟
+                </button>
+              </>
             )}
             <button
               type="button"
-              onClick={() => setEditingCell(null)}
+              onClick={() => {
+                setEditingCell(null);
+                setFreeSlotKeys(null);
+              }}
               className="rounded-lg border border-slate-300 dark:border-slate-700 text-slate-600 dark:text-slate-300 text-sm px-4 py-2 hover:bg-slate-50 dark:hover:bg-slate-800"
             >
               إلغاء
             </button>
           </div>
+          {freeSlotKeys && (
+            <div className="flex flex-col gap-2 border-t border-slate-200 dark:border-slate-800 pt-3">
+              {freeSlotKeys.size === 0 ? (
+                <p className="text-xs text-amber-600 dark:text-amber-400">ما فيه أي مكان فاضٍ لنقل هذي الحصة -- الأسبوع مليان لهذا المعلم أو الشعبة.</p>
+              ) : (
+                <>
+                  <p className="text-xs text-slate-500">الأماكن الفاضية (مضيئة بالأخضر بالجدول فوق) -- اضغط عشان تنقل مباشرة:</p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {SCHEDULE_DAYS.flatMap((day) =>
+                      SCHEDULE_PERIODS.filter((period) => freeSlotKeys.has(`${day}::${period}`)).map((period) => (
+                        <button
+                          key={`${day}-${period}`}
+                          type="button"
+                          onClick={() =>
+                            handleMoveCell(
+                              slotFor(editingCell.teacherId, editingCell.day, editingCell.period)!.id,
+                              editingCell.teacherId,
+                              day,
+                              period
+                            )
+                          }
+                          className="rounded-full border border-emerald-300 dark:border-emerald-800 text-emerald-700 dark:text-emerald-400 text-xs px-2.5 py-1 hover:bg-emerald-50 dark:hover:bg-emerald-900/20"
+                        >
+                          {day} -- {period}
+                        </button>
+                      ))
+                    )}
+                  </div>
+                </>
+              )}
+            </div>
+          )}
         </div>
       )}
 
