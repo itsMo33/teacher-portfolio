@@ -71,3 +71,17 @@ export function toSlot(row: SlotRow): ScheduleSlot {
     period: row.period as SchedulePeriod,
   };
 }
+
+/** A stable, repeating palette so every section keeps the same color everywhere (grid, print) --
+ *  assigned by sort_order, not a hash of the id, so it stays predictable as sections are added. */
+export const SECTION_COLORS = [
+  "#FCA5A5", "#FDBA74", "#FDE047", "#BEF264", "#86EFAC",
+  "#6EE7B7", "#5EEAD4", "#67E8F9", "#7DD3FC", "#93C5FD",
+  "#A5B4FC", "#C4B5FD", "#D8B4FE", "#F0ABFC", "#F9A8D4",
+  "#FDA4AF", "#FCD34D", "#A3E635", "#34D399", "#22D3EE",
+  "#60A5FA", "#818CF8", "#E879F9", "#FB7185",
+];
+
+export function sectionColor(sortOrder: number): string {
+  return SECTION_COLORS[sortOrder % SECTION_COLORS.length];
+}

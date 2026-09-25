@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { SCHEDULE_DAYS, SCHEDULE_PERIODS, ScheduleDay, SchedulePeriod } from "@/lib/schedule-builder";
+import { SCHEDULE_DAYS, SCHEDULE_PERIODS, ScheduleDay, SchedulePeriod, sectionColor } from "@/lib/schedule-builder";
 
 interface Teacher {
   id: string;
@@ -779,6 +779,13 @@ function GridTab({
   const [printTeacherId, setPrintTeacherId] = useState("");
   const [draggingSlotId, setDraggingSlotId] = useState<string | null>(null);
   const [dragOverKey, setDragOverKey] = useState<string | null>(null);
+  const [conflictPopup, setConflictPopup] = useState<{
+    message: string;
+    slotId: string;
+    day: ScheduleDay;
+    period: SchedulePeriod;
+    highlightKey: string | null;
+  } | null>(null);
   const [generating, setGenerating] = useState(false);
   const [generateResult, setGenerateResult] = useState<{
     placedCount: number;
@@ -860,18 +867,34 @@ function GridTab({
     }
   }
 
-  async function handleMoveCell(slotId: string, destDay: ScheduleDay, destPeriod: SchedulePeriod) {
+  async function handleMoveCell(slotId: string, destDay: ScheduleDay, destPeriod: SchedulePeriod, force = false) {
     const movingSlot = slots.find((s) => s.id === slotId);
-    if (movingSlot && movingSlot.day === destDay && movingSlot.period === destPeriod) return;
+    if (!force && movingSlot && movingSlot.day === destDay && movingSlot.period === destPeriod) return;
     try {
       const res = await fetch("/api/schedule-builder/slots/move", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ slotId, day: destDay, period: destPeriod }),
+        body: JSON.stringify({ slotId, day: destDay, period: destPeriod, force }),
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error);
-      setSlots((prev) => prev.map((s) => (s.id === slotId ? data.slot : s)));
+      if (!res.ok) {
+        if (data.conflict) {
+          const highlightKey = data.conflict.conflictSectionId === sectionId ? `${destDay}::${destPeriod}` : null;
+          setConflictPopup({ message: data.error, slotId, day: destDay, period: destPeriod, highlightKey });
+          if (highlightKey) {
+            requestAnimationFrame(() => {
+              document.querySelector(`[data-cell-key="${highlightKey}"]`)?.scrollIntoView({ behavior: "smooth", block: "center" });
+            });
+          }
+          return;
+        }
+        throw new Error(data.error);
+      }
+      setSlots((prev) => {
+        const next = prev.map((s) => (s.id === slotId ? data.slot : s));
+        return data.removedConflict ? next.filter((s) => s.id !== data.removedConflict.conflictSlotId) : next;
+      });
+      setConflictPopup(null);
       setError("");
     } catch (e) {
       setError(e instanceof Error ? e.message : "تعذّر نقل الحصة");
@@ -1034,10 +1057,12 @@ function GridTab({
                     const cellKey = `${day}::${period}`;
                     const isDragging = !!slot && draggingSlotId === slot.id;
                     const isDragOverTarget = dragOverKey === cellKey;
+                    const isConflictHighlight = conflictPopup?.highlightKey === cellKey;
                     return (
                       <td key={period} className="p-1">
                         <button
                           type="button"
+                          data-cell-key={cellKey}
                           onClick={() => openCell(day, period)}
                           draggable={!!slot}
                           onDragStart={(e) => {
@@ -1062,11 +1087,13 @@ function GridTab({
                             handleMoveCell(slotId, day, period);
                           }}
                           className={`w-full rounded-lg border px-2 py-2 text-xs transition-colors ${
-                            isDragOverTarget
-                              ? "border-amber-400 bg-amber-400/20 ring-2 ring-amber-400"
-                              : slot
-                                ? "cursor-grab border-[var(--brand-primary)]/40 bg-[var(--brand-primary)]/10 text-slate-800 dark:text-slate-100"
-                                : "border-dashed border-slate-300 dark:border-slate-700 text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800"
+                            isConflictHighlight
+                              ? "animate-pulse ring-4 ring-red-500"
+                              : isDragOverTarget
+                                ? "border-amber-400 bg-amber-400/20 ring-2 ring-amber-400"
+                                : slot
+                                  ? "cursor-grab border-[var(--brand-primary)]/40 bg-[var(--brand-primary)]/10 text-slate-800 dark:text-slate-100"
+                                  : "border-dashed border-slate-300 dark:border-slate-700 text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800"
                           } ${isDragging ? "opacity-30" : ""}`}
                         >
                           {slot ? (
@@ -1155,6 +1182,37 @@ function GridTab({
           </div>
         </div>
       )}
+
+      {conflictPopup && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40"
+          onClick={() => setConflictPopup(null)}
+        >
+          <div
+            className="mx-4 flex max-w-sm flex-col gap-3 rounded-xl border border-red-200 bg-white p-5 dark:border-red-800 dark:bg-slate-900"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3 className="font-bold text-red-600 dark:text-red-400">يوجد تعارض</h3>
+            <p className="text-sm text-slate-700 dark:text-slate-200">{conflictPopup.message}</p>
+            <div className="flex flex-wrap items-center gap-2 pt-1">
+              <button
+                type="button"
+                onClick={() => handleMoveCell(conflictPopup.slotId, conflictPopup.day, conflictPopup.period, true)}
+                className="rounded-lg bg-red-600 hover:bg-red-700 text-white text-sm px-4 py-2 transition-colors"
+              >
+                إزالة التعارض ووضع الحصة هنا
+              </button>
+              <button
+                type="button"
+                onClick={() => setConflictPopup(null)}
+                className="rounded-lg border border-slate-300 dark:border-slate-700 text-slate-600 dark:text-slate-300 text-sm px-4 py-2 hover:bg-slate-50 dark:hover:bg-slate-800"
+              >
+                إلغاء
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -1187,6 +1245,14 @@ function MasterGridTab({
   const [pickSubjectId, setPickSubjectId] = useState("");
   const [draggingSlot, setDraggingSlot] = useState<{ id: string; teacherId: string } | null>(null);
   const [dragOverKey, setDragOverKey] = useState<string | null>(null);
+  const [conflictPopup, setConflictPopup] = useState<{
+    message: string;
+    slotId: string;
+    teacherId: string;
+    day: ScheduleDay;
+    period: SchedulePeriod;
+    highlightKey: string | null;
+  } | null>(null);
 
   const loadAllSlots = useCallback(() => {
     return fetch("/api/schedule-builder/slots?all=true")
@@ -1202,6 +1268,13 @@ function MasterGridTab({
 
   const sortedTeachers = useMemo(() => [...teachers].sort((a, b) => a.name.localeCompare(b.name, "ar")), [teachers]);
   const sectionNameById = useMemo(() => new Map(sections.map((s) => [s.id, s.nameAr])), [sections]);
+  const sectionColorById = useMemo(() => new Map(sections.map((s) => [s.id, sectionColor(s.sortOrder)])), [sections]);
+
+  function scrollToCell(key: string) {
+    requestAnimationFrame(() => {
+      document.querySelector(`[data-cell-key="${key}"]`)?.scrollIntoView({ behavior: "smooth", block: "center", inline: "center" });
+    });
+  }
 
   const slotFor = useCallback(
     (teacherId: string, day: ScheduleDay, period: SchedulePeriod) =>
@@ -1277,22 +1350,42 @@ function MasterGridTab({
     }
   }
 
-  async function handleMoveCell(slotId: string, destTeacherId: string, destDay: ScheduleDay, destPeriod: SchedulePeriod) {
+  async function handleMoveCell(
+    slotId: string,
+    destTeacherId: string,
+    destDay: ScheduleDay,
+    destPeriod: SchedulePeriod,
+    force = false
+  ) {
     const movingSlot = slots.find((s) => s.id === slotId);
     if (movingSlot && movingSlot.teacherId !== destTeacherId) {
       setError("ما يمكن نقل حصة لمعلم آخر بالسحب -- هذا يغيّر مالك الحصة، عدّلها من الخانة نفسها بدل السحب");
       return;
     }
-    if (movingSlot && movingSlot.day === destDay && movingSlot.period === destPeriod) return;
+    if (!force && movingSlot && movingSlot.day === destDay && movingSlot.period === destPeriod) return;
     try {
       const res = await fetch("/api/schedule-builder/slots/move", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ slotId, day: destDay, period: destPeriod }),
+        body: JSON.stringify({ slotId, day: destDay, period: destPeriod, force }),
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error);
-      setSlots((prev) => prev.map((s) => (s.id === slotId ? data.slot : s)));
+      if (!res.ok) {
+        if (data.conflict) {
+          const highlightKey = data.conflict.conflictTeacherId
+            ? `${data.conflict.conflictTeacherId}::${destDay}::${destPeriod}`
+            : `${destTeacherId}::${destDay}::${destPeriod}`;
+          setConflictPopup({ message: data.error, slotId, teacherId: destTeacherId, day: destDay, period: destPeriod, highlightKey });
+          scrollToCell(highlightKey);
+          return;
+        }
+        throw new Error(data.error);
+      }
+      setSlots((prev) => {
+        const next = prev.map((s) => (s.id === slotId ? data.slot : s));
+        return data.removedConflict ? next.filter((s) => s.id !== data.removedConflict.conflictSlotId) : next;
+      });
+      setConflictPopup(null);
       setError("");
     } catch (e) {
       setError(e instanceof Error ? e.message : "تعذّر نقل الحصة");
@@ -1311,29 +1404,29 @@ function MasterGridTab({
         </div>
       ) : (
         <div className="max-h-[75vh] overflow-auto rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900">
-          <table className="w-full min-w-[1150px] text-[10px] text-center border-collapse">
+          <table className="w-full min-w-[1350px] text-[11px] text-center border-collapse">
             <thead>
-              <tr className="h-7 border-b border-slate-200 dark:border-slate-800">
-                <th className="sticky right-0 top-0 z-30 h-7 bg-white p-1 dark:bg-slate-900"></th>
+              <tr className="h-8 border-b border-slate-200 dark:border-slate-800">
+                <th className="sticky right-0 top-0 z-30 h-8 bg-white p-1 dark:bg-slate-900"></th>
                 {SCHEDULE_DAYS.map((day) => (
                   <th
                     key={day}
                     colSpan={SCHEDULE_PERIODS.length}
-                    className="sticky top-0 z-20 h-7 bg-white p-1 text-slate-600 dark:bg-slate-900 dark:text-slate-300"
+                    className="sticky top-0 z-20 h-8 bg-white p-1 text-slate-600 dark:bg-slate-900 dark:text-slate-300"
                   >
                     {day}
                   </th>
                 ))}
               </tr>
-              <tr className="h-6 border-b border-slate-200 dark:border-slate-800">
-                <th className="sticky right-0 top-7 z-30 h-6 bg-white p-1 text-slate-600 dark:bg-slate-900 dark:text-slate-300">
+              <tr className="h-7 border-b border-slate-200 dark:border-slate-800">
+                <th className="sticky right-0 top-8 z-30 h-7 bg-white p-1 text-slate-600 dark:bg-slate-900 dark:text-slate-300">
                   المعلم
                 </th>
                 {SCHEDULE_DAYS.map((day) =>
                   SCHEDULE_PERIODS.map((period) => (
                     <th
                       key={`${day}-${period}`}
-                      className="sticky top-7 z-20 h-6 bg-white p-1 text-slate-500 dark:bg-slate-900"
+                      className="sticky top-8 z-20 h-7 bg-white p-1 text-slate-500 dark:bg-slate-900"
                     >
                       {period}
                     </th>
@@ -1353,10 +1446,13 @@ function MasterGridTab({
                       const cellKey = `${teacher.id}::${day}::${period}`;
                       const isDragging = draggingSlot?.id === slot?.id && !!slot;
                       const isDragOverTarget = dragOverKey === cellKey && draggingSlot?.teacherId === teacher.id;
+                      const isConflictHighlight = conflictPopup?.highlightKey === cellKey;
+                      const bgColor = slot ? sectionColorById.get(slot.sectionId) : undefined;
                       return (
                         <td key={`${day}-${period}`} className="p-0.5">
                           <button
                             type="button"
+                            data-cell-key={cellKey}
                             onClick={() => openCell(teacher.id, day, period)}
                             draggable={!!slot}
                             onDragStart={(e) => {
@@ -1384,12 +1480,15 @@ function MasterGridTab({
                               if (!slotId) return;
                               handleMoveCell(slotId, teacher.id, day, period);
                             }}
-                            className={`w-full min-w-[27px] rounded border px-0.5 py-1 transition-colors ${
-                              isDragOverTarget
-                                ? "border-amber-400 bg-amber-400/20 ring-2 ring-amber-400"
-                                : slot
-                                  ? "cursor-grab border-[var(--brand-primary)]/40 bg-[var(--brand-primary)]/10 text-slate-800 dark:text-slate-100"
-                                  : "border-dashed border-slate-300 dark:border-slate-700 text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800"
+                            style={bgColor ? { backgroundColor: bgColor, borderColor: bgColor } : undefined}
+                            className={`w-full min-w-[36px] rounded border px-0.5 py-1.5 font-medium transition-colors ${
+                              isConflictHighlight
+                                ? "animate-pulse ring-4 ring-red-500"
+                                : isDragOverTarget
+                                  ? "border-amber-400 bg-amber-400/20 ring-2 ring-amber-400"
+                                  : slot
+                                    ? "cursor-grab text-slate-900"
+                                    : "border-dashed border-slate-300 dark:border-slate-700 text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800"
                             } ${isDragging ? "opacity-30" : ""}`}
                           >
                             {slot ? sectionNameById.get(slot.sectionId) ?? "" : "+"}
@@ -1471,6 +1570,39 @@ function MasterGridTab({
             >
               إلغاء
             </button>
+          </div>
+        </div>
+      )}
+
+      {conflictPopup && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40"
+          onClick={() => setConflictPopup(null)}
+        >
+          <div
+            className="mx-4 flex max-w-sm flex-col gap-3 rounded-xl border border-red-200 bg-white p-5 dark:border-red-800 dark:bg-slate-900"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3 className="font-bold text-red-600 dark:text-red-400">يوجد تعارض</h3>
+            <p className="text-sm text-slate-700 dark:text-slate-200">{conflictPopup.message}</p>
+            <div className="flex flex-wrap items-center gap-2 pt-1">
+              <button
+                type="button"
+                onClick={() =>
+                  handleMoveCell(conflictPopup.slotId, conflictPopup.teacherId, conflictPopup.day, conflictPopup.period, true)
+                }
+                className="rounded-lg bg-red-600 hover:bg-red-700 text-white text-sm px-4 py-2 transition-colors"
+              >
+                إزالة التعارض ووضع الحصة هنا
+              </button>
+              <button
+                type="button"
+                onClick={() => setConflictPopup(null)}
+                className="rounded-lg border border-slate-300 dark:border-slate-700 text-slate-600 dark:text-slate-300 text-sm px-4 py-2 hover:bg-slate-50 dark:hover:bg-slate-800"
+              >
+                إلغاء
+              </button>
+            </div>
           </div>
         </div>
       )}

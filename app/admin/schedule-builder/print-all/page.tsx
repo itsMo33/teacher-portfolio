@@ -1,21 +1,27 @@
 import { supabaseAdmin } from "@/lib/supabase/server";
 import { SCHOOL_NAME } from "@/lib/school";
 import { PrintButton } from "@/components/admin/PrintButton";
-import { SCHEDULE_DAYS, SCHEDULE_PERIODS } from "@/lib/schedule-builder";
+import { SCHEDULE_DAYS, SCHEDULE_PERIODS, sectionColor } from "@/lib/schedule-builder";
 
 export default async function PrintAllSchedulesPage() {
-  const { data: slotRows } = await supabaseAdmin
-    .from("schedule_slots")
-    .select("teacher_id, day, period, users(name), class_sections(name_ar)");
+  const [{ data: slotRows }, { data: sections }] = await Promise.all([
+    supabaseAdmin.from("schedule_slots").select("teacher_id, section_id, day, period, users(name)"),
+    supabaseAdmin.from("class_sections").select("id, name_ar, sort_order"),
+  ]);
+
+  const colorBySectionId = new Map((sections ?? []).map((s) => [s.id, sectionColor(s.sort_order)]));
+  const sectionNameById = new Map((sections ?? []).map((s) => [s.id, s.name_ar]));
 
   const teacherNameById = new Map<string, string>();
-  const grid = new Map<string, string>();
+  const grid = new Map<string, { sectionId: string; sectionName: string }>();
 
   for (const row of slotRows ?? []) {
     const teacher = Array.isArray(row.users) ? row.users[0] : row.users;
-    const section = Array.isArray(row.class_sections) ? row.class_sections[0] : row.class_sections;
     if (teacher?.name) teacherNameById.set(row.teacher_id, teacher.name);
-    grid.set(`${row.teacher_id}::${row.day}::${row.period}`, section?.name_ar ?? "");
+    grid.set(`${row.teacher_id}::${row.day}::${row.period}`, {
+      sectionId: row.section_id,
+      sectionName: sectionNameById.get(row.section_id) ?? "",
+    });
   }
 
   const teachers = Array.from(teacherNameById, ([id, name]) => ({ id, name })).sort((a, b) =>
@@ -26,20 +32,20 @@ export default async function PrintAllSchedulesPage() {
 
   return (
     <div className="mx-auto bg-white text-slate-900">
-      <style>{"@page { size: landscape; }"}</style>
+      <style>{"@page { size: landscape; margin: 6mm; }"}</style>
       <div className="no-print mb-4 flex justify-end">
         <PrintButton />
       </div>
 
-      <table className="w-full border-collapse">
+      <table className="w-full border-collapse text-[9px] print:text-[6px]">
         <thead>
           <tr>
-            <td colSpan={SCHEDULE_DAYS.length * SCHEDULE_PERIODS.length + 1} className="print-no-border pb-4">
-              <div className="border-b border-slate-300 pb-4 mb-4 text-center">
-                <p className="text-sm text-slate-500">{SCHOOL_NAME}</p>
-                <h1 className="text-xl font-bold">الجدول العام لكل المعلمين</h1>
+            <td colSpan={SCHEDULE_DAYS.length * SCHEDULE_PERIODS.length + 1} className="print-no-border pb-2 print:pb-1">
+              <div className="border-b border-slate-300 pb-2 mb-2 text-center print:pb-1 print:mb-1">
+                <p className="text-xs text-slate-500 print:text-[7px]">{SCHOOL_NAME}</p>
+                <h1 className="text-base font-bold print:text-[9px]">الجدول العام لكل المعلمين</h1>
               </div>
-              <div className="mb-4 flex justify-end text-sm">
+              <div className="mb-2 flex justify-end text-[10px] print:mb-1 print:text-[6px]">
                 <p>
                   <strong>تاريخ الطباعة:</strong> {printDate}
                 </p>
@@ -49,22 +55,22 @@ export default async function PrintAllSchedulesPage() {
         </thead>
         <tbody>
           <tr>
-            <td className="border border-slate-300 p-1 text-[10px] font-bold text-center"></td>
+            <td className="border border-slate-300 p-0.5 font-bold text-center"></td>
             {SCHEDULE_DAYS.map((day) => (
               <td
                 key={day}
                 colSpan={SCHEDULE_PERIODS.length}
-                className="border border-slate-300 p-1 text-xs font-bold text-center"
+                className="border border-slate-300 p-0.5 font-bold text-center"
               >
                 {day}
               </td>
             ))}
           </tr>
           <tr>
-            <td className="border border-slate-300 p-1 text-[10px] font-bold text-center">المعلم</td>
+            <td className="border border-slate-300 p-0.5 font-bold text-center">المعلم</td>
             {SCHEDULE_DAYS.map((day) =>
               SCHEDULE_PERIODS.map((period) => (
-                <td key={`${day}-${period}`} className="border border-slate-300 p-1 text-[10px] font-bold text-center">
+                <td key={`${day}-${period}`} className="border border-slate-300 p-0.5 font-bold text-center">
                   {period}
                 </td>
               ))
@@ -72,13 +78,18 @@ export default async function PrintAllSchedulesPage() {
           </tr>
           {teachers.map((teacher) => (
             <tr key={teacher.id} className="break-inside-avoid">
-              <td className="border border-slate-300 p-1 text-[10px] font-bold whitespace-nowrap">{teacher.name}</td>
+              <td className="border border-slate-300 p-0.5 font-bold whitespace-nowrap">{teacher.name}</td>
               {SCHEDULE_DAYS.map((day) =>
                 SCHEDULE_PERIODS.map((period) => {
-                  const sectionName = grid.get(`${teacher.id}::${day}::${period}`);
+                  const cell = grid.get(`${teacher.id}::${day}::${period}`);
+                  const bgColor = cell ? colorBySectionId.get(cell.sectionId) : undefined;
                   return (
-                    <td key={`${day}-${period}`} className="border border-slate-300 p-1 text-[10px] text-center">
-                      {sectionName || <span className="text-slate-300">--</span>}
+                    <td
+                      key={`${day}-${period}`}
+                      className="border border-slate-300 p-0.5 text-center font-medium"
+                      style={bgColor ? { backgroundColor: bgColor } : undefined}
+                    >
+                      {cell?.sectionName || <span className="text-slate-300">--</span>}
                     </td>
                   );
                 })
