@@ -25,3 +25,21 @@ export interface ScheduleSlot {
   day: ScheduleDay;
   period: SchedulePeriod;
 }
+
+/** null day = applies to every day; null period = applies to the whole day. Never both null. */
+export interface TeacherUnavailability {
+  id: string;
+  teacherId: string;
+  day: ScheduleDay | null;
+  period: SchedulePeriod | null;
+}
+
+export interface ScheduleRequirement {
+  id: string;
+  sectionId: string;
+  subjectId: string;
+  subjectName: string;
+  teacherId: string;
+  teacherName: string;
+  periodsPerWeek: number;
+}

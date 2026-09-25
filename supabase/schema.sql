@@ -274,3 +274,31 @@ create index if not exists idx_schedule_slots_section on schedule_slots(section_
 -- Grants access to the /admin/schedule-builder tool -- additive like restricted_category, so a
 -- teacher-role account (e.g. مؤيد) can carry this alongside their normal teacher access.
 alter table users add column if not exists can_build_schedule boolean not null default false;
+
+-- Auto-generator support for جدول مدرسي: a teacher can be marked unavailable for a whole day, a
+-- whole period across every day, or one exact (day, period) slot -- the generator treats all
+-- three as hard constraints it must never violate.
+create table if not exists teacher_unavailability (
+  id uuid primary key default gen_random_uuid(),
+  teacher_id uuid not null references users(id) on delete cascade,
+  day text check (day in ('احد', 'اثنين', 'ثلاثاء', 'اربعاء', 'خميس')),
+  period text check (period in ('1', '2', '3', '4', '5', '6', '7')),
+  created_at timestamptz not null default now(),
+  constraint teacher_unavailability_has_scope check (day is not null or period is not null)
+);
+create index if not exists idx_teacher_unavailability_teacher on teacher_unavailability(teacher_id);
+
+-- The "curriculum": how many periods/week a given teacher teaches a given subject to a given
+-- section. The generator reads these as its targets and tries to place exactly this many slots
+-- per requirement without violating any teacher_unavailability row or double-booking.
+create table if not exists schedule_requirements (
+  id uuid primary key default gen_random_uuid(),
+  section_id uuid not null references class_sections(id) on delete cascade,
+  subject_id uuid not null references subjects(id) on delete cascade,
+  teacher_id uuid not null references users(id) on delete cascade,
+  periods_per_week integer not null check (periods_per_week between 1 and 35),
+  created_at timestamptz not null default now(),
+  unique (section_id, subject_id)
+);
+create index if not exists idx_schedule_requirements_section on schedule_requirements(section_id);
+create index if not exists idx_schedule_requirements_teacher on schedule_requirements(teacher_id);

@@ -1,0 +1,25 @@
+import { NextRequest, NextResponse } from "next/server";
+import { auth } from "@/lib/auth/auth-options";
+import { supabaseAdmin } from "@/lib/supabase/server";
+
+async function requireAccess() {
+  const session = await auth();
+  if (!session) return { error: NextResponse.json({ error: "Unauthorized" }, { status: 401 }) };
+  const isFullAdmin = session.user.role !== "teacher" && !session.user.restrictedCategory;
+  const isGrantedTeacher = session.user.role === "teacher" && session.user.canBuildSchedule;
+  if (!isFullAdmin && !isGrantedTeacher) {
+    return { error: NextResponse.json({ error: "Forbidden" }, { status: 403 }) };
+  }
+  return { session };
+}
+
+export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const { error } = await requireAccess();
+  if (error) return error;
+  const { id } = await params;
+
+  const { error: deleteError } = await supabaseAdmin.from("teacher_unavailability").delete().eq("id", id);
+  if (deleteError) return NextResponse.json({ error: deleteError.message }, { status: 500 });
+
+  return NextResponse.json({ success: true });
+}
