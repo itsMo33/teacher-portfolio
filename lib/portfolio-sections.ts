@@ -9,7 +9,6 @@ export type SectionKey =
   | "learning_outcomes"
   | "parent_interaction"
   | "achievements"
-  | "lesson_prep"
   | "tasks_assignments"
   | "accountability"
   | "excuse_request";
@@ -76,13 +75,6 @@ export const PORTFOLIO_SECTIONS: PortfolioSection[] = [
     requiredCount: 17,
     showPercent: true,
     accentColor: "#6366f1",
-  },
-  {
-    key: "lesson_prep",
-    labelAr: "توثيق من منصة مدرستي لتحضير الدروس",
-    hasSubsections: false,
-    teacherWritable: true,
-    accentColor: "#0284c7",
   },
   {
     key: "teaching_strategies",
