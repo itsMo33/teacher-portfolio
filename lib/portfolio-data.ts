@@ -10,9 +10,10 @@ export async function getFilledSlots(teacherId: string): Promise<Set<string>> {
 
 /** Maps "category:subcategory" (subcategory empty string when the section has none) to how many files were uploaded to that slot. */
 export async function getSlotCounts(teacherId: string): Promise<Record<string, number>> {
-  const [{ data }, { data: teacher }] = await Promise.all([
+  const [{ data }, { data: teacher }, { count: impactCount }] = await Promise.all([
     supabaseAdmin.from("attachments").select("category, subcategory").eq("teacher_id", teacherId).is("deleted_at", null),
     supabaseAdmin.from("users").select("professional_license_exempt").eq("id", teacherId).maybeSingle(),
+    supabaseAdmin.from("impact_measurements").select("id", { count: "exact", head: true }).eq("teacher_id", teacherId),
   ]);
 
   const counts: Record<string, number> = {};
@@ -20,7 +21,72 @@ export async function getSlotCounts(teacherId: string): Promise<Record<string, n
     const key = `${row.category}:${row.subcategory ?? ""}`;
     counts[key] = (counts[key] ?? 0) + 1;
   }
+  // قياس الأثر moved from file uploads to structured entries -- count those the same way so
+  // completion tracking keeps working without a separate special case downstream.
+  if (impactCount) {
+    const key = "learning_outcomes:impact_measurement";
+    counts[key] = (counts[key] ?? 0) + impactCount;
+  }
   return applyProfessionalLicenseExemption(counts, teacher?.professional_license_exempt ?? false);
+}
+
+export interface ImpactMeasurement {
+  id: string;
+  teacherId: string;
+  subject: string;
+  studentName: string;
+  className: string;
+  maxScore: number;
+  scoreBefore: number;
+  scoreAfter: number;
+  improvementLevel: string;
+  teacherNotes: string | null;
+  recommendations: string[];
+  createdAt: string;
+}
+
+function toImpactMeasurement(row: {
+  id: string;
+  teacher_id: string;
+  subject: string;
+  student_name: string;
+  class_name: string;
+  max_score: number;
+  score_before: number;
+  score_after: number;
+  improvement_level: string;
+  teacher_notes: string | null;
+  recommendations: string[];
+  created_at: string;
+}): ImpactMeasurement {
+  return {
+    id: row.id,
+    teacherId: row.teacher_id,
+    subject: row.subject,
+    studentName: row.student_name,
+    className: row.class_name,
+    maxScore: row.max_score,
+    scoreBefore: row.score_before,
+    scoreAfter: row.score_after,
+    improvementLevel: row.improvement_level,
+    teacherNotes: row.teacher_notes,
+    recommendations: row.recommendations ?? [],
+    createdAt: row.created_at,
+  };
+}
+
+export async function getImpactMeasurements(teacherId: string): Promise<ImpactMeasurement[]> {
+  const { data } = await supabaseAdmin
+    .from("impact_measurements")
+    .select("*")
+    .eq("teacher_id", teacherId)
+    .order("created_at", { ascending: false });
+  return (data ?? []).map(toImpactMeasurement);
+}
+
+export async function getImpactMeasurement(id: string): Promise<ImpactMeasurement | null> {
+  const { data } = await supabaseAdmin.from("impact_measurements").select("*").eq("id", id).maybeSingle();
+  return data ? toImpactMeasurement(data) : null;
 }
 
 export async function getProfessionalLicenseExempt(teacherId: string): Promise<boolean> {

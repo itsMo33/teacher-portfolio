@@ -3,9 +3,10 @@ import Link from "next/link";
 import { auth } from "@/lib/auth/auth-options";
 import { supabaseAdmin } from "@/lib/supabase/server";
 import { getSection } from "@/lib/portfolio-sections";
-import { getSectionAttachments, getProfessionalLicenseExempt } from "@/lib/portfolio-data";
+import { getSectionAttachments, getProfessionalLicenseExempt, getImpactMeasurements } from "@/lib/portfolio-data";
 import { AttachmentList } from "@/components/portfolio/AttachmentList";
 import { FileUploadDropzone } from "@/components/portfolio/FileUploadDropzone";
+import { ImpactMeasurementSection } from "@/components/portfolio/ImpactMeasurementSection";
 
 export default async function AdminTeacherPortfolioSectionPage({
   params,
@@ -33,6 +34,8 @@ export default async function AdminTeacherPortfolioSectionPage({
   const subsections = section.hasSubsections ? section.subsections! : [{ key: "", labelAr: "" }];
 
   const professionalLicenseExempt = section.key === "achievement_file" ? await getProfessionalLicenseExempt(teacherId) : false;
+  const impactMeasurements =
+    section.key === "learning_outcomes" ? await getImpactMeasurements(teacherId) : [];
 
   const subsectionData = await Promise.all(
     subsections.map(async (sub) => ({
@@ -92,6 +95,7 @@ export default async function AdminTeacherPortfolioSectionPage({
 
       {subsectionData.map(({ sub, attachments }) => {
         const isExemptLicense = professionalLicenseExempt && sub.key === "professional_license";
+        const isImpactMeasurement = sub.key === "impact_measurement";
         return (
           <div key={sub.key} className="flex flex-col gap-3">
             {sub.labelAr && (
@@ -103,18 +107,24 @@ export default async function AdminTeacherPortfolioSectionPage({
             {isExemptLicense && (
               <p className="text-sm text-slate-500 dark:text-slate-400">معفى من هذا المتطلب</p>
             )}
-            {!section.teacherWritable && !readOnly && (
-              <FileUploadDropzone
-                uploadUrl="/api/portfolio/upload"
-                extraFields={{ category: section.key, subcategory: sub.key, teacherId }}
-              />
+            {isImpactMeasurement ? (
+              <ImpactMeasurementSection entries={impactMeasurements} readOnly />
+            ) : (
+              <>
+                {!section.teacherWritable && !readOnly && (
+                  <FileUploadDropzone
+                    uploadUrl="/api/portfolio/upload"
+                    extraFields={{ category: section.key, subcategory: sub.key, teacherId }}
+                  />
+                )}
+                <AttachmentList
+                  attachments={attachments}
+                  canDelete={!section.teacherWritable && !readOnly}
+                  showViewedStatus={!section.teacherWritable}
+                  editableAccountabilityStatus={section.key === "accountability" && !readOnly}
+                />
+              </>
             )}
-            <AttachmentList
-              attachments={attachments}
-              canDelete={!section.teacherWritable && !readOnly}
-              showViewedStatus={!section.teacherWritable}
-              editableAccountabilityStatus={section.key === "accountability" && !readOnly}
-            />
           </div>
         );
       })}

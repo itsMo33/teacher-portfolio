@@ -1,10 +1,11 @@
 import { notFound, redirect } from "next/navigation";
 import { auth } from "@/lib/auth/auth-options";
 import { getSection } from "@/lib/portfolio-sections";
-import { getSectionAttachments, getProfessionalLicenseExempt } from "@/lib/portfolio-data";
+import { getSectionAttachments, getProfessionalLicenseExempt, getImpactMeasurements } from "@/lib/portfolio-data";
 import { FileUploadDropzone } from "@/components/portfolio/FileUploadDropzone";
 import { AttachmentList } from "@/components/portfolio/AttachmentList";
 import { MarkViewedOnMount } from "@/components/portfolio/MarkViewedOnMount";
+import { ImpactMeasurementSection } from "@/components/portfolio/ImpactMeasurementSection";
 
 export default async function TeacherPortfolioSectionPage({
   params,
@@ -23,6 +24,8 @@ export default async function TeacherPortfolioSectionPage({
   const subsections = section.hasSubsections ? section.subsections! : [{ key: "", labelAr: "" }];
 
   const professionalLicenseExempt = section.key === "achievement_file" ? await getProfessionalLicenseExempt(teacherId) : false;
+  const impactMeasurements =
+    section.key === "learning_outcomes" ? await getImpactMeasurements(teacherId) : [];
 
   const subsectionData = await Promise.all(
     subsections.map(async (sub) => ({
@@ -62,6 +65,7 @@ export default async function TeacherPortfolioSectionPage({
 
       {subsectionData.map(({ sub, attachments }) => {
         const isExemptLicense = professionalLicenseExempt && sub.key === "professional_license";
+        const isImpactMeasurement = sub.key === "impact_measurement";
         return (
           <div key={sub.key} className="flex flex-col gap-3">
             {sub.labelAr && (
@@ -73,13 +77,19 @@ export default async function TeacherPortfolioSectionPage({
             {isExemptLicense && (
               <p className="text-sm text-slate-500 dark:text-slate-400">معفى من هذا المتطلب</p>
             )}
-            {section.teacherWritable && !isExemptLicense && !readOnly && (
-              <FileUploadDropzone
-                uploadUrl="/api/portfolio/upload"
-                extraFields={{ category: section.key, subcategory: sub.key }}
-              />
+            {isImpactMeasurement ? (
+              <ImpactMeasurementSection entries={impactMeasurements} readOnly={readOnly} />
+            ) : (
+              <>
+                {section.teacherWritable && !isExemptLicense && !readOnly && (
+                  <FileUploadDropzone
+                    uploadUrl="/api/portfolio/upload"
+                    extraFields={{ category: section.key, subcategory: sub.key }}
+                  />
+                )}
+                <AttachmentList attachments={attachments} canDelete={section.teacherWritable && !readOnly} />
+              </>
             )}
-            <AttachmentList attachments={attachments} canDelete={section.teacherWritable && !readOnly} />
           </div>
         );
       })}

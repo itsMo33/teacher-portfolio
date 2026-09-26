@@ -302,3 +302,24 @@ create table if not exists schedule_requirements (
 );
 create index if not exists idx_schedule_requirements_section on schedule_requirements(section_id);
 create index if not exists idx_schedule_requirements_teacher on schedule_requirements(teacher_id);
+
+-- Replaces the plain file-upload flow for نواتج التعلم > قياس الأثر: instead of scanning and
+-- uploading the paper form, the teacher fills it in directly, one row per student's remedial-plan
+-- outcome. max_score is per-entry (not a fixed /10) since different assessments grade out of
+-- different totals. recommendations is a checkbox set, so a teacher can pick more than one.
+create table if not exists impact_measurements (
+  id uuid primary key default gen_random_uuid(),
+  teacher_id uuid not null references users(id) on delete cascade,
+  subject text not null,
+  student_name text not null,
+  class_name text not null,
+  max_score integer not null default 10 check (max_score > 0),
+  score_before integer not null check (score_before >= 0),
+  score_after integer not null check (score_after >= 0),
+  improvement_level text not null check (improvement_level in ('كبير', 'متوسط', 'بسيط', 'لم يتحسن')),
+  teacher_notes text,
+  recommendations text[] not null default '{}',
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+create index if not exists idx_impact_measurements_teacher on impact_measurements(teacher_id);
