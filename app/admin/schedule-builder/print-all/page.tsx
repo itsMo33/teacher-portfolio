@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { supabaseAdmin } from "@/lib/supabase/server";
 import { SCHOOL_NAME } from "@/lib/school";
 import { PrintButton } from "@/components/admin/PrintButton";
@@ -5,7 +6,7 @@ import { SCHEDULE_DAYS, SCHEDULE_PERIODS, sectionColor } from "@/lib/schedule-bu
 
 export default async function PrintAllSchedulesPage() {
   const [{ data: slotRows }, { data: sections }] = await Promise.all([
-    supabaseAdmin.from("schedule_slots").select("teacher_id, section_id, day, period, users(name)"),
+    supabaseAdmin.from("schedule_slots").select("teacher_id, section_id, subject_id, day, period, users(name), subjects(name_ar)"),
     supabaseAdmin.from("class_sections").select("id, name_ar, sort_order"),
   ]);
 
@@ -14,26 +15,46 @@ export default async function PrintAllSchedulesPage() {
 
   const teacherNameById = new Map<string, string>();
   const grid = new Map<string, { sectionId: string; sectionName: string }>();
+  const subjectCountsByTeacherId = new Map<string, Map<string, number>>();
 
   for (const row of slotRows ?? []) {
     const teacher = Array.isArray(row.users) ? row.users[0] : row.users;
+    const subject = Array.isArray(row.subjects) ? row.subjects[0] : row.subjects;
     if (teacher?.name) teacherNameById.set(row.teacher_id, teacher.name);
     grid.set(`${row.teacher_id}::${row.day}::${row.period}`, {
       sectionId: row.section_id,
       sectionName: sectionNameById.get(row.section_id) ?? "",
     });
+    if (subject?.name_ar) {
+      if (!subjectCountsByTeacherId.has(row.teacher_id)) subjectCountsByTeacherId.set(row.teacher_id, new Map());
+      const bySubject = subjectCountsByTeacherId.get(row.teacher_id)!;
+      bySubject.set(subject.name_ar, (bySubject.get(subject.name_ar) ?? 0) + 1);
+    }
   }
 
-  const teachers = Array.from(teacherNameById, ([id, name]) => ({ id, name })).sort((a, b) =>
-    a.name.localeCompare(b.name, "ar")
-  );
+  const primarySubjectByTeacherId = new Map<string, string>();
+  for (const [teacherId, bySubject] of subjectCountsByTeacherId) {
+    const top = [...bySubject.entries()].sort((a, b) => b[1] - a[1])[0];
+    primarySubjectByTeacherId.set(teacherId, top?.[0] ?? "");
+  }
+
+  const teachers = Array.from(teacherNameById, ([id, name]) => ({ id, name })).sort((a, b) => {
+    const subjA = primarySubjectByTeacherId.get(a.id) ?? "";
+    const subjB = primarySubjectByTeacherId.get(b.id) ?? "";
+    return subjA.localeCompare(subjB, "ar") || a.name.localeCompare(b.name, "ar");
+  });
 
   const printDate = new Date().toLocaleDateString("ar-SA");
 
   return (
     <div className="mx-auto bg-white text-slate-900">
-      <style>{"@page { size: landscape; margin: 6mm; }"}</style>
-      <div className="no-print mb-4 flex justify-end">
+      <style>
+        {"@page { size: landscape; margin: 6mm; } * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }"}
+      </style>
+      <div className="no-print mb-4 flex items-center justify-between">
+        <Link href="/admin/schedule-builder" className="text-sm text-[var(--brand-primary)] hover:underline">
+          ← رجوع
+        </Link>
         <PrintButton />
       </div>
 

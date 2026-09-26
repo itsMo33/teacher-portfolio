@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import Link from "next/link";
 import { supabaseAdmin } from "@/lib/supabase/server";
 import { SCHOOL_NAME } from "@/lib/school";
 import { PrintButton } from "@/components/admin/PrintButton";
@@ -38,7 +39,10 @@ export default async function PrintSectionSchedulePage({
 
   return (
     <div className="max-w-4xl mx-auto bg-white text-slate-900 print:max-w-none">
-      <div className="no-print mb-4 flex justify-end">
+      <div className="no-print mb-4 flex items-center justify-between">
+        <Link href="/admin/schedule-builder" className="text-sm text-[var(--brand-primary)] hover:underline">
+          ← رجوع
+        </Link>
         <PrintButton />
       </div>
 

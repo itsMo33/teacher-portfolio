@@ -1299,20 +1299,26 @@ function GridTab({
           >
             <h3 className="font-bold text-red-600 dark:text-red-400">يوجد تعارض</h3>
             <p className="text-sm text-slate-700 dark:text-slate-200">{conflictPopup.message}</p>
+            <p className="text-xs text-amber-600 dark:text-amber-400">
+              تنبيه: &quot;إزالة التعارض&quot; يحذف الحصة الموجودة بهذي الخانة نهائيًا عشان يحط حصتك مكانها.
+            </p>
             <div className="flex flex-wrap items-center gap-2 pt-1">
-              <button
-                type="button"
-                onClick={() => handleMoveCell(conflictPopup.slotId, conflictPopup.day, conflictPopup.period, true)}
-                className="rounded-lg bg-red-600 hover:bg-red-700 text-white text-sm px-4 py-2 transition-colors"
-              >
-                إزالة التعارض ووضع الحصة هنا
-              </button>
               <button
                 type="button"
                 onClick={() => setConflictPopup(null)}
                 className="rounded-lg border border-slate-300 dark:border-slate-700 text-slate-600 dark:text-slate-300 text-sm px-4 py-2 hover:bg-slate-50 dark:hover:bg-slate-800"
               >
                 إلغاء
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  if (!confirm("متأكد؟ هذا يحذف الحصة الأخرى نهائيًا.")) return;
+                  handleMoveCell(conflictPopup.slotId, conflictPopup.day, conflictPopup.period, true);
+                }}
+                className="rounded-lg bg-red-600 hover:bg-red-700 text-white text-sm px-4 py-2 transition-colors"
+              >
+                إزالة التعارض ووضع الحصة هنا
               </button>
             </div>
           </div>
@@ -1374,7 +1380,30 @@ function MasterGridTab({
     loadAllSlots();
   }, [loadAllSlots]);
 
-  const sortedTeachers = useMemo(() => [...teachers].sort((a, b) => a.name.localeCompare(b.name, "ar")), [teachers]);
+  const primarySubjectByTeacherId = useMemo(() => {
+    const counts = new Map<string, Map<string, number>>();
+    for (const s of slots) {
+      if (!counts.has(s.teacherId)) counts.set(s.teacherId, new Map());
+      const bySubject = counts.get(s.teacherId)!;
+      bySubject.set(s.subjectName, (bySubject.get(s.subjectName) ?? 0) + 1);
+    }
+    const result = new Map<string, string>();
+    for (const [teacherId, bySubject] of counts) {
+      const top = [...bySubject.entries()].sort((a, b) => b[1] - a[1])[0];
+      result.set(teacherId, top?.[0] ?? "");
+    }
+    return result;
+  }, [slots]);
+
+  const sortedTeachers = useMemo(
+    () =>
+      [...teachers].sort((a, b) => {
+        const subjA = primarySubjectByTeacherId.get(a.id) ?? "";
+        const subjB = primarySubjectByTeacherId.get(b.id) ?? "";
+        return subjA.localeCompare(subjB, "ar") || a.name.localeCompare(b.name, "ar");
+      }),
+    [teachers, primarySubjectByTeacherId]
+  );
   const sectionNameById = useMemo(() => new Map(sections.map((s) => [s.id, s.nameAr])), [sections]);
   const sectionColorById = useMemo(() => new Map(sections.map((s) => [s.id, sectionColor(s.sortOrder)])), [sections]);
 
@@ -1512,9 +1541,28 @@ function MasterGridTab({
 
   return (
     <div className="flex flex-col gap-4">
-      <p className="text-xs text-slate-500">
-        كل معلم بصف مستقل -- اضغط خانة فاضية لتسجيل حصة، أو اسحب حصة موجودة لخانة ثانية بنفس صف المعلم لتغيير وقتها.
-      </p>
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <p className="text-xs text-slate-500">
+          كل معلم بصف مستقل -- اضغط خانة فاضية لتسجيل حصة، أو اسحب حصة موجودة لخانة ثانية بنفس صف المعلم لتغيير وقتها.
+        </p>
+        <a
+          href="/admin/schedule-builder/print-all"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="shrink-0 rounded-lg border border-slate-300 dark:border-slate-700 px-3 py-1.5 text-sm text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800"
+        >
+          طباعة الجدول العام (ملوّن)
+        </a>
+      </div>
+
+      {draggingSlot && (
+        <div className="flex flex-wrap items-center gap-3 rounded-lg border border-emerald-300 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-900/20 px-3 py-2 text-xs text-emerald-800 dark:text-emerald-300">
+          <span>
+            تسحب حصة {teachers.find((t) => t.id === draggingSlot.teacherId)?.name} -- الخانات
+            <span className="mx-1 inline-block h-3 w-3 rounded border border-emerald-400 bg-emerald-400/40 align-middle" /> خضراء = تقدر تحط الحصة فيها، والباقي مشغول أو ممنوع لهذا المعلم.
+          </span>
+        </div>
+      )}
 
       {!loaded ? (
         <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-6 text-center text-sm text-slate-400">
@@ -1754,22 +1802,26 @@ function MasterGridTab({
           >
             <h3 className="font-bold text-red-600 dark:text-red-400">يوجد تعارض</h3>
             <p className="text-sm text-slate-700 dark:text-slate-200">{conflictPopup.message}</p>
+            <p className="text-xs text-amber-600 dark:text-amber-400">
+              تنبيه: &quot;إزالة التعارض&quot; يحذف الحصة الموجودة بهذي الخانة نهائيًا عشان يحط حصتك مكانها.
+            </p>
             <div className="flex flex-wrap items-center gap-2 pt-1">
-              <button
-                type="button"
-                onClick={() =>
-                  handleMoveCell(conflictPopup.slotId, conflictPopup.teacherId, conflictPopup.day, conflictPopup.period, true)
-                }
-                className="rounded-lg bg-red-600 hover:bg-red-700 text-white text-sm px-4 py-2 transition-colors"
-              >
-                إزالة التعارض ووضع الحصة هنا
-              </button>
               <button
                 type="button"
                 onClick={() => setConflictPopup(null)}
                 className="rounded-lg border border-slate-300 dark:border-slate-700 text-slate-600 dark:text-slate-300 text-sm px-4 py-2 hover:bg-slate-50 dark:hover:bg-slate-800"
               >
                 إلغاء
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  if (!confirm("متأكد؟ هذا يحذف الحصة الأخرى نهائيًا.")) return;
+                  handleMoveCell(conflictPopup.slotId, conflictPopup.teacherId, conflictPopup.day, conflictPopup.period, true);
+                }}
+                className="rounded-lg bg-red-600 hover:bg-red-700 text-white text-sm px-4 py-2 transition-colors"
+              >
+                إزالة التعارض ووضع الحصة هنا
               </button>
             </div>
           </div>
