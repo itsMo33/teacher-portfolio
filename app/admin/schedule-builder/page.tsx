@@ -49,6 +49,14 @@ interface Constraint {
 
 type Tab = "sections" | "subjects" | "requirements" | "constraints" | "grid" | "master";
 
+/** A single-level "oops" undo: every mutating grid action records how to reverse itself here, and
+ *  a banner offers to run it. Deliberately not a full history stack -- covers the actual failure
+ *  mode (one accidental drag/save/removal) without the complexity of multi-step undo/redo. */
+interface UndoAction {
+  label: string;
+  perform: () => Promise<void>;
+}
+
 function isTeacherUnavailable(constraints: Constraint[], teacherId: string, day: ScheduleDay, period: SchedulePeriod) {
   return constraints.some(
     (c) => c.teacherId === teacherId && (c.day === null || c.day === day) && (c.period === null || c.period === period)
@@ -828,7 +836,10 @@ function GridTab({
     day: ScheduleDay;
     period: SchedulePeriod;
     highlightKey: string | null;
+    conflictSlotSnapshot: Slot | null;
   } | null>(null);
+  const [lastAction, setLastAction] = useState<UndoAction | null>(null);
+  const [undoing, setUndoing] = useState(false);
   const [generating, setGenerating] = useState(false);
   const [generateResult, setGenerateResult] = useState<{
     placedCount: number;
@@ -880,29 +891,46 @@ function GridTab({
     setPickSubjectId(existing?.subjectId ?? "");
   }
 
+  async function putSlot(day: ScheduleDay | string, period: SchedulePeriod | string, teacherId: string, subjectId: string) {
+    const res = await fetch("/api/schedule-builder/slots", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ sectionId, day, period, teacherId, subjectId }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error);
+    return data.slot as Slot;
+  }
+
   async function handleSaveCell() {
     if (!editingCell || !pickTeacherId || !pickSubjectId) return;
+    const previous = slotFor(editingCell.day, editingCell.period);
     try {
-      const res = await fetch("/api/schedule-builder/slots", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          sectionId,
-          day: editingCell.day,
-          period: editingCell.period,
-          teacherId: pickTeacherId,
-          subjectId: pickSubjectId,
-        }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error);
+      const slot = await putSlot(editingCell.day, editingCell.period, pickTeacherId, pickSubjectId);
       setSlots((prev) => [
         ...prev.filter((s) => !(s.day === editingCell.day && s.period === editingCell.period)),
-        data.slot,
+        slot,
       ]);
       teacherSlotsCache.current.clear();
       setEditingCell(null);
       setError("");
+      setLastAction({
+        label: `حفظ حصة (${editingCell.day} -- الحصة ${editingCell.period})`,
+        perform: async () => {
+          if (previous) {
+            const restored = await putSlot(previous.day, previous.period, previous.teacherId, previous.subjectId);
+            setSlots((prev) => prev.map((s) => (s.day === restored.day && s.period === restored.period ? restored : s)));
+          } else {
+            await fetch("/api/schedule-builder/slots", {
+              method: "DELETE",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ sectionId, day: editingCell.day, period: editingCell.period }),
+            });
+            setSlots((prev) => prev.filter((s) => !(s.day === editingCell.day && s.period === editingCell.period)));
+          }
+          teacherSlotsCache.current.clear();
+        },
+      });
     } catch (e) {
       setError(e instanceof Error ? e.message : "تعذّر الحفظ");
     }
@@ -910,6 +938,7 @@ function GridTab({
 
   async function handleClearCell() {
     if (!editingCell) return;
+    const cleared = slotFor(editingCell.day, editingCell.period);
     try {
       const res = await fetch("/api/schedule-builder/slots", {
         method: "DELETE",
@@ -921,6 +950,16 @@ function GridTab({
       teacherSlotsCache.current.clear();
       setEditingCell(null);
       setError("");
+      if (cleared) {
+        setLastAction({
+          label: `إفراغ حصة (${editingCell.day} -- الحصة ${editingCell.period})`,
+          perform: async () => {
+            const restored = await putSlot(cleared.day, cleared.period, cleared.teacherId, cleared.subjectId);
+            setSlots((prev) => [...prev, restored]);
+            teacherSlotsCache.current.clear();
+          },
+        });
+      }
     } catch (e) {
       setError(e instanceof Error ? e.message : "تعذّر الحذف");
     }
@@ -939,7 +978,10 @@ function GridTab({
       if (!res.ok) {
         if (data.conflict) {
           const highlightKey = data.conflict.conflictSectionId === sectionId ? `${destDay}::${destPeriod}` : null;
-          setConflictPopup({ message: data.error, slotId, day: destDay, period: destPeriod, highlightKey });
+          const conflictSlotSnapshot = data.conflict.conflictSlotId
+            ? (slots.find((s) => s.id === data.conflict.conflictSlotId) ?? null)
+            : null;
+          setConflictPopup({ message: data.error, slotId, day: destDay, period: destPeriod, highlightKey, conflictSlotSnapshot });
           if (highlightKey) {
             requestAnimationFrame(() => {
               document.querySelector(`[data-cell-key="${highlightKey}"]`)?.scrollIntoView({ behavior: "smooth", block: "center" });
@@ -958,6 +1000,26 @@ function GridTab({
       setFreeSlotKeys(null);
       setEditingCell(null);
       setError("");
+      if (movingSlot) {
+        const fromDay = movingSlot.day;
+        const fromPeriod = movingSlot.period;
+        const removedSnapshot = data.removedConflict ? conflictPopup?.conflictSlotSnapshot ?? null : null;
+        setLastAction({
+          label: `نقل حصة إلى (${destDay} -- الحصة ${destPeriod})`,
+          perform: async () => {
+            await fetch("/api/schedule-builder/slots/move", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ slotId, day: fromDay, period: fromPeriod, force: true }),
+            });
+            if (removedSnapshot) {
+              await putSlot(removedSnapshot.day, removedSnapshot.period, removedSnapshot.teacherId, removedSnapshot.subjectId);
+            }
+            await loadSlots(sectionId);
+            teacherSlotsCache.current.clear();
+          },
+        });
+      }
     } catch (e) {
       setError(e instanceof Error ? e.message : "تعذّر نقل الحصة");
     }
@@ -1028,6 +1090,31 @@ function GridTab({
           </div>
         )}
       </div>
+
+      {lastAction && (
+        <div className="flex items-center justify-between gap-3 rounded-xl border border-amber-300 dark:border-amber-800 bg-amber-50 dark:bg-amber-900/20 px-4 py-2 text-sm text-amber-800 dark:text-amber-300">
+          <span>آخر تعديل: {lastAction.label}</span>
+          <button
+            type="button"
+            disabled={undoing}
+            onClick={async () => {
+              setUndoing(true);
+              try {
+                await lastAction.perform();
+                setLastAction(null);
+                setError("");
+              } catch (e) {
+                setError(e instanceof Error ? e.message : "تعذّر التراجع");
+              } finally {
+                setUndoing(false);
+              }
+            }}
+            className="rounded-lg border border-amber-400 dark:border-amber-700 px-3 py-1 font-medium hover:bg-amber-100 dark:hover:bg-amber-900/40 disabled:opacity-50"
+          >
+            {undoing ? "جارٍ التراجع..." : "↶ تراجع"}
+          </button>
+        </div>
+      )}
 
       <div className="flex flex-wrap items-center gap-3">
         <select
@@ -1366,7 +1453,10 @@ function MasterGridTab({
     day: ScheduleDay;
     period: SchedulePeriod;
     highlightKey: string | null;
+    conflictSlotSnapshot: Slot | null;
   } | null>(null);
+  const [lastAction, setLastAction] = useState<UndoAction | null>(null);
+  const [undoing, setUndoing] = useState(false);
 
   const loadAllSlots = useCallback(() => {
     return fetch("/api/schedule-builder/slots?all=true")
@@ -1440,32 +1530,48 @@ function MasterGridTab({
     setPickSubjectId(existing?.subjectId ?? "");
   }
 
+  async function putMasterSlot(secId: string, teacherId: string, day: ScheduleDay | string, period: SchedulePeriod | string, subjectId: string) {
+    const res = await fetch("/api/schedule-builder/slots", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ sectionId: secId, day, period, teacherId, subjectId }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error);
+    return data.slot as Slot;
+  }
+
   async function handleSaveCell() {
     if (!editingCell || !pickSectionId || !pickSubjectId) return;
+    const previous = slotFor(editingCell.teacherId, editingCell.day, editingCell.period);
     try {
-      const res = await fetch("/api/schedule-builder/slots", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          sectionId: pickSectionId,
-          day: editingCell.day,
-          period: editingCell.period,
-          teacherId: editingCell.teacherId,
-          subjectId: pickSubjectId,
-        }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error);
+      const slot = await putMasterSlot(pickSectionId, editingCell.teacherId, editingCell.day, editingCell.period, pickSubjectId);
       setSlots((prev) => [
         ...prev.filter(
           (s) =>
             !(s.teacherId === editingCell.teacherId && s.day === editingCell.day && s.period === editingCell.period) &&
             !(s.sectionId === pickSectionId && s.day === editingCell.day && s.period === editingCell.period)
         ),
-        data.slot,
+        slot,
       ]);
       setEditingCell(null);
       setError("");
+      setLastAction({
+        label: `حفظ حصة (${editingCell.day} -- الحصة ${editingCell.period})`,
+        perform: async () => {
+          if (previous) {
+            await putMasterSlot(previous.sectionId, previous.teacherId, previous.day, previous.period, previous.subjectId);
+            await loadAllSlots();
+          } else {
+            await fetch("/api/schedule-builder/slots", {
+              method: "DELETE",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ sectionId: pickSectionId, day: editingCell.day, period: editingCell.period }),
+            });
+            await loadAllSlots();
+          }
+        },
+      });
     } catch (e) {
       setError(e instanceof Error ? e.message : "تعذّر الحفظ");
     }
@@ -1488,6 +1594,13 @@ function MasterGridTab({
       setSlots((prev) => prev.filter((s) => s.id !== existing.id));
       setEditingCell(null);
       setError("");
+      setLastAction({
+        label: `إفراغ حصة (${editingCell.day} -- الحصة ${editingCell.period})`,
+        perform: async () => {
+          await putMasterSlot(existing.sectionId, existing.teacherId, existing.day, existing.period, existing.subjectId);
+          await loadAllSlots();
+        },
+      });
     } catch (e) {
       setError(e instanceof Error ? e.message : "تعذّر الحذف");
     }
@@ -1518,7 +1631,10 @@ function MasterGridTab({
           const highlightKey = data.conflict.conflictTeacherId
             ? `${data.conflict.conflictTeacherId}::${destDay}::${destPeriod}`
             : `${destTeacherId}::${destDay}::${destPeriod}`;
-          setConflictPopup({ message: data.error, slotId, teacherId: destTeacherId, day: destDay, period: destPeriod, highlightKey });
+          const conflictSlotSnapshot = data.conflict.conflictSlotId
+            ? (slots.find((s) => s.id === data.conflict.conflictSlotId) ?? null)
+            : null;
+          setConflictPopup({ message: data.error, slotId, teacherId: destTeacherId, day: destDay, period: destPeriod, highlightKey, conflictSlotSnapshot });
           scrollToCell(highlightKey);
           return;
         }
@@ -1532,6 +1648,25 @@ function MasterGridTab({
       setFreeSlotKeys(null);
       setEditingCell(null);
       setError("");
+      if (movingSlot) {
+        const fromDay = movingSlot.day;
+        const fromPeriod = movingSlot.period;
+        const removedSnapshot = data.removedConflict ? conflictPopup?.conflictSlotSnapshot ?? null : null;
+        setLastAction({
+          label: `نقل حصة إلى (${destDay} -- الحصة ${destPeriod})`,
+          perform: async () => {
+            await fetch("/api/schedule-builder/slots/move", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ slotId, day: fromDay, period: fromPeriod, force: true }),
+            });
+            if (removedSnapshot) {
+              await putMasterSlot(removedSnapshot.sectionId, removedSnapshot.teacherId, removedSnapshot.day, removedSnapshot.period, removedSnapshot.subjectId);
+            }
+            await loadAllSlots();
+          },
+        });
+      }
     } catch (e) {
       setError(e instanceof Error ? e.message : "تعذّر نقل الحصة");
     }
@@ -1541,6 +1676,30 @@ function MasterGridTab({
 
   return (
     <div className="flex flex-col gap-4">
+      {lastAction && (
+        <div className="flex items-center justify-between gap-3 rounded-xl border border-amber-300 dark:border-amber-800 bg-amber-50 dark:bg-amber-900/20 px-4 py-2 text-sm text-amber-800 dark:text-amber-300">
+          <span>آخر تعديل: {lastAction.label}</span>
+          <button
+            type="button"
+            disabled={undoing}
+            onClick={async () => {
+              setUndoing(true);
+              try {
+                await lastAction.perform();
+                setLastAction(null);
+                setError("");
+              } catch (e) {
+                setError(e instanceof Error ? e.message : "تعذّر التراجع");
+              } finally {
+                setUndoing(false);
+              }
+            }}
+            className="rounded-lg border border-amber-400 dark:border-amber-700 px-3 py-1 font-medium hover:bg-amber-100 dark:hover:bg-amber-900/40 disabled:opacity-50"
+          >
+            {undoing ? "جارٍ التراجع..." : "↶ تراجع"}
+          </button>
+        </div>
+      )}
       <div className="flex flex-wrap items-center justify-between gap-2">
         <p className="text-xs text-slate-500">
           كل معلم بصف مستقل -- اضغط خانة فاضية لتسجيل حصة، أو اسحب حصة موجودة لخانة ثانية بنفس صف المعلم لتغيير وقتها.
