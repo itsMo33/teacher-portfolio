@@ -4,9 +4,15 @@
 -- NOTE ON ROW LEVEL SECURITY: this app never talks to Supabase from the
 -- browser. Every request goes through Next.js server code using the
 -- SERVICE ROLE key, which bypasses RLS by design. Authorization is enforced
--- in middleware.ts and inside each API route handler instead. Do not enable
--- RLS/policies on these tables assuming client-side/anon access -- there is
--- none, and policies here would be dead code.
+-- in middleware.ts and inside each API route handler instead -- so every
+-- table here should still have RLS *enabled* (with zero policies). That is
+-- not dead code: Supabase's PostgREST layer exposes every public-schema
+-- table over its REST API to anyone holding the anon key whenever RLS is
+-- off, regardless of whether this app's own code ever uses that key. With
+-- RLS enabled and no policies, only the service role (which bypasses RLS)
+-- can read/write these tables -- exactly what this app needs, and nothing
+-- more. Every `create table` below must be paired with an `enable row level
+-- security` statement for this reason.
 
 create extension if not exists "pgcrypto";
 
@@ -323,3 +329,15 @@ create table if not exists impact_measurements (
   updated_at timestamptz not null default now()
 );
 create index if not exists idx_impact_measurements_teacher on impact_measurements(teacher_id);
+
+-- These 7 tables were created without RLS enabled, so Supabase's Advisor flagged them (their
+-- public-schema tables are otherwise reachable over PostgREST via the anon key). The service role
+-- this app uses bypasses RLS regardless, so enabling it with zero policies changes nothing for the
+-- app and just closes that public REST exposure.
+alter table subjects enable row level security;
+alter table teacher_subjects enable row level security;
+alter table class_sections enable row level security;
+alter table schedule_slots enable row level security;
+alter table teacher_unavailability enable row level security;
+alter table schedule_requirements enable row level security;
+alter table impact_measurements enable row level security;
