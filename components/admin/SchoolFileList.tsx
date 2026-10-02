@@ -11,14 +11,26 @@ export interface SchoolFileItem {
   mime_type?: string;
 }
 
-export function SchoolFileList({ files, canDelete = true }: { files: SchoolFileItem[]; canDelete?: boolean }) {
+export function SchoolFileList({
+  files,
+  canDelete = true,
+  deleteUrl = "/api/school-files/delete",
+  confirmDelete = false,
+}: {
+  files: SchoolFileItem[];
+  canDelete?: boolean;
+  deleteUrl?: string;
+  /** Ask before deleting -- for lists whose delete is permanent rather than a recoverable soft delete. */
+  confirmDelete?: boolean;
+}) {
   const router = useRouter();
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
 
   async function handleDelete(id: string) {
+    if (confirmDelete && !confirm("حذف هذا الملف نهائيًا؟")) return;
     setDeletingId(id);
-    await fetch("/api/school-files/delete", {
+    await fetch(deleteUrl, {
       method: "DELETE",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ fileId: id }),

@@ -21,6 +21,7 @@ const DASHBOARD_CARDS: DashboardCard[] = [
   { href: "/admin/statistics", label: "الإحصائيات", description: "نسب رفع الملفات لكل قسم بين المعلمين", accentColor: "#d97706" },
   { href: "/admin/teacher-performance", label: "متابعة أداء المعلمين", description: "الطابور الصباحي، الإشراف، المناوبة، وغيرها", accentColor: "#9333ea" },
   { href: "/admin/school-management", label: "الإنجاز المدرسي", description: "ملفات مدير المدرسة والوكلاء والموجه الطلابي", accentColor: "#7c3aed" },
+  { href: "/admin/student-referrals", label: "تحويلات الطلاب", description: "تحويلات المعلمين لوكيل شؤون الطلاب والموجه الطلابي", accentColor: "#b45309" },
 ];
 
 async function RestrictedDashboard({ categoryKey }: { categoryKey: string }) {
@@ -31,8 +32,39 @@ async function RestrictedDashboard({ categoryKey }: { categoryKey: string }) {
 
   const subsections = category.subsections ?? [{ key: "", labelAr: "" }];
 
+  // The وكيل شؤون الطلاب and الموجه الطلابي accounts also receive student referrals -- surface what's
+  // waiting on them right at the top of their only dashboard.
+  const waitingStatus =
+    categoryKey === "student_affairs_agent" ? "with_agent" : categoryKey === "student_guidance" ? "with_counselor" : null;
+  const waitingCount = waitingStatus
+    ? ((
+        await supabaseAdmin
+          .from("student_referrals")
+          .select("id", { count: "exact", head: true })
+          .eq("status", waitingStatus)
+      ).count ?? 0)
+    : 0;
+
   return (
     <div className="max-w-2xl">
+      {waitingStatus && (
+        <Link
+          href="/admin/student-referrals"
+          style={{ borderInlineStartColor: "#b45309", borderInlineStartWidth: 4 }}
+          className="mb-6 flex items-center justify-between gap-2 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg"
+        >
+          <span className="font-semibold text-slate-900 dark:text-slate-50">تحويلات الطلاب</span>
+          <span
+            className={`rounded-full px-2 py-0.5 text-xs whitespace-nowrap font-medium ${
+              waitingCount > 0
+                ? "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300"
+                : "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300"
+            }`}
+          >
+            {waitingCount > 0 ? `${waitingCount} بانتظارك` : "لا يوجد جديد"}
+          </span>
+        </Link>
+      )}
       <h2 className="flex items-center gap-2 text-xl font-bold text-slate-900 dark:text-slate-50 mb-4">
         <span className="inline-block h-3 w-3 shrink-0 rounded-full" style={{ backgroundColor: category.accentColor }} />
         {category.labelAr}
@@ -100,7 +132,7 @@ export default async function AdminDashboard() {
     <div>
       <h2 className="text-xl font-bold text-slate-900 dark:text-slate-50 mb-4">لوحة تحكم الإدارة</h2>
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-        {DASHBOARD_CARDS.map((card, index) => (
+        {DASHBOARD_CARDS.filter((card) => card.href !== "/admin/student-referrals" || session?.user?.role === "manager").map((card, index) => (
           <Link
             key={card.href}
             href={card.href}

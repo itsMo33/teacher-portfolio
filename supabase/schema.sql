@@ -341,3 +341,45 @@ alter table schedule_slots enable row level security;
 alter table teacher_unavailability enable row level security;
 alter table schedule_requirements enable row level security;
 alter table impact_measurements enable row level security;
+
+-- نموذج تحويل الطالب: المعلم -> وكيل شؤون الطلاب -> الموجه الطلابي. One row per referral; each
+-- stage's own fields live on the same row (the paper forms are one packet that travels along).
+-- agent_procedures / counselor_procedures hold the ticked procedure numbers (see
+-- lib/student-referral-constants.ts). status moves draft -> with_agent -> with_counselor.
+create table if not exists student_referrals (
+  id uuid primary key default gen_random_uuid(),
+  teacher_id uuid not null references users(id) on delete cascade,
+  student_name text not null,
+  class_name text not null,
+  subject text not null,
+  reasons text[] not null default '{}',
+  problem_description text,
+  status text not null default 'draft' check (status in ('draft', 'with_agent', 'with_counselor')),
+  sent_to_agent_at timestamptz,
+  agent_procedures integer[] not null default '{}',
+  agent_notes text,
+  sent_to_counselor_at timestamptz,
+  counselor_procedures integer[] not null default '{}',
+  counselor_extra_services text,
+  counselor_notes text,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+create index if not exists idx_student_referrals_teacher on student_referrals(teacher_id);
+create index if not exists idx_student_referrals_status on student_referrals(status);
+
+-- "الإجراءات" attachments (files/images) added by the agent or the counselor on a referral.
+create table if not exists student_referral_files (
+  id uuid primary key default gen_random_uuid(),
+  referral_id uuid not null references student_referrals(id) on delete cascade,
+  stage text not null check (stage in ('agent', 'counselor')),
+  file_path text not null,
+  file_name text not null,
+  mime_type text not null default 'application/octet-stream',
+  uploaded_by uuid references users(id),
+  uploaded_at timestamptz not null default now()
+);
+create index if not exists idx_student_referral_files_referral on student_referral_files(referral_id);
+
+alter table student_referrals enable row level security;
+alter table student_referral_files enable row level security;

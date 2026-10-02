@@ -45,6 +45,10 @@ export function buildSchoolFilePath(category: string, subcategory: string | null
   return `school-management/${category}/${sub}/${randomUUID()}${safeExtension(fileName)}`;
 }
 
+export function buildReferralFilePath(referralId: string, stage: string, fileName: string) {
+  return `student-referrals/${referralId}/${stage}/${randomUUID()}${safeExtension(fileName)}`;
+}
+
 export async function uploadFile(
   bucket: string,
   path: string,

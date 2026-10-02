@@ -10,6 +10,7 @@ function buildNavItems(canBuildSchedule?: boolean): NavItem[] {
       label: s.labelAr,
     })),
     { href: "/teacher/schedule", label: "الجدول المدرسي" },
+    { href: "/teacher/student-referrals", label: "تحويل الطالب لوكيل شؤون الطلاب" },
     // A teacher granted جدول مدرسي access (e.g. مؤيد) needs a way into /admin/schedule-builder --
     // that tool lives under /admin, entirely separate from this teacher-side nav, so without this
     // link they'd have no way to reach it short of typing the URL themselves.

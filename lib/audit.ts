@@ -42,4 +42,6 @@ export const ACTION_LABELS_AR: Record<string, string> = {
   create_school_category: "إضافة قسم إدارة مدرسة",
   update_school_category: "تعديل قسم إدارة مدرسة",
   delete_school_category: "حذف قسم إدارة مدرسة",
+  send_referral_to_agent: "إرسال تحويل طالب لوكيل شؤون الطلاب",
+  forward_referral_to_counselor: "تحويل طالب للموجه الطلابي",
 };

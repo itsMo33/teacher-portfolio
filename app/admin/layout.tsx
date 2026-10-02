@@ -15,6 +15,7 @@ const fullNavItems: NavItem[] = [
   { href: "/admin/accountability", label: "المسائلات" },
   { href: "/admin/reports", label: "تصدير تقرير" },
   { href: "/admin/school-management", label: "الإنجاز المدرسي" },
+  { href: "/admin/student-referrals", label: "تحويلات الطلاب" },
   { href: "/admin/activity-log", label: "سجل النشاط" },
   { href: "/admin/trash", label: "سلة المحذوفات" },
   { href: "/admin/settings", label: "الإعدادات" },
@@ -31,11 +32,14 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   const navItems: NavItem[] = restrictedCategory
     ? [
         { href: "/admin", label: (await getSchoolManagementCategory(restrictedCategory))?.labelAr ?? "لوحة تحكم" },
+        ...(restrictedCategory === "student_affairs_agent" || restrictedCategory === "student_guidance"
+          ? [{ href: "/admin/student-referrals", label: "تحويلات الطلاب" }]
+          : []),
         ...(canBuildSchedule ? [{ href: "/admin/schedule-builder", label: "جدول مدرسي" }] : []),
       ]
     : canBuildSchedule
       ? [{ href: "/admin/schedule-builder", label: "جدول مدرسي" }]
-      : fullNavItems;
+      : fullNavItems.filter((item) => item.href !== "/admin/student-referrals" || session?.user?.role === "manager");
 
   return (
     <AppShell

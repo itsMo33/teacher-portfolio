@@ -61,6 +61,19 @@ export default async function TeacherDashboard() {
           </span>
         </Link>
       )}
+      <Link
+        href="/teacher/student-referrals"
+        style={{ borderInlineStartColor: "#b45309", borderInlineStartWidth: 4 }}
+        className="mb-4 flex flex-col gap-1 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg"
+      >
+        <span className="flex items-center gap-2 font-semibold text-slate-900 dark:text-slate-50">
+          <span className="inline-block h-2.5 w-2.5 shrink-0 rounded-full bg-amber-600" />
+          تحويل الطالب لوكيل شؤون الطلاب
+        </span>
+        <span className="text-xs text-slate-500 dark:text-slate-400">
+          نموذج إلكتروني لتحويل طالب (ضعف دراسي، غياب، سلوك...) مع طباعة وإرسال
+        </span>
+      </Link>
       <ProgressGrid
         slotCounts={slotCounts}
         linkPrefix="/teacher/portfolio"

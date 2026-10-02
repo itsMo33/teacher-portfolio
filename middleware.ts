@@ -18,7 +18,8 @@ export default auth((req) => {
     nextUrl.pathname.startsWith("/api/substitute-assignments") ||
     nextUrl.pathname.startsWith("/api/teacher-performance") ||
     nextUrl.pathname.startsWith("/api/schedule-builder") ||
-    nextUrl.pathname.startsWith("/api/impact-measurements");
+    nextUrl.pathname.startsWith("/api/impact-measurements") ||
+    nextUrl.pathname.startsWith("/api/student-referrals");
 
   if (!session && (isAdminPath || isTeacherPath || isProtectedApi)) {
     if (nextUrl.pathname.startsWith("/api/")) {
@@ -75,8 +76,15 @@ export default auth((req) => {
   // kept as its own block since it also covers isProtectedApi (a teacher-role restricted account
   // never had that extra lockdown, per the original design).
   if (session && role !== "teacher" && restrictedCategory) {
-    const allowedApi = nextUrl.pathname.startsWith("/api/school-files");
-    const allowedPage = nextUrl.pathname === "/admin";
+    // The وكيل شؤون الطلاب and الموجه الطلابي accounts additionally take part in the student-referral
+    // workflow; the API itself re-checks exactly which stage each of them may touch.
+    const inReferralWorkflow = restrictedCategory === "student_affairs_agent" || restrictedCategory === "student_guidance";
+    const allowedApi =
+      nextUrl.pathname.startsWith("/api/school-files") ||
+      (inReferralWorkflow && nextUrl.pathname.startsWith("/api/student-referrals"));
+    const allowedPage =
+      nextUrl.pathname === "/admin" ||
+      (inReferralWorkflow && nextUrl.pathname.startsWith("/admin/student-referrals"));
     const lockedDown = isAdminPath || isProtectedApi;
 
     if (!allowedApi && !allowedPage && lockedDown) {
@@ -104,5 +112,6 @@ export const config = {
     "/api/teacher-performance/:path*",
     "/api/schedule-builder/:path*",
     "/api/impact-measurements/:path*",
+    "/api/student-referrals/:path*",
   ],
 };
