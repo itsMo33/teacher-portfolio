@@ -81,7 +81,8 @@ export default auth((req) => {
     const inReferralWorkflow = restrictedCategory === "student_affairs_agent" || restrictedCategory === "student_guidance";
     const allowedApi =
       nextUrl.pathname.startsWith("/api/school-files") ||
-      (inReferralWorkflow && nextUrl.pathname.startsWith("/api/student-referrals"));
+      (inReferralWorkflow && nextUrl.pathname.startsWith("/api/student-referrals")) ||
+      (restrictedCategory === "teacher_affairs_agent" && nextUrl.pathname === "/api/teachers/files-manifest");
     const allowedPage =
       nextUrl.pathname === "/admin" ||
       (inReferralWorkflow && nextUrl.pathname.startsWith("/admin/student-referrals"));

@@ -5,6 +5,7 @@ import { supabaseAdmin } from "@/lib/supabase/server";
 import { getSchoolManagementCategory, getSchoolFiles } from "@/lib/school-files";
 import { FileUploadDropzone } from "@/components/portfolio/FileUploadDropzone";
 import { SchoolFileList } from "@/components/admin/SchoolFileList";
+import { DownloadAllFilesButton } from "@/components/admin/DownloadAllFilesButton";
 
 interface DashboardCard {
   href: string;
@@ -47,6 +48,14 @@ async function RestrictedDashboard({ categoryKey }: { categoryKey: string }) {
 
   return (
     <div className="max-w-2xl">
+      {categoryKey === "teacher_affairs_agent" && (
+        <div className="mb-6 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4">
+          <p className="mb-2 text-sm text-slate-600 dark:text-slate-300">
+            تحميل كل ما رفعه المعلمون (الجدول المدرسي، ملف الإنجاز، وغيرها) في ملف واحد، مجلد لكل معلم.
+          </p>
+          <DownloadAllFilesButton />
+        </div>
+      )}
       {waitingStatus && (
         <Link
           href="/admin/student-referrals"
