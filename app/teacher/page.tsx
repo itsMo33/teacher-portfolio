@@ -9,16 +9,18 @@ import {
 } from "@/lib/portfolio-data";
 import { TEACHER_COMPLETION_SLOTS, TOTAL_TEACHER_COMPLETION_SLOTS } from "@/lib/portfolio-sections";
 import { getSchoolManagementCategory } from "@/lib/school-files";
+import { getFilesNeedingRevision } from "@/lib/weekly-review";
 import { ProgressGrid } from "@/components/portfolio/ProgressGrid";
 
 export default async function TeacherDashboard() {
   const session = await auth();
-  const [slotCounts, hasSchedule, unviewedSectionKeys, hasUnviewedSchedule, professionalLicenseExempt] = await Promise.all([
+  const [slotCounts, hasSchedule, unviewedSectionKeys, hasUnviewedSchedule, professionalLicenseExempt, filesNeedingRevision] = await Promise.all([
     getSlotCounts(session!.user.id),
     getHasSchedule(session!.user.id),
     getUnviewedAdminSectionKeys(session!.user.id),
     getHasUnviewedSchedule(session!.user.id),
     getProfessionalLicenseExempt(session!.user.id),
+    getFilesNeedingRevision(session!.user.id),
   ]);
 
   const restrictedCategoryLabel = session!.user.restrictedCategory
@@ -60,6 +62,25 @@ export default async function TeacherDashboard() {
             إدارة قسم: {restrictedCategoryLabel}
           </span>
         </Link>
+      )}
+      {filesNeedingRevision.length > 0 && (
+        <div className="mb-4 flex flex-col gap-2 rounded-xl border border-amber-300 dark:border-amber-800 bg-amber-50 dark:bg-amber-900/20 p-4">
+          <p className="font-semibold text-amber-800 dark:text-amber-200">
+            ملفات رجّعها لك المراجعون وتحتاج تعديل ({filesNeedingRevision.length})
+          </p>
+          <ul className="flex flex-col gap-1.5 text-sm">
+            {filesNeedingRevision.map((f) => (
+              <li key={f.id}>
+                <Link href={`/teacher/portfolio/${f.category}`} className="font-medium text-amber-900 dark:text-amber-100 hover:underline">
+                  {f.fileName}
+                </Link>
+                <span className="text-xs text-amber-700 dark:text-amber-300"> -- {f.sectionLabel}</span>
+                {f.note && <p className="text-xs text-amber-700 dark:text-amber-300">المطلوب: {f.note}</p>}
+              </li>
+            ))}
+          </ul>
+          <p className="text-xs text-amber-700 dark:text-amber-300">ارفع النسخة المعدّلة في نفس القسم، ويمكنك حذف القديمة.</p>
+        </div>
       )}
       <Link
         href="/teacher/student-referrals"

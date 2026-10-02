@@ -383,3 +383,24 @@ create index if not exists idx_student_referral_files_referral on student_referr
 
 alter table student_referrals enable row level security;
 alter table student_referral_files enable row level security;
+
+-- مراجعة الأسبوع: the reviewer's per-file verdict on a teacher's upload (accepted, or sent back
+-- for changes with a note the teacher sees next to the file), plus a per-teacher "reviewed up to
+-- here" mark so each weekly review only shows what's new since the reviewer's last pass.
+alter table attachments add column if not exists review_status text;
+alter table attachments add column if not exists review_note text;
+alter table attachments add column if not exists reviewed_at timestamptz;
+do $$ begin
+  alter table attachments add constraint attachments_review_status_check
+    check (review_status in ('accepted', 'needs_revision'));
+exception
+  when duplicate_object then null;
+end $$;
+
+create table if not exists weekly_review_marks (
+  teacher_id uuid not null references users(id) on delete cascade,
+  reviewer_id uuid not null references users(id) on delete cascade,
+  reviewed_at timestamptz not null default now(),
+  primary key (teacher_id, reviewer_id)
+);
+alter table weekly_review_marks enable row level security;

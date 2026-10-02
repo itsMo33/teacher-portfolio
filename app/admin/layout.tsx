@@ -1,6 +1,7 @@
 import { auth } from "@/lib/auth/auth-options";
 import { AppShell, type NavItem } from "@/components/ui/AppShell";
 import { getSchoolManagementCategory } from "@/lib/school-files";
+import { canReview } from "@/lib/weekly-review";
 
 const fullNavItems: NavItem[] = [
   { href: "/admin", label: "لوحة تحكم" },
@@ -15,6 +16,7 @@ const fullNavItems: NavItem[] = [
   { href: "/admin/accountability", label: "المسائلات" },
   { href: "/admin/reports", label: "تصدير تقرير" },
   { href: "/admin/school-management", label: "الإنجاز المدرسي" },
+  { href: "/admin/weekly-review", label: "مراجعة الأسبوع" },
   { href: "/admin/student-referrals", label: "تحويلات الطلاب" },
   { href: "/admin/activity-log", label: "سجل النشاط" },
   { href: "/admin/trash", label: "سلة المحذوفات" },
@@ -39,7 +41,11 @@ export default async function AdminLayout({ children }: { children: React.ReactN
       ]
     : canBuildSchedule
       ? [{ href: "/admin/schedule-builder", label: "جدول مدرسي" }]
-      : fullNavItems.filter((item) => item.href !== "/admin/student-referrals" || session?.user?.role === "manager");
+      : fullNavItems.filter((item) => {
+          if (item.href === "/admin/student-referrals") return session?.user?.role === "manager";
+          if (item.href === "/admin/weekly-review") return !!session && canReview(session.user);
+          return true;
+        });
 
   return (
     <AppShell

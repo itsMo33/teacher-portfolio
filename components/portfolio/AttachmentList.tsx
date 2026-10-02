@@ -12,6 +12,9 @@ export interface AttachmentItem {
   viewed_at?: string | null;
   mime_type?: string;
   accountability_status?: AccountabilityStatus | null;
+  /** The weekly reviewer's verdict (مراجعة الأسبوع), shown to the teacher next to the file. */
+  review_status?: "accepted" | "needs_revision" | null;
+  review_note?: string | null;
 }
 
 export function AttachmentList({
@@ -86,6 +89,9 @@ export function AttachmentList({
                 >
                   {a.file_name}
                 </a>
+                {a.review_status === "needs_revision" && a.review_note && (
+                  <span className="text-xs text-amber-700 dark:text-amber-300">المطلوب: {a.review_note}</span>
+                )}
               </div>
               <div className="flex items-center gap-3 shrink-0">
                 <span className="text-xs text-slate-400">
@@ -116,6 +122,17 @@ export function AttachmentList({
                       {ACCOUNTABILITY_STATUS_LABELS_AR[a.accountability_status]}
                     </span>
                   )
+                )}
+                {a.review_status && (
+                  <span
+                    className={`text-xs px-2 py-0.5 rounded-full whitespace-nowrap ${
+                      a.review_status === "accepted"
+                        ? "bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300"
+                        : "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300"
+                    }`}
+                  >
+                    {a.review_status === "accepted" ? "تمت مراجعته: مقبول" : "يحتاج تعديل"}
+                  </span>
                 )}
                 {showViewedStatus && (
                   <span

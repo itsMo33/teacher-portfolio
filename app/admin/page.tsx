@@ -6,6 +6,7 @@ import { getSchoolManagementCategory, getSchoolFiles } from "@/lib/school-files"
 import { FileUploadDropzone } from "@/components/portfolio/FileUploadDropzone";
 import { SchoolFileList } from "@/components/admin/SchoolFileList";
 import { DownloadAllFilesButton } from "@/components/admin/DownloadAllFilesButton";
+import { canReview } from "@/lib/weekly-review";
 
 interface DashboardCard {
   href: string;
@@ -23,6 +24,7 @@ const DASHBOARD_CARDS: DashboardCard[] = [
   { href: "/admin/teacher-performance", label: "متابعة أداء المعلمين", description: "الطابور الصباحي، الإشراف، المناوبة، وغيرها", accentColor: "#9333ea" },
   { href: "/admin/school-management", label: "الإنجاز المدرسي", description: "ملفات مدير المدرسة والوكلاء والموجه الطلابي", accentColor: "#7c3aed" },
   { href: "/admin/student-referrals", label: "تحويلات الطلاب", description: "تحويلات المعلمين لوكيل شؤون الطلاب والموجه الطلابي", accentColor: "#b45309" },
+  { href: "/admin/weekly-review", label: "مراجعة الأسبوع", description: "الملفات الجديدة من المعلمين ومن لم يرفع بعد", accentColor: "#059669" },
 ];
 
 async function RestrictedDashboard({ categoryKey }: { categoryKey: string }) {
@@ -141,7 +143,11 @@ export default async function AdminDashboard() {
     <div>
       <h2 className="text-xl font-bold text-slate-900 dark:text-slate-50 mb-4">لوحة تحكم الإدارة</h2>
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-        {DASHBOARD_CARDS.filter((card) => card.href !== "/admin/student-referrals" || session?.user?.role === "manager").map((card, index) => (
+        {DASHBOARD_CARDS.filter((card) => {
+          if (card.href === "/admin/student-referrals") return session?.user?.role === "manager";
+          if (card.href === "/admin/weekly-review") return !!session && canReview(session.user);
+          return true;
+        }).map((card, index) => (
           <Link
             key={card.href}
             href={card.href}
