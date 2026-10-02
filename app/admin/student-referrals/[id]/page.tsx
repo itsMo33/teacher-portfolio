@@ -5,6 +5,7 @@ import { AGENT_PROCEDURES, COUNSELOR_PROCEDURES } from "@/lib/student-referral-c
 import { canEditStage, canView, getReferral, getReferralActor, getReferralFiles } from "@/lib/student-referrals";
 import { ReferralStatusBadge } from "@/components/referrals/ReferralStatusBadge";
 import { ReferralStageForm } from "@/components/referrals/ReferralStageForm";
+import { DeleteReferralButton } from "@/components/referrals/DeleteReferralButton";
 
 export default async function StudentReferralDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -86,6 +87,8 @@ export default async function StudentReferralDetailPage({ params }: { params: Pr
           files={counselorFiles}
         />
       )}
+
+      {!session!.user.demoViewOnly && <DeleteReferralButton referralId={referral.id} studentName={referral.studentName} />}
     </div>
   );
 }
