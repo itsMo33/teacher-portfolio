@@ -404,3 +404,14 @@ create table if not exists weekly_review_marks (
   primary key (teacher_id, reviewer_id)
 );
 alter table weekly_review_marks enable row level security;
+
+-- تحضير مدرستي in متابعة أداء المعلمين: one mark per teacher per school week (week_start = that
+-- week's Sunday). No row = green (default); 'yellow' / 'red' are the two exceptions.
+create table if not exists madrasati_prep_weeks (
+  teacher_id uuid not null references users(id) on delete cascade,
+  week_start date not null,
+  status text not null check (status in ('yellow', 'red')),
+  updated_at timestamptz not null default now(),
+  primary key (teacher_id, week_start)
+);
+alter table madrasati_prep_weeks enable row level security;

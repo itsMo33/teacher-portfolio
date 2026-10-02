@@ -38,3 +38,44 @@ export function getPerformanceCategory(key: string): PerformanceCategoryConfig |
 export function isValidPerformanceCategory(key: string): key is PerformanceCategory {
   return getPerformanceCategory(key) !== undefined;
 }
+
+/** تحضير مدرستي is tracked once per week, not per day: every teacher starts the week green, and a
+ *  click cycles green -> yellow -> red -> green. Green is "no row"; only yellow/red are stored, keyed
+ *  by the week's Sunday (see madrasati_prep_weeks). */
+export type MadrasatiPrepStatus = "green" | "yellow" | "red";
+
+export const MADRASATI_PREP_LABELS_AR: Record<MadrasatiPrepStatus, string> = {
+  green: "أكمل التحضير",
+  yellow: "ناقص",
+  red: "لم يحضّر",
+};
+
+export function nextMadrasatiPrepStatus(current: MadrasatiPrepStatus): MadrasatiPrepStatus {
+  return current === "green" ? "yellow" : current === "yellow" ? "red" : "green";
+}
+
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+function parseDay(day: string): number {
+  const [y, m, d] = day.split("-").map(Number);
+  return Date.UTC(y, m - 1, d);
+}
+
+function formatDay(ms: number): string {
+  return new Date(ms).toISOString().slice(0, 10);
+}
+
+/** The Sunday on or before `day` (YYYY-MM-DD) -- the school week runs Sunday to Thursday. */
+export function weekStartOf(day: string): string {
+  const ms = parseDay(day);
+  return formatDay(ms - new Date(ms).getUTCDay() * DAY_MS);
+}
+
+export function addDays(day: string, days: number): string {
+  return formatDay(parseDay(day) + days * DAY_MS);
+}
+
+/** The five school days of the week starting on `weekStart`, Sunday first. */
+export function schoolWeekDays(weekStart: string): string[] {
+  return [0, 1, 2, 3, 4].map((i) => addDays(weekStart, i));
+}

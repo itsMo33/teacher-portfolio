@@ -1,8 +1,18 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
-import { PERFORMANCE_CATEGORIES, PERFORMANCE_PERIODS, PerformanceCategory, PerformancePeriod } from "@/lib/teacher-performance";
+import {
+  addDays,
+  MADRASATI_PREP_LABELS_AR,
+  nextMadrasatiPrepStatus,
+  PERFORMANCE_CATEGORIES,
+  PERFORMANCE_PERIODS,
+  PerformanceCategory,
+  PerformancePeriod,
+  weekStartOf,
+  type MadrasatiPrepStatus,
+} from "@/lib/teacher-performance";
 
 interface Teacher {
   id: string;
@@ -25,6 +35,24 @@ interface StatsRecord {
   period: string | null;
 }
 
+const NAME_BUTTON =
+  "flex w-full select-none items-center gap-1.5 rounded-xl border px-3 py-2.5 text-right text-sm transition-all duration-150 hover:shadow-sm active:scale-[0.97]";
+
+const STATUS_COLORS = {
+  present: "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300 border-green-200 dark:border-green-800",
+  late: "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300 border-amber-200 dark:border-amber-800",
+  absent: "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300 border-red-200 dark:border-red-800",
+  none: "bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400 border-slate-200 dark:border-slate-700",
+} as const;
+
+const PREP_COLORS = {
+  green: STATUS_COLORS.present,
+  yellow: STATUS_COLORS.late,
+  red: STATUS_COLORS.absent,
+} as const;
+
+const PREP_DOT = { green: "bg-green-500", yellow: "bg-amber-400", red: "bg-red-500" } as const;
+
 function formatArDate(d: string): string {
   return new Date(`${d}T00:00:00`).toLocaleDateString("ar-SA", { year: "numeric", month: "long", day: "numeric" });
 }
@@ -40,35 +68,81 @@ export default function TeacherPerformancePage() {
   const [teachers, setTeachers] = useState<Teacher[]>([]);
   const [records, setRecords] = useState<Record_[]>([]);
   const [loaded, setLoaded] = useState(false);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const [viewMode, setViewMode] = useState<"track" | "stats">("track");
+  const [viewMode, setViewMode] = useState<"track" | "prep" | "stats">("track");
+  const [prepMarks, setPrepMarks] = useState<Partial<Record<string, "yellow" | "red">>>({});
+  // Saves for the same name go out strictly in click order, so tapping through the colors quickly
+  // always ends on the state you see; and only the newest load's answer is ever applied.
+  const saveQueue = useRef(new Map<string, Promise<void>>());
+  const loadSeq = useRef(0);
   const [statsTeacherId, setStatsTeacherId] = useState("");
   const [statsRecords, setStatsRecords] = useState<StatsRecord[]>([]);
   const [statsLoaded, setStatsLoaded] = useState(true);
   const [expandedTeacherId, setExpandedTeacherId] = useState<string | null>(null);
 
   const load = useCallback((d: string) => {
+    const seq = ++loadSeq.current;
+    setLoading(true);
     return fetch(`/api/teacher-performance?date=${d}`)
       .then((res) => {
         if (!res.ok) throw new Error("failed");
         return res.json();
       })
       .then((data) => {
+        if (seq !== loadSeq.current) return;
         setTeachers(data.teachers ?? []);
         setRecords(data.records ?? []);
         setError("");
       })
       .catch(() => {
-        setError("تعذّر تحميل البيانات");
+        if (seq === loadSeq.current) setError("تعذّر تحميل البيانات");
       })
       .finally(() => {
+        if (seq !== loadSeq.current) return;
         setLoaded(true);
+        setLoading(false);
       });
   }, []);
 
   useEffect(() => {
     load(date);
   }, [date, load]);
+
+  const loadPrep = useCallback((d: string) => {
+    return fetch(`/api/teacher-performance/madrasati-prep?date=${d}`)
+      .then((res) => {
+        if (!res.ok) throw new Error("failed");
+        return res.json();
+      })
+      .then((data: { marks: { teacherId: string; status: "yellow" | "red" }[] }) => {
+        setPrepMarks(Object.fromEntries(data.marks.map((m) => [m.teacherId, m.status])));
+        setError("");
+      })
+      .catch(() => setError("تعذّر تحميل تحضير مدرستي"));
+  }, []);
+
+  useEffect(() => {
+    if (viewMode === "prep") loadPrep(date);
+  }, [viewMode, date, loadPrep]);
+
+  /** Runs `task` after every earlier save for the same `key` has finished; a failed save reverts the
+   *  screen to what the server really has instead of leaving a mark that never got stored. */
+  const enqueueSave = useCallback(
+    (key: string, task: () => Promise<Response>, onFail: () => void) => {
+      const run = async () => {
+        try {
+          const res = await task();
+          if (!res.ok) throw new Error("failed");
+        } catch {
+          onFail();
+        }
+      };
+      const previous = saveQueue.current.get(key) ?? Promise.resolve();
+      saveQueue.current.set(key, previous.then(run, run));
+    },
+    []
+  );
 
   useEffect(() => {
     if (!statsTeacherId) return;
@@ -155,23 +229,22 @@ export default function TeacherPerformancePage() {
         : [...filtered, { teacherId, category: activeCategory, status: next, period: null }];
     });
 
-    try {
-      if (isDefault) {
-        await fetch("/api/teacher-performance", {
-          method: "DELETE",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ teacherId, category: activeCategory, date }),
-        });
-      } else {
-        await fetch("/api/teacher-performance", {
-          method: "PUT",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ teacherId, category: activeCategory, date, status: next }),
-        });
-      }
-    } catch {
-      load(date);
-    }
+    enqueueSave(
+      `${teacherId}:${activeCategory}`,
+      () =>
+        isDefault
+          ? fetch("/api/teacher-performance", {
+              method: "DELETE",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ teacherId, category: activeCategory, date }),
+            })
+          : fetch("/api/teacher-performance", {
+              method: "PUT",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ teacherId, category: activeCategory, date, status: next }),
+            }),
+      () => load(date)
+    );
   }
 
   async function handlePeriodCycle(teacherId: string, period: PerformancePeriod) {
@@ -186,34 +259,56 @@ export default function TeacherPerformancePage() {
       return next === null ? filtered : [...filtered, { teacherId, category: activeCategory, status: next, period }];
     });
 
-    try {
-      if (next === null) {
-        await fetch("/api/teacher-performance", {
-          method: "DELETE",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ teacherId, category: activeCategory, date, period }),
-        });
-      } else {
-        await fetch("/api/teacher-performance", {
-          method: "PUT",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ teacherId, category: activeCategory, date, status: next, period }),
-        });
-      }
-    } catch {
-      load(date);
-    }
+    enqueueSave(
+      `${teacherId}:${activeCategory}:${period}`,
+      () =>
+        next === null
+          ? fetch("/api/teacher-performance", {
+              method: "DELETE",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ teacherId, category: activeCategory, date, period }),
+            })
+          : fetch("/api/teacher-performance", {
+              method: "PUT",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ teacherId, category: activeCategory, date, status: next, period }),
+            }),
+      () => load(date)
+    );
   }
 
+  function handlePrepCycle(teacherId: string) {
+    const current: MadrasatiPrepStatus = prepMarks[teacherId] ?? "green";
+    const next = nextMadrasatiPrepStatus(current);
+    setPrepMarks((prev) => {
+      const { [teacherId]: _removed, ...rest } = prev;
+      void _removed;
+      return next === "green" ? rest : { ...rest, [teacherId]: next };
+    });
+    enqueueSave(
+      `${teacherId}:prep:${weekStartOf(date)}`,
+      () =>
+        fetch("/api/teacher-performance/madrasati-prep", {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ teacherId, date, status: next }),
+        }),
+      () => loadPrep(date)
+    );
+  }
+
+  const weekStart = weekStartOf(date);
   const descriptionText =
-    category.mode === "assumed-present"
+    viewMode === "prep"
+      ? "تحضير مدرستي مرة وحدة بالأسبوع -- الكل أخضر، اضغط على الاسم: أصفر، ثم أحمر، ثم يرجع أخضر"
+      : category.mode === "assumed-present"
       ? "كل المعلمين مسجّلين حاضرين افتراضيًا -- اضغط على اسم المعلم الغائب لتحويله لغائب"
       : category.mode === "explicit"
         ? "كل المعلمين فاضين افتراضيًا -- اضغط لتسجيل حاضر، اضغط مرة ثانية لتسجيل غائب، وثالثة للرجوع فاضي"
         : "كل المعلمين ملتزمين افتراضيًا -- اضغط على اسم المعلم لاختيار الحصة، ثم اضغط عليها لتسجيل متأخر، ومرة ثانية لتسجيل لم يحضر";
 
   return (
-    <div className="flex flex-col gap-6 max-w-3xl">
+    <div className="flex flex-col gap-6 max-w-4xl">
       <div className="flex items-center justify-between gap-3">
         <div>
           <h2 className="text-xl font-bold text-slate-900 dark:text-slate-50">متابعة أداء المعلمين</h2>
@@ -229,7 +324,7 @@ export default function TeacherPerformancePage() {
 
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex flex-wrap items-center gap-3">
-          {viewMode === "track" && (
+          {viewMode !== "stats" && (
             <input
               type="date"
               value={date}
@@ -261,6 +356,20 @@ export default function TeacherPerformancePage() {
             ))}
             <button
               type="button"
+              onClick={() => {
+                setViewMode("prep");
+                setExpandedTeacherId(null);
+              }}
+              className={`rounded-lg border px-3 py-1.5 text-sm transition-colors ${
+                viewMode === "prep"
+                  ? "border-[var(--brand-primary)] bg-[var(--brand-primary)] text-white"
+                  : "border-slate-300 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800"
+              }`}
+            >
+              تحضير مدرستي
+            </button>
+            <button
+              type="button"
               onClick={() => setViewMode("stats")}
               className={`rounded-lg border px-3 py-1.5 text-sm transition-colors ${
                 viewMode === "stats"
@@ -272,15 +381,27 @@ export default function TeacherPerformancePage() {
             </button>
           </div>
         </div>
-        {viewMode === "track" ? (
-          <a
-            href={`/admin/teacher-performance/print?category=${activeCategory}&date=${date}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="shrink-0 rounded-lg border border-slate-300 dark:border-slate-700 px-3 py-1.5 text-sm text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800"
-          >
-            طباعة {category.labelAr}
-          </a>
+        {viewMode !== "stats" ? (
+          <div className="flex flex-wrap items-center gap-2">
+            {viewMode === "track" && (
+              <a
+                href={`/admin/teacher-performance/print?category=${activeCategory}&date=${date}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="shrink-0 rounded-lg border border-slate-300 dark:border-slate-700 px-3 py-1.5 text-sm text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800"
+              >
+                طباعة {category.labelAr}
+              </a>
+            )}
+            <a
+              href={`/admin/teacher-performance/weekly-print?week=${weekStart}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="shrink-0 rounded-lg bg-[var(--brand-primary)] hover:bg-[var(--brand-primary-dark)] px-3 py-1.5 text-sm font-medium text-white transition-colors"
+            >
+              الطباعة الأسبوعية
+            </a>
+          </div>
         ) : (
           statsTeacherId && (
             <a
@@ -301,80 +422,100 @@ export default function TeacherPerformancePage() {
         </div>
       )}
 
-      {viewMode === "track" ? (
+      {viewMode === "prep" ? (
+        <div className={`flex flex-col gap-3 transition-opacity duration-200 ${!loaded ? "opacity-60" : ""}`}>
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-slate-500">
+            <span>
+              الأسبوع: {formatArDate(weekStart)} — {formatArDate(addDays(weekStart, 4))}
+            </span>
+            {(["green", "yellow", "red"] as const).map((st) => (
+              <span key={st} className="flex items-center gap-1">
+                <span className={`h-2.5 w-2.5 rounded-full ${PREP_DOT[st]}`} />
+                {MADRASATI_PREP_LABELS_AR[st]}
+              </span>
+            ))}
+          </div>
+          <div className="grid grid-cols-2 gap-2 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-3 sm:grid-cols-3">
+            {teachers.map((t) => {
+              const status: MadrasatiPrepStatus = prepMarks[t.id] ?? "green";
+              return (
+                <button
+                  key={t.id}
+                  type="button"
+                  onClick={() => handlePrepCycle(t.id)}
+                  className={`${NAME_BUTTON} ${PREP_COLORS[status]}`}
+                >
+                  <span className="font-bold">{status === "green" ? "✓" : status === "yellow" ? "!" : "✗"}</span>
+                  <span className="truncate">{t.name}</span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      ) : viewMode === "track" ? (
         !loaded ? (
           <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-6 text-center text-sm text-slate-400">
             جارٍ التحميل...
           </div>
-        ) : category.mode === "period-exception" ? (
-          <div className="flex flex-col gap-2 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4">
-            {teachers.map((t) => {
-              const agg = aggregateStatusFor(t.id);
-              const colorClass =
-                agg === "present"
-                  ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300 border-green-200 dark:border-green-800"
-                  : agg === "late"
-                    ? "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300 border-amber-200 dark:border-amber-800"
-                    : "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300 border-red-200 dark:border-red-800";
-              const isExpanded = expandedTeacherId === t.id;
-              return (
-                <div key={t.id} className="flex flex-col gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setExpandedTeacherId(isExpanded ? null : t.id)}
-                    className={`self-start inline-flex items-center gap-1 rounded-full border px-3 py-1.5 text-xs transition-colors ${colorClass}`}
-                  >
-                    {agg === "present" ? "✓" : agg === "late" ? "⏱" : "✗"} {t.name}
-                  </button>
-                  {isExpanded && (
-                    <div className="flex flex-wrap gap-1.5 rounded-lg border border-dashed border-slate-300 dark:border-slate-700 p-2 pr-4">
-                      {PERFORMANCE_PERIODS.map((p) => {
-                        const pStatus = periodStatusFor(t.id, p);
-                        const pColor =
-                          pStatus === "absent"
-                            ? "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300 border-red-200 dark:border-red-800"
-                            : pStatus === "late"
-                              ? "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300 border-amber-200 dark:border-amber-800"
-                              : "bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400 border-slate-200 dark:border-slate-700";
-                        return (
-                          <button
-                            key={p}
-                            type="button"
-                            onClick={() => handlePeriodCycle(t.id, p)}
-                            className={`rounded-full border px-2.5 py-1 text-xs transition-colors ${pColor}`}
-                          >
-                            الحصة {p}
-                            {pStatus === "late" && " — متأخر"}
-                            {pStatus === "absent" && " — لم يحضر"}
-                          </button>
-                        );
-                      })}
-                    </div>
-                  )}
-                </div>
-              );
-            })}
-          </div>
         ) : (
-          <div className="flex flex-wrap gap-2 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4">
+          <div
+            className={`grid grid-cols-2 gap-2 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-3 transition-opacity duration-200 sm:grid-cols-3 ${
+              loading ? "opacity-60" : ""
+            }`}
+          >
             {teachers.map((t) => {
+              if (category.mode === "period-exception") {
+                const agg = aggregateStatusFor(t.id);
+                const isExpanded = expandedTeacherId === t.id;
+                return (
+                  <Fragment key={t.id}>
+                    <button
+                      type="button"
+                      onClick={() => setExpandedTeacherId(isExpanded ? null : t.id)}
+                      className={`${NAME_BUTTON} ${STATUS_COLORS[agg]} ${isExpanded ? "ring-2 ring-[var(--brand-primary)]" : ""}`}
+                    >
+                      <span className="font-bold">{agg === "present" ? "✓" : agg === "late" ? "⏱" : "✗"}</span>
+                      <span className="truncate">{t.name}</span>
+                    </button>
+                    {isExpanded && (
+                      <div className="col-span-full flex flex-wrap gap-1.5 rounded-lg border border-dashed border-slate-300 dark:border-slate-700 p-2">
+                        {PERFORMANCE_PERIODS.map((p) => {
+                          const pStatus = periodStatusFor(t.id, p);
+                          const pColor =
+                            pStatus === "absent"
+                              ? STATUS_COLORS.absent
+                              : pStatus === "late"
+                                ? STATUS_COLORS.late
+                                : STATUS_COLORS.none;
+                          return (
+                            <button
+                              key={p}
+                              type="button"
+                              onClick={() => handlePeriodCycle(t.id, p)}
+                              className={`rounded-full border px-3 py-1.5 text-xs transition-all duration-150 active:scale-95 ${pColor}`}
+                            >
+                              الحصة {p}
+                              {pStatus === "late" && " — متأخر"}
+                              {pStatus === "absent" && " — لم يحضر"}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </Fragment>
+                );
+              }
+
               const status = statusFor(t.id);
-              const colorClass =
-                status === "present"
-                  ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300 border-green-200 dark:border-green-800"
-                  : status === "absent"
-                    ? "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300 border-red-200 dark:border-red-800"
-                    : "bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400 border-slate-200 dark:border-slate-700";
-              const icon = status === "present" ? "✓" : status === "absent" ? "✗" : "";
               return (
                 <button
                   key={t.id}
                   type="button"
                   onClick={() => handleCycle(t.id)}
-                  className={`inline-flex items-center gap-1 rounded-full border px-3 py-1.5 text-xs transition-colors ${colorClass}`}
+                  className={`${NAME_BUTTON} ${STATUS_COLORS[status ?? "none"]}`}
                 >
-                  {icon && <span className="font-bold">{icon}</span>}
-                  {t.name}
+                  <span className="font-bold">{status === "present" ? "✓" : status === "absent" ? "✗" : ""}</span>
+                  <span className="truncate">{t.name}</span>
                 </button>
               );
             })}
