@@ -43,3 +43,10 @@ describe("OFFICIAL_LOAD", () => {
     }
   });
 });
+
+describe("matchShortName ties", () => {
+  it("prefers the exact first-name match when two teachers are equally close on the family name", () => {
+    // "البراك" is two edits from both "براك" and "البحار"; only أحمد براك also matches the first name.
+    expect(matchShortName("احمد عبدالله البراك")).toBe("أحمد براك");
+  });
+});

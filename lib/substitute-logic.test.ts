@@ -52,9 +52,15 @@ describe("getCandidates", () => {
 });
 
 describe("getAlwaysAvailableCandidates", () => {
-  it("returns nothing for period 1 or 7", () => {
+  it("returns nothing for period 1, or for a slot with no waiting duty", () => {
     expect(getAlwaysAvailableCandidates([], "احد", "1", "غير موجود")).toEqual([]);
-    expect(getAlwaysAvailableCandidates([], "احد", "7", "غير موجود")).toEqual([]);
+    // the 7th period exists on Sunday only
+    expect(getAlwaysAvailableCandidates([], "اثنين", "7", "غير موجود")).toEqual([]);
+  });
+
+  it("returns the standing substitutes on Sunday's 7th period too", () => {
+    const names = getAlwaysAvailableCandidates([], "احد", "7", "غير موجود");
+    expect(names.sort()).toEqual([...ALWAYS_AVAILABLE_TEACHERS].sort());
   });
 
   it("returns all four standing substitutes for a mid-day period", () => {
