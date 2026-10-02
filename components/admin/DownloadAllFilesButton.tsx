@@ -41,7 +41,18 @@ export function DownloadAllFilesButton({ teacherId, label = "تحميل المل
     setBusy(true);
     setStatus("جاري التجهيز...");
     const baseName = teacherId ? "ملفات-المعلم" : "ملفات-المعلمين";
+    const picker = (window as unknown as SaveFilePickerWindow).showSaveFilePicker;
     try {
+      // Chrome/Edge: stream straight into one .zip file on disk, so memory stays at about one file
+      // at a time no matter how big the whole school's files are (that's ~1GB). The save dialog has
+      // to open straight from the click -- the browser rejects it once any await has gone by.
+      const handle = picker
+        ? await picker.call(window, {
+            suggestedName: `${baseName}.zip`,
+            types: [{ description: "ملف مضغوط", accept: { "application/zip": [".zip"] } }],
+          })
+        : null;
+
       const qs = teacherId ? `?teacherId=${encodeURIComponent(teacherId)}` : "";
       const res = await fetch(`/api/teachers/files-manifest${qs}`);
       if (!res.ok) throw new Error("تعذّر جلب قائمة الملفات");
@@ -52,19 +63,12 @@ export function DownloadAllFilesButton({ teacherId, label = "تحميل المل
       }
 
       const { Zip, ZipPassThrough, zipSync } = await import("fflate");
-      const picker = (window as unknown as SaveFilePickerWindow).showSaveFilePicker;
 
-      // Chrome/Edge: stream straight into one .zip file on disk, so memory stays at about one file
-      // at a time no matter how big the whole school's files are (that's ~1GB).
       let writable: FileWritable | null = null;
       let writeChain: Promise<void> = Promise.resolve();
       let zip: InstanceType<typeof Zip> | null = null;
 
-      if (picker) {
-        const handle = await picker.call(window, {
-          suggestedName: `${baseName}.zip`,
-          types: [{ description: "ملف مضغوط", accept: { "application/zip": [".zip"] } }],
-        });
+      if (handle) {
         writable = await handle.createWritable();
         const target = writable;
         zip = new Zip((err, chunk) => {
