@@ -31,8 +31,13 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   // A scoped account (e.g. الأمن والسلامة) only ever sees its own single section -- no other
   // admin tool exists for it, in the sidebar or otherwise. A teacher granted جدول مدرسي access
   // (e.g. مؤيد) gets that one tool instead; the two capabilities combine if an account has both.
+  // A teacher-role account reaching /admin (scoped category or جدول مدرسي access) also gets a way back
+  // to its own dashboard -- otherwise this sidebar is a dead end.
+  const teacherHome: NavItem[] = session?.user?.role === "teacher" ? [{ href: "/teacher", label: "لوحة المعلم" }] : [];
+
   const navItems: NavItem[] = restrictedCategory
     ? [
+        ...teacherHome,
         { href: "/admin", label: (await getSchoolManagementCategory(restrictedCategory))?.labelAr ?? "لوحة تحكم" },
         ...(restrictedCategory === "student_affairs_agent" || restrictedCategory === "student_guidance"
           ? [{ href: "/admin/student-referrals", label: "تحويلات الطلاب" }]
@@ -40,7 +45,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
         ...(canBuildSchedule ? [{ href: "/admin/schedule-builder", label: "جدول مدرسي" }] : []),
       ]
     : canBuildSchedule
-      ? [{ href: "/admin/schedule-builder", label: "جدول مدرسي" }]
+      ? [...teacherHome, { href: "/admin/schedule-builder", label: "جدول مدرسي" }]
       : fullNavItems.filter((item) => {
           if (item.href === "/admin/student-referrals") return session?.user?.role === "manager";
           if (item.href === "/admin/weekly-review") return !!session && canReview(session.user);

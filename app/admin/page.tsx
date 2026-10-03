@@ -127,10 +127,12 @@ export default async function AdminDashboard() {
     return <RestrictedDashboard categoryKey={restrictedCategory} />;
   }
 
-  // A teacher granted only جدول مدرسي access (e.g. مؤيد) has exactly one admin tool -- send them
-  // straight there instead of showing the full dashboard, most of which middleware would 403 anyway.
+  // A teacher granted جدول مدرسي access (e.g. مؤيد) has no admin dashboard to show -- /admin is
+  // only where the builder's "رجوع" and the header land, so send them to their own teacher
+  // dashboard (which links into the builder). Sending them back to the builder instead made
+  // "رجوع" a loop they couldn't leave.
   if (session?.user?.role === "teacher" && session?.user?.canBuildSchedule) {
-    redirect("/admin/schedule-builder");
+    redirect("/teacher");
   }
 
   const { count: teacherCount } = await supabaseAdmin
