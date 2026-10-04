@@ -27,7 +27,18 @@ const DASHBOARD_CARDS: DashboardCard[] = [
   { href: "/admin/weekly-review", label: "مراجعة الأسبوع", description: "الملفات الجديدة من المعلمين ومن لم يرفع بعد", accentColor: "#059669" },
 ];
 
-async function RestrictedDashboard({ categoryKey, userId }: { categoryKey: string; userId: string }) {
+// Accounts that only handle student referrals -- their dashboard has no file-upload sections.
+const REFERRALS_ONLY_NATIONAL_IDS = new Set(["1003956578"]); // أحمد الشمراني
+
+async function RestrictedDashboard({
+  categoryKey,
+  userId,
+  referralsOnly,
+}: {
+  categoryKey: string;
+  userId: string;
+  referralsOnly: boolean;
+}) {
   const category = await getSchoolManagementCategory(categoryKey);
   if (!category) {
     return <p className="text-sm text-red-600 dark:text-red-400">القسم المخصص لهذا الحساب غير موجود.</p>;
@@ -77,6 +88,8 @@ async function RestrictedDashboard({ categoryKey, userId }: { categoryKey: strin
           </span>
         </Link>
       )}
+      {!referralsOnly && (
+        <>
       <h2 className="flex items-center gap-2 text-xl font-bold text-slate-900 dark:text-slate-50 mb-4">
         <span className="inline-block h-3 w-3 shrink-0 rounded-full" style={{ backgroundColor: category.accentColor }} />
         {category.labelAr}
@@ -116,6 +129,8 @@ async function RestrictedDashboard({ categoryKey, userId }: { categoryKey: strin
             );
           })())}
       </div>
+        </>
+      )}
     </div>
   );
 }
@@ -125,7 +140,11 @@ export default async function AdminDashboard() {
   const restrictedCategory = session?.user?.restrictedCategory;
 
   if (restrictedCategory) {
-    return <RestrictedDashboard categoryKey={restrictedCategory} userId={session!.user.id} />;
+    return <RestrictedDashboard
+        categoryKey={restrictedCategory}
+        userId={session!.user.id}
+        referralsOnly={REFERRALS_ONLY_NATIONAL_IDS.has(session!.user.nationalId)}
+      />;
   }
 
   // A teacher granted جدول مدرسي access (e.g. مؤيد) has no admin dashboard to show -- /admin is
