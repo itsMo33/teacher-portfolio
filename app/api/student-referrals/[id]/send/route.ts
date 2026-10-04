@@ -1,12 +1,12 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth/auth-options";
 import { supabaseAdmin } from "@/lib/supabase/server";
-import { getReferral, getReferralActor } from "@/lib/student-referrals";
+import { getAgentForClass, getCounselors, getReferral, getReferralActor } from "@/lib/student-referrals";
 import { logActivity } from "@/lib/audit";
 
 /** Moves a referral one step along: teacher (draft) -> وكيل شؤون الطلاب, then وكيل -> الموجه الطلابي.
  *  The status check is part of the UPDATE itself so a double-click can't send it twice. */
-export async function POST(_req: Request, { params }: { params: Promise<{ id: string }> }) {
+export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const session = await auth();
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -24,12 +24,24 @@ export async function POST(_req: Request, { params }: { params: Promise<{ id: st
 
   if (actor === "teacher") {
     if (referral.teacherId !== session.user.id) return NextResponse.json({ error: "Not found" }, { status: 404 });
+    // The class picks the agent (a class missing from the routing table can't be sent anywhere).
+    const agentId = await getAgentForClass(referral.className);
+    if (!agentId) {
+      return NextResponse.json({ error: "هذا الصف غير مرتبط بوكيل شؤون طلاب، عدّل الصف واختره من القائمة" }, { status: 409 });
+    }
     from = "draft";
-    update = { status: "with_agent", sent_to_agent_at: now, updated_at: now };
+    update = { status: "with_agent", sent_to_agent_at: now, updated_at: now, assigned_agent_id: agentId };
     action = "send_referral_to_agent";
   } else {
+    // Only the agent this referral was routed to can forward it, and must say to which counselor.
+    if (referral.assignedAgentId !== session.user.id) return NextResponse.json({ error: "Not found" }, { status: 404 });
+    const { counselorId } = await req.json().catch(() => ({ counselorId: null }));
+    const counselors = await getCounselors();
+    if (typeof counselorId !== "string" || !counselors.some((c) => c.id === counselorId)) {
+      return NextResponse.json({ error: "اختر الموجه الطلابي المحوَّل له" }, { status: 400 });
+    }
     from = "with_agent";
-    update = { status: "with_counselor", sent_to_counselor_at: now, updated_at: now };
+    update = { status: "with_counselor", sent_to_counselor_at: now, updated_at: now, assigned_counselor_id: counselorId };
     action = "forward_referral_to_counselor";
   }
 
@@ -53,7 +65,10 @@ export async function POST(_req: Request, { params }: { params: Promise<{ id: st
     action,
     targetTeacherId: referral.teacherId,
     targetTeacherName: referral.teacherName,
-    details: `${referral.studentName} -- ${referral.className}`,
+    details:
+      actor === "agent"
+        ? `${referral.studentName} -- ${referral.className} -> ${(await getCounselors()).find((c) => c.id === (update as { assigned_counselor_id: string }).assigned_counselor_id)?.name ?? ""}`
+        : `${referral.studentName} -- ${referral.className}`,
   });
 
   return NextResponse.json({ success: true });

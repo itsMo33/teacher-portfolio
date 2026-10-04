@@ -3,7 +3,7 @@ import { auth } from "@/lib/auth/auth-options";
 import { supabaseAdmin } from "@/lib/supabase/server";
 import { AGENT_PROCEDURES, COUNSELOR_PROCEDURES, REFERRAL_REASONS } from "@/lib/student-referral-constants";
 import { PORTFOLIO_BUCKET } from "@/lib/supabase/storage";
-import { canEditStage, canView, getReferral, getReferralActor } from "@/lib/student-referrals";
+import { canEditStage, canView, getReferral, getReferralActor, getRoutedClasses } from "@/lib/student-referrals";
 
 function validProcedures(value: unknown, allowed: { n: number }[]): number[] | null {
   if (!Array.isArray(value)) return null;
@@ -40,6 +40,9 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
     if (reasonList.some((r) => !(REFERRAL_REASONS as readonly string[]).includes(r))) {
       return NextResponse.json({ error: "Invalid reason" }, { status: 400 });
     }
+    if (!(await getRoutedClasses()).includes(className.trim())) {
+      return NextResponse.json({ error: "اختر الصف من القائمة" }, { status: 400 });
+    }
     update = {
       student_name: studentName.trim(),
       class_name: className.trim(),
@@ -48,14 +51,14 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
       problem_description: problemDescription?.trim() || null,
     };
   } else if (actor === "agent") {
-    if (!canEditStage(actor, referral, "agent")) {
+    if (!canEditStage(actor, session.user.id, referral, "agent")) {
       return NextResponse.json({ error: "لا يمكن تعديل النموذج بعد تحويله" }, { status: 409 });
     }
     const procedures = validProcedures(body.procedures, AGENT_PROCEDURES);
     if (!procedures) return NextResponse.json({ error: "Invalid procedures" }, { status: 400 });
     update = { agent_procedures: procedures, agent_notes: body.notes?.trim() || null };
   } else if (actor === "counselor") {
-    if (!canEditStage(actor, referral, "counselor")) {
+    if (!canEditStage(actor, session.user.id, referral, "counselor")) {
       return NextResponse.json({ error: "لا يمكن تعديل هذا النموذج" }, { status: 409 });
     }
     const procedures = validProcedures(body.procedures, COUNSELOR_PROCEDURES);

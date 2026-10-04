@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth/auth-options";
 import { supabaseAdmin } from "@/lib/supabase/server";
 import { REFERRAL_REASONS } from "@/lib/student-referral-constants";
-import { getReferralActor, listReferralsFor } from "@/lib/student-referrals";
+import { getReferralActor, getRoutedClasses, listReferralsFor } from "@/lib/student-referrals";
 
 export async function GET() {
   const session = await auth();
@@ -29,6 +29,10 @@ export async function POST(req: NextRequest) {
   const reasonList: string[] = Array.isArray(reasons) ? reasons : [];
   if (reasonList.some((r) => !(REFERRAL_REASONS as readonly string[]).includes(r))) {
     return NextResponse.json({ error: "Invalid reason" }, { status: 400 });
+  }
+  // The class decides which وكيل شؤون الطلاب receives the referral, so it must be one we route.
+  if (!(await getRoutedClasses()).includes(className.trim())) {
+    return NextResponse.json({ error: "اختر الصف من القائمة" }, { status: 400 });
   }
 
   const { data, error } = await supabaseAdmin

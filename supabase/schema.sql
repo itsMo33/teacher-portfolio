@@ -415,3 +415,18 @@ create table if not exists madrasati_prep_weeks (
   primary key (teacher_id, week_start)
 );
 alter table madrasati_prep_weeks enable row level security;
+
+-- Referral routing: a teacher's class decides which وكيل شؤون الطلاب receives the referral
+-- (student_referral_routing: one row per class), and the agent then picks the الموجه الطلابي.
+-- assigned_* record who each referral is currently routed to, so every agent/counselor only sees
+-- their own.
+alter table student_referrals add column if not exists assigned_agent_id uuid references users(id);
+alter table student_referrals add column if not exists assigned_counselor_id uuid references users(id);
+create index if not exists idx_student_referrals_assigned_agent on student_referrals(assigned_agent_id);
+create index if not exists idx_student_referrals_assigned_counselor on student_referrals(assigned_counselor_id);
+
+create table if not exists student_referral_routing (
+  class_name text primary key,
+  agent_id uuid not null references users(id) on delete cascade
+);
+alter table student_referral_routing enable row level security;

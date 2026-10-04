@@ -22,7 +22,7 @@ export async function POST(req: NextRequest) {
   if (!referral) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
   const stage = actor === "agent" ? "agent" : "counselor";
-  if (!canEditStage(actor, referral, stage)) {
+  if (!canEditStage(actor, session.user.id, referral, stage)) {
     return NextResponse.json({ error: "لا يمكن إضافة ملفات بعد تحويل النموذج" }, { status: 409 });
   }
 

@@ -23,7 +23,7 @@ export async function DELETE(req: NextRequest) {
   if (!file) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
   const referral = await getReferral(file.referral_id);
-  if (!referral || !canEditStage(actor, referral, file.stage as ReferralFileStage)) {
+  if (!referral || !canEditStage(actor, session.user.id, referral, file.stage as ReferralFileStage)) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 

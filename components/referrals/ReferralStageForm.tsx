@@ -22,6 +22,7 @@ export function ReferralStageForm({
   initialExtraServices,
   editable,
   files,
+  counselors,
 }: {
   kind: "agent" | "counselor";
   referralId: string;
@@ -33,11 +34,14 @@ export function ReferralStageForm({
   initialExtraServices?: string;
   editable: boolean;
   files: SchoolFileItem[];
+  /** The agent's stage only: the student counselors this referral can be forwarded to. */
+  counselors?: { id: string; name: string }[];
 }) {
   const router = useRouter();
   const [selected, setSelected] = useState<number[]>(initialSelected);
   const [notes, setNotes] = useState(initialNotes);
   const [extraServices, setExtraServices] = useState(initialExtraServices ?? "");
+  const [counselorId, setCounselorId] = useState("");
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<{ text: string; ok: boolean } | null>(null);
 
@@ -68,11 +72,20 @@ export function ReferralStageForm({
   }
 
   async function handleForward() {
-    if (!confirm("تحويل النموذج للموجه الطلابي؟ ما راح تقدر تعدّل عليه بعد التحويل.")) return;
+    const counselor = counselors?.find((c) => c.id === counselorId);
+    if (!counselor) {
+      setMessage({ text: "اختر الموجه الطلابي اللي بتحوّل له النموذج", ok: false });
+      return;
+    }
+    if (!confirm(`تحويل النموذج للموجه الطلابي ${counselor.name}؟ ما راح تقدر تعدّل عليه بعد التحويل.`)) return;
     setBusy(true);
     setMessage(null);
     if (await save()) {
-      const res = await fetch(`/api/student-referrals/${referralId}/send`, { method: "POST" });
+      const res = await fetch(`/api/student-referrals/${referralId}/send`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ counselorId }),
+      });
       if (!res.ok) {
         setMessage({ text: (await res.json().catch(() => ({}))).error ?? "تعذّر التحويل", ok: false });
       } else {
@@ -149,14 +162,28 @@ export function ReferralStageForm({
             حفظ
           </button>
           {kind === "agent" && (
-            <button
-              type="button"
-              onClick={handleForward}
-              disabled={busy}
-              className="rounded-lg border border-[var(--brand-primary)] text-[var(--brand-primary)] text-sm px-4 py-2 hover:bg-[var(--brand-primary)]/10 transition-colors disabled:opacity-50"
-            >
-              حفظ وتحويل للموجه الطلابي
-            </button>
+            <>
+              <select
+                value={counselorId}
+                onChange={(e) => setCounselorId(e.target.value)}
+                className="rounded-lg border border-slate-300 dark:border-slate-700 bg-transparent px-3 py-2 text-sm text-slate-900 dark:text-slate-50 focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]"
+              >
+                <option value="">— اختر الموجه الطلابي —</option>
+                {(counselors ?? []).map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.name}
+                  </option>
+                ))}
+              </select>
+              <button
+                type="button"
+                onClick={handleForward}
+                disabled={busy}
+                className="rounded-lg border border-[var(--brand-primary)] text-[var(--brand-primary)] text-sm px-4 py-2 hover:bg-[var(--brand-primary)]/10 transition-colors disabled:opacity-50"
+              >
+                حفظ وتحويل للموجه الطلابي
+              </button>
+            </>
           )}
         </div>
       )}

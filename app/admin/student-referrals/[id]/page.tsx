@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { auth } from "@/lib/auth/auth-options";
 import { AGENT_PROCEDURES, COUNSELOR_PROCEDURES } from "@/lib/student-referral-constants";
-import { canEditStage, canView, getReferral, getReferralActor, getReferralFiles } from "@/lib/student-referrals";
+import { canEditStage, canView, getCounselors, getReferral, getReferralActor, getReferralFiles } from "@/lib/student-referrals";
 import { ReferralStatusBadge } from "@/components/referrals/ReferralStatusBadge";
 import { ReferralStageForm } from "@/components/referrals/ReferralStageForm";
 import { DeleteReferralButton } from "@/components/referrals/DeleteReferralButton";
@@ -18,7 +18,7 @@ export default async function StudentReferralDetailPage({ params }: { params: Pr
   const referral = await getReferral(id);
   if (!referral || !canView(actor, session!.user.id, referral)) notFound();
 
-  const files = await getReferralFiles(id);
+  const [files, counselors] = await Promise.all([getReferralFiles(id), getCounselors()]);
   const agentFiles = files.filter((f) => f.stage === "agent");
   const counselorFiles = files.filter((f) => f.stage === "counselor");
 
@@ -59,6 +59,8 @@ export default async function StudentReferralDetailPage({ params }: { params: Pr
         {detail("سبب التحويل", referral.reasons.join("، ") || "--")}
         {detail("إيضاح المشكلة", referral.problemDescription || "--")}
         {detail("اسم المعلم", referral.teacherName)}
+        {detail("وكيل شؤون الطلاب", referral.assignedAgentName ?? "--")}
+        {referral.assignedCounselorName && detail("الموجه الطلابي", referral.assignedCounselorName)}
       </section>
 
       <ReferralStageForm
@@ -69,7 +71,8 @@ export default async function StudentReferralDetailPage({ params }: { params: Pr
         procedures={AGENT_PROCEDURES}
         initialSelected={referral.agentProcedures}
         initialNotes={referral.agentNotes ?? ""}
-        editable={canEditStage(actor, referral, "agent")}
+        editable={canEditStage(actor, session!.user.id, referral, "agent")}
+        counselors={counselors}
         files={agentFiles}
       />
 
@@ -83,7 +86,7 @@ export default async function StudentReferralDetailPage({ params }: { params: Pr
           initialSelected={referral.counselorProcedures}
           initialNotes={referral.counselorNotes ?? ""}
           initialExtraServices={referral.counselorExtraServices ?? ""}
-          editable={canEditStage(actor, referral, "counselor")}
+          editable={canEditStage(actor, session!.user.id, referral, "counselor")}
           files={counselorFiles}
         />
       )}

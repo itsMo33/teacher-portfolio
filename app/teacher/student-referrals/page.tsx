@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { auth } from "@/lib/auth/auth-options";
-import { getReferralActor, listReferralsFor } from "@/lib/student-referrals";
+import { getReferralActor, getRoutedClasses, listReferralsFor } from "@/lib/student-referrals";
 import { TeacherReferralSection } from "@/components/referrals/TeacherReferralSection";
 
 export default async function TeacherStudentReferralsPage() {
@@ -8,7 +8,10 @@ export default async function TeacherStudentReferralsPage() {
   const actor = getReferralActor(session!.user);
 
   // A demo (view-only) account isn't a teacher, so it just sees what has been sent on.
-  const referrals = actor ? await listReferralsFor(actor, session!.user.id) : [];
+  const [referrals, classOptions] = await Promise.all([
+    actor ? listReferralsFor(actor, session!.user.id) : Promise.resolve([]),
+    getRoutedClasses(),
+  ]);
 
   return (
     <div className="flex flex-col gap-4 max-w-2xl">
@@ -27,6 +30,7 @@ export default async function TeacherStudentReferralsPage() {
       <TeacherReferralSection
         referrals={referrals}
         teacherName={session!.user.name ?? ""}
+        classOptions={classOptions}
         readOnly={actor !== "teacher" || !!session!.user.demoViewOnly}
       />
     </div>

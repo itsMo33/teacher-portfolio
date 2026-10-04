@@ -22,7 +22,7 @@ async function authorize(session: Session, referralId: unknown) {
   if (!referral) return { error: NextResponse.json({ error: "Not found" }, { status: 404 }) };
 
   const stage: ReferralFileStage = actor === "agent" ? "agent" : "counselor";
-  if (!canEditStage(actor, referral, stage)) {
+  if (!canEditStage(actor, session.user.id, referral, stage)) {
     return { error: NextResponse.json({ error: "لا يمكن إضافة ملفات بعد تحويل النموذج" }, { status: 409 }) };
   }
   return { referral, stage };

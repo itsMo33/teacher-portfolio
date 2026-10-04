@@ -14,6 +14,8 @@ export interface TeacherReferralItem {
   problemDescription: string | null;
   status: ReferralStatus;
   createdAt: string;
+  assignedAgentName: string | null;
+  assignedCounselorName: string | null;
 }
 
 interface FormState {
@@ -33,10 +35,13 @@ export function TeacherReferralSection({
   referrals,
   teacherName,
   readOnly,
+  classOptions,
 }: {
   referrals: TeacherReferralItem[];
   teacherName: string;
   readOnly: boolean;
+  /** The classes a referral can be filed for -- each one has a وكيل شؤون الطلاب who receives it. */
+  classOptions: string[];
 }) {
   const router = useRouter();
   const [editingId, setEditingId] = useState<string | "new" | null>(null);
@@ -53,7 +58,8 @@ export function TeacherReferralSection({
   function openEdit(r: TeacherReferralItem) {
     setForm({
       studentName: r.studentName,
-      className: r.className,
+      // an old free-text class that isn't in the list has to be picked again
+      className: classOptions.includes(r.className) ? r.className : "",
       subject: r.subject,
       reasons: r.reasons,
       problemDescription: r.problemDescription ?? "",
@@ -71,7 +77,7 @@ export function TeacherReferralSection({
 
   async function handleSave() {
     if (!form.studentName.trim() || !form.className.trim() || !form.subject.trim()) {
-      setError("عبّي اسم الطالب والصف والمادة");
+      setError("عبّي اسم الطالب واختر الصف وعبّي المادة");
       return;
     }
     if (form.reasons.length === 0) {
@@ -143,13 +149,18 @@ export function TeacherReferralSection({
               placeholder="اسم الطالب"
               className={INPUT_CLASS}
             />
-            <input
-              type="text"
+            <select
               value={form.className}
               onChange={(e) => setForm((p) => ({ ...p, className: e.target.value }))}
-              placeholder="الصف"
               className={INPUT_CLASS}
-            />
+            >
+              <option value="">— اختر الصف —</option>
+              {classOptions.map((c) => (
+                <option key={c} value={c}>
+                  {c}
+                </option>
+              ))}
+            </select>
             <input
               type="text"
               value={form.subject}
@@ -222,6 +233,12 @@ export function TeacherReferralSection({
             <p className="text-xs text-slate-500">
               {r.reasons.join("، ")} -- {new Date(r.createdAt).toLocaleDateString("ar-SA")}
             </p>
+            {r.assignedAgentName && (
+              <p className="text-xs text-slate-500">
+                وكيل شؤون الطلاب: {r.assignedAgentName}
+                {r.assignedCounselorName ? ` -- الموجه الطلابي: ${r.assignedCounselorName}` : ""}
+              </p>
+            )}
             <div className="flex flex-wrap items-center gap-3 pt-1 text-xs">
               <a
                 href={`/student-referrals/${r.id}/print`}

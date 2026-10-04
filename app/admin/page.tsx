@@ -27,7 +27,7 @@ const DASHBOARD_CARDS: DashboardCard[] = [
   { href: "/admin/weekly-review", label: "مراجعة الأسبوع", description: "الملفات الجديدة من المعلمين ومن لم يرفع بعد", accentColor: "#059669" },
 ];
 
-async function RestrictedDashboard({ categoryKey }: { categoryKey: string }) {
+async function RestrictedDashboard({ categoryKey, userId }: { categoryKey: string; userId: string }) {
   const category = await getSchoolManagementCategory(categoryKey);
   if (!category) {
     return <p className="text-sm text-red-600 dark:text-red-400">القسم المخصص لهذا الحساب غير موجود.</p>;
@@ -45,6 +45,7 @@ async function RestrictedDashboard({ categoryKey }: { categoryKey: string }) {
           .from("student_referrals")
           .select("id", { count: "exact", head: true })
           .eq("status", waitingStatus)
+          .eq(waitingStatus === "with_agent" ? "assigned_agent_id" : "assigned_counselor_id", userId)
       ).count ?? 0)
     : 0;
 
@@ -124,7 +125,7 @@ export default async function AdminDashboard() {
   const restrictedCategory = session?.user?.restrictedCategory;
 
   if (restrictedCategory) {
-    return <RestrictedDashboard categoryKey={restrictedCategory} />;
+    return <RestrictedDashboard categoryKey={restrictedCategory} userId={session!.user.id} />;
   }
 
   // A teacher granted جدول مدرسي access (e.g. مؤيد) has no admin dashboard to show -- /admin is
