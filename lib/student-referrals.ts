@@ -42,6 +42,12 @@ export interface StudentReferral {
   createdAt: string;
 }
 
+/** A referral the وكيل شؤون الطلاب filed himself (a student violation) rather than one a teacher
+ *  sent: he is both its creator and its assigned agent, so no extra column is needed. */
+export function isAgentFiled(r: Pick<StudentReferral, "teacherId" | "assignedAgentId">): boolean {
+  return r.assignedAgentId !== null && r.teacherId === r.assignedAgentId;
+}
+
 export interface ReferralFile {
   id: string;
   stage: ReferralFileStage;

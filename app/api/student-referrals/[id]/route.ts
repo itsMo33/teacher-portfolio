@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth/auth-options";
 import { supabaseAdmin } from "@/lib/supabase/server";
-import { AGENT_PROCEDURES, COUNSELOR_PROCEDURES, REFERRAL_REASONS } from "@/lib/student-referral-constants";
+import { AGENT_PROCEDURES, COUNSELOR_PROCEDURES, REFERRAL_REASONS, VIOLATIONS } from "@/lib/student-referral-constants";
 import { PORTFOLIO_BUCKET } from "@/lib/supabase/storage";
-import { canEditStage, canView, getReferral, getReferralActor, getRoutedClasses } from "@/lib/student-referrals";
+import { canEditStage, canView, getReferral, isAgentFiled, getReferralActor, getRoutedClasses } from "@/lib/student-referrals";
 
 function validProcedures(value: unknown, allowed: { n: number }[]): number[] | null {
   if (!Array.isArray(value)) return null;
@@ -53,6 +53,33 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
   } else if (actor === "agent") {
     if (!canEditStage(actor, session.user.id, referral, "agent")) {
       return NextResponse.json({ error: "لا يمكن تعديل النموذج بعد تحويله" }, { status: 409 });
+    }
+    if (body.form) {
+      // editing the violation form itself -- only for referrals the وكيل filed
+      if (!isAgentFiled(referral)) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+      const { studentName, className, violations, problemDescription } = body.form;
+      const list: string[] = Array.isArray(violations) ? violations : [];
+      if (!studentName?.trim() || !className?.trim() || list.length === 0) {
+        return NextResponse.json({ error: "عبّي اسم الطالب واختر الصف والمخالفة" }, { status: 400 });
+      }
+      if (list.some((v) => !(VIOLATIONS as readonly string[]).includes(v))) {
+        return NextResponse.json({ error: "Invalid violation" }, { status: 400 });
+      }
+      if (!(await getRoutedClasses()).includes(className.trim())) {
+        return NextResponse.json({ error: "اختر الصف من القائمة" }, { status: 400 });
+      }
+      const { error: formError } = await supabaseAdmin
+        .from("student_referrals")
+        .update({
+          student_name: studentName.trim(),
+          class_name: className.trim(),
+          reasons: list,
+          problem_description: problemDescription?.trim() || null,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", id);
+      if (formError) return NextResponse.json({ error: formError.message }, { status: 500 });
+      return NextResponse.json({ success: true });
     }
     const procedures = validProcedures(body.procedures, AGENT_PROCEDURES);
     if (!procedures) return NextResponse.json({ error: "Invalid procedures" }, { status: 400 });

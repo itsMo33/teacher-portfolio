@@ -2,14 +2,14 @@ import { notFound, redirect } from "next/navigation";
 import { auth } from "@/lib/auth/auth-options";
 import { SCHOOL_NAME } from "@/lib/school";
 import { PrintButton } from "@/components/admin/PrintButton";
-import { AGENT_PROCEDURES, COUNSELOR_PROCEDURES, REFERRAL_REASONS } from "@/lib/student-referral-constants";
-import { canView, getReferral, getReferralActor, getReferralFiles, type ReferralFile } from "@/lib/student-referrals";
+import { AGENT_PROCEDURES, COUNSELOR_PROCEDURES, REFERRAL_REASONS, VIOLATIONS } from "@/lib/student-referral-constants";
+import { canView, getReferral, getReferralActor, getReferralFiles, isAgentFiled, type ReferralFile } from "@/lib/student-referrals";
 
 const COLUMNS = 5;
 
 function CheckBox({ checked }: { checked: boolean }) {
   return (
-    <span className="inline-flex h-4 w-4 shrink-0 items-center justify-center border border-slate-600 text-xs leading-none">
+    <span className="inline-flex h-3 w-3 shrink-0 items-center justify-center border border-slate-600 text-xs leading-none">
       {checked ? "✓" : ""}
     </span>
   );
@@ -30,7 +30,7 @@ function ProcedureTable({ cells }: { cells: ProcedureCell[] }) {
   for (let i = 0; i < cells.length; i += COLUMNS) rows.push(cells.slice(i, i + COLUMNS));
 
   return (
-    <table className="w-full border-collapse text-xs">
+    <table className="w-full border-collapse text-[10px] leading-tight">
       <thead>
         <tr>
           {Array.from({ length: COLUMNS }).map((_, i) => (
@@ -59,8 +59,8 @@ function ProcedureTable({ cells }: { cells: ProcedureCell[] }) {
 function HeaderCells() {
   return (
     <>
-      <th className="border border-slate-500 p-1.5 w-8">م</th>
-      <th className="border border-slate-500 p-1.5">الإجراء</th>
+      <th className="border border-slate-500 p-0.5 w-6">م</th>
+      <th className="border border-slate-500 p-0.5">الإجراء</th>
     </>
   );
 }
@@ -68,8 +68,8 @@ function HeaderCells() {
 function EmptyCells() {
   return (
     <>
-      <td className="border border-slate-500 p-1.5" />
-      <td className="border border-slate-500 p-1.5" />
+      <td className="border border-slate-500 p-0.5" />
+      <td className="border border-slate-500 p-0.5" />
     </>
   );
 }
@@ -77,8 +77,8 @@ function EmptyCells() {
 function ProcedureCells({ cell }: { cell: ProcedureCell }) {
   return (
     <>
-      <td className="border border-slate-500 p-1.5 text-center align-top font-bold">{cell.n}</td>
-      <td className={`border border-slate-500 p-1.5 align-top ${cell.checked ? "bg-slate-200 font-bold" : ""}`}>
+      <td className="border border-slate-500 p-0.5 text-center align-top font-bold">{cell.n}</td>
+      <td className={`border border-slate-500 p-0.5 align-top ${cell.checked ? "bg-slate-200 font-bold" : ""}`}>
         <span className="flex items-start gap-1.5">
           {cell.extra === undefined && <CheckBox checked={cell.checked} />}
           <span>{cell.extra === undefined ? cell.text : `${cell.text}${cell.extra ? `: ${cell.extra}` : ""}`}</span>
@@ -92,7 +92,7 @@ function Attachments({ files }: { files: ReferralFile[] }) {
   if (files.length === 0) return null;
   const images = files.filter((f) => f.mime_type.startsWith("image/"));
   return (
-    <div className="mt-4">
+    <div className="mt-4 break-before-page">
       <p className="font-bold text-sm mb-1">المرفقات (الإجراءات):</p>
       <ul className="list-disc pr-5 text-xs mb-2">
         {files.map((f) => (
@@ -111,9 +111,9 @@ function Attachments({ files }: { files: ReferralFile[] }) {
 
 function FormHeader({ title }: { title: string }) {
   return (
-    <div className="text-center mb-5">
-      <p className="text-sm text-slate-500">{SCHOOL_NAME}</p>
-      <h1 className="text-xl font-bold">{title}</h1>
+    <div className="text-center mb-2">
+      <p className="text-[10px] text-slate-500">{SCHOOL_NAME}</p>
+      <h1 className="text-sm font-bold">{title}</h1>
     </div>
   );
 }
@@ -150,15 +150,20 @@ export default async function StudentReferralPrintPage({ params }: { params: Pro
     },
   ];
 
+  const filedByAgent = isAgentFiled(referral);
+  const agentFiles = files.filter((f) => f.stage === "agent");
+  const counselorFiles = files.filter((f) => f.stage === "counselor");
+
+  // All the forms share one A4 page (attachments, if any, follow on their own pages).
   return (
-    <div className="max-w-3xl mx-auto bg-white text-slate-900 p-6 print:p-0">
+    <div className="max-w-3xl mx-auto bg-white text-slate-900 p-6 print:p-0 text-[11px] leading-snug">
       <div className="no-print mb-4 flex justify-end">
         <PrintButton />
       </div>
 
       <section>
-        <FormHeader title="نموذج تحويل طالب لوكيل شؤون الطلاب" />
-        <div className="flex flex-col gap-3 text-sm">
+        <FormHeader title={filedByAgent ? "نموذج مخالفة طالب" : "نموذج تحويل طالب لوكيل شؤون الطلاب"} />
+        <div className="flex flex-col gap-1.5">
           <div className="flex flex-wrap gap-x-8 gap-y-1">
             <p>
               <strong>اسم الطالب/</strong> {referral.studentName}
@@ -166,66 +171,68 @@ export default async function StudentReferralPrintPage({ params }: { params: Pro
             <p>
               <strong>الصف:</strong> {referral.className}
             </p>
+            {!filedByAgent && (
+              <p>
+                <strong>المادة/</strong> {referral.subject}
+              </p>
+            )}
+          </div>
+          <div>
+            <p className="font-bold mb-1">{filedByAgent ? "المخالفة:" : "سبب التحويل:"}</p>
+            {filedByAgent ? (
+              <div className="grid grid-cols-3 gap-x-3 gap-y-0.5 text-[10px]">
+                {VIOLATIONS.map((v) => (
+                  <span key={v} className="flex items-start gap-1">
+                    <CheckBox checked={referral.reasons.includes(v)} />
+                    {v}
+                  </span>
+                ))}
+              </div>
+            ) : (
+              <div className="flex flex-wrap gap-x-5 gap-y-1">
+                {REFERRAL_REASONS.map((reason) => (
+                  <span key={reason} className="flex items-center gap-1.5">
+                    <CheckBox checked={referral.reasons.includes(reason)} />
+                    {reason}
+                  </span>
+                ))}
+              </div>
+            )}
+          </div>
+          <div>
+            <p className="font-bold mb-0.5">{filedByAgent ? "إيضاح:" : "إيضاح المشكلة:"}</p>
+            <p className="min-h-[1.5rem] whitespace-pre-wrap border-b border-slate-400 pb-1">{referral.problemDescription || "--"}</p>
+          </div>
+          {!filedByAgent && (
             <p>
-              <strong>المادة/</strong> {referral.subject}
+              <strong>اسم المعلم:</strong> {referral.teacherName}
             </p>
-          </div>
-          <div>
-            <p className="font-bold mb-1.5">سبب التحويل:</p>
-            <div className="flex flex-wrap gap-x-6 gap-y-1.5">
-              {REFERRAL_REASONS.map((reason) => (
-                <span key={reason} className="flex items-center gap-1.5">
-                  <CheckBox checked={referral.reasons.includes(reason)} />
-                  {reason}
-                </span>
-              ))}
-            </div>
-          </div>
-          <div>
-            <p className="font-bold mb-1.5">إيضاح المشكلة:</p>
-            <p className="min-h-[5rem] whitespace-pre-wrap border-b border-slate-400 pb-2">
-              {referral.problemDescription || "--"}
-            </p>
-          </div>
-          <p>
-            <strong>اسم المعلم:</strong> {referral.teacherName}
-          </p>
+          )}
         </div>
       </section>
 
       {showAgent && (
-        <section className="mt-10 print:mt-0 print:break-before-page">
+        <section className="mt-3 border-t border-slate-400 pt-3 break-inside-avoid">
           <FormHeader title="إجراءات وكيل شؤون الطلاب" />
-          <p className="text-sm mb-3">
-            <strong>الطالب:</strong> {referral.studentName} -- {referral.className}
-          </p>
           <ProcedureTable cells={agentCells} />
-          <div className="mt-4">
-            <p className="font-bold text-sm mb-1">ملاحظات وكيل الطلاب:</p>
-            <p className="text-sm min-h-[3rem] whitespace-pre-wrap border-b border-slate-400 pb-2">
-              {referral.agentNotes || "--"}
-            </p>
-          </div>
-          <Attachments files={files.filter((f) => f.stage === "agent")} />
+          <p className="mt-1.5">
+            <strong>ملاحظات وكيل الطلاب:</strong> <span className="whitespace-pre-wrap">{referral.agentNotes || "--"}</span>
+          </p>
         </section>
       )}
 
       {showCounselor && (
-        <section className="mt-10 print:mt-0 print:break-before-page">
+        <section className="mt-3 border-t border-slate-400 pt-3 break-inside-avoid">
           <FormHeader title="إجراءات الموجه الطلابي" />
-          <p className="text-sm mb-3">
-            <strong>الطالب:</strong> {referral.studentName} -- {referral.className}
-          </p>
           <ProcedureTable cells={counselorCells} />
-          <div className="mt-4">
-            <p className="font-bold text-sm mb-1">ملاحظات الموجه الطلابي:</p>
-            <p className="text-sm min-h-[3rem] whitespace-pre-wrap border-b border-slate-400 pb-2">
-              {referral.counselorNotes || "--"}
-            </p>
-          </div>
-          <Attachments files={files.filter((f) => f.stage === "counselor")} />
+          <p className="mt-1.5">
+            <strong>ملاحظات الموجه الطلابي:</strong> <span className="whitespace-pre-wrap">{referral.counselorNotes || "--"}</span>
+          </p>
         </section>
       )}
+
+      <Attachments files={agentFiles} />
+      <Attachments files={counselorFiles} />
     </div>
   );
 }

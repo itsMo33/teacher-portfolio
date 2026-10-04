@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { auth } from "@/lib/auth/auth-options";
 import { AGENT_PROCEDURES, COUNSELOR_PROCEDURES } from "@/lib/student-referral-constants";
-import { canEditStage, canView, getCounselors, getReferral, getReferralActor, getReferralFiles } from "@/lib/student-referrals";
+import { canEditStage, canView, getCounselors, getReferral, getReferralActor, getReferralFiles, isAgentFiled } from "@/lib/student-referrals";
 import { ReferralStatusBadge } from "@/components/referrals/ReferralStatusBadge";
 import { ReferralStageForm } from "@/components/referrals/ReferralStageForm";
 import { DeleteReferralButton } from "@/components/referrals/DeleteReferralButton";
@@ -22,6 +22,7 @@ export default async function StudentReferralDetailPage({ params }: { params: Pr
   const agentFiles = files.filter((f) => f.stage === "agent");
   const counselorFiles = files.filter((f) => f.stage === "counselor");
 
+  const filedByAgent = isAgentFiled(referral);
   const detail = (label: string, value: string) => (
     <p>
       <span className="text-slate-500">{label}: </span>
@@ -52,13 +53,20 @@ export default async function StudentReferralDetailPage({ params }: { params: Pr
       </div>
 
       <section className="flex flex-col gap-1.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4 text-sm">
-        <h3 className="font-bold text-slate-800 dark:text-slate-100 mb-1">نموذج تحويل الطالب</h3>
+        <div className="flex items-center justify-between gap-2 mb-1">
+          <h3 className="font-bold text-slate-800 dark:text-slate-100">{filedByAgent ? "نموذج مخالفة طالب" : "نموذج تحويل الطالب"}</h3>
+          {filedByAgent && canEditStage(actor, session!.user.id, referral, "agent") && (
+            <Link href={`/admin/student-referrals/${referral.id}/edit`} className="text-xs text-[var(--brand-primary)] hover:underline">
+              تعديل النموذج
+            </Link>
+          )}
+        </div>
         {detail("اسم الطالب", referral.studentName)}
         {detail("الصف", referral.className)}
-        {detail("المادة", referral.subject)}
-        {detail("سبب التحويل", referral.reasons.join("، ") || "--")}
-        {detail("إيضاح المشكلة", referral.problemDescription || "--")}
-        {detail("اسم المعلم", referral.teacherName)}
+        {!filedByAgent && detail("المادة", referral.subject)}
+        {detail(filedByAgent ? "المخالفة" : "سبب التحويل", referral.reasons.join("، ") || "--")}
+        {detail(filedByAgent ? "إيضاح" : "إيضاح المشكلة", referral.problemDescription || "--")}
+        {!filedByAgent && detail("اسم المعلم", referral.teacherName)}
         {detail("وكيل شؤون الطلاب", referral.assignedAgentName ?? "--")}
         {referral.assignedCounselorName && detail("الموجه الطلابي", referral.assignedCounselorName)}
       </section>

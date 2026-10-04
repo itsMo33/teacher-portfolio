@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { auth } from "@/lib/auth/auth-options";
-import { getReferralActor, listReferralsFor, type StudentReferral } from "@/lib/student-referrals";
+import { getReferralActor, isAgentFiled, listReferralsFor, type StudentReferral } from "@/lib/student-referrals";
 import { ReferralStatusBadge } from "@/components/referrals/ReferralStatusBadge";
 
 function ReferralRow({ r }: { r: StudentReferral }) {
@@ -12,12 +12,14 @@ function ReferralRow({ r }: { r: StudentReferral }) {
     >
       <div className="flex flex-wrap items-center justify-between gap-2">
         <span className="font-medium text-slate-800 dark:text-slate-100">
-          {r.studentName} -- {r.className} -- {r.subject}
+          {r.studentName} -- {r.className}
+          {isAgentFiled(r) ? " -- مخالفة" : ` -- ${r.subject}`}
         </span>
         <ReferralStatusBadge status={r.status} />
       </div>
       <p className="text-xs text-slate-500">
-        المعلم: {r.teacherName} -- {r.reasons.join("، ")} --{" "}
+        {isAgentFiled(r) ? "" : `المعلم: ${r.teacherName} -- `}
+        {r.reasons.join("، ")} --{" "}
         {new Date(r.sentToAgentAt ?? r.createdAt).toLocaleDateString("ar-SA")}
       </p>
     </Link>
@@ -40,10 +42,20 @@ export default async function StudentReferralsPage() {
 
   return (
     <div className="flex flex-col gap-4 max-w-3xl">
-      <h2 className="flex items-center gap-2 text-xl font-bold text-slate-900 dark:text-slate-50">
-        <span className="inline-block h-3 w-3 shrink-0 rounded-full bg-amber-600" />
-        تحويلات الطلاب
-      </h2>
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <h2 className="flex items-center gap-2 text-xl font-bold text-slate-900 dark:text-slate-50">
+          <span className="inline-block h-3 w-3 shrink-0 rounded-full bg-amber-600" />
+          تحويلات الطلاب
+        </h2>
+        {actor === "agent" && !session!.user.demoViewOnly && (
+          <Link
+            href="/admin/student-referrals/new"
+            className="rounded-lg bg-[var(--brand-primary)] hover:bg-[var(--brand-primary-dark)] text-white text-sm px-4 py-2 transition-colors"
+          >
+            + مخالفة طالب جديدة
+          </Link>
+        )}
+      </div>
 
       {waitingStatus && (
         <section className="flex flex-col gap-2">
