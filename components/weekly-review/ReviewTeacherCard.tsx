@@ -35,7 +35,7 @@ function FilePreview({ file }: { file: ReviewFileItem }) {
   );
 }
 
-function FileRow({ file }: { file: ReviewFileItem }) {
+export function FileRow({ file }: { file: ReviewFileItem }) {
   const router = useRouter();
   const [previewing, setPreviewing] = useState(false);
   const [returning, setReturning] = useState(false);

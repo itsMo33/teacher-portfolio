@@ -61,55 +61,24 @@ function guessMimeType(fileName: string): string {
   return "application/octet-stream";
 }
 
-/** What `reviewerId` has yet to look at, plus who hasn't uploaded in the last `days` days.
- *
- *  "New" is per teacher: files the teacher uploaded after the reviewer last pressed "تمت المراجعة"
- *  on them. A teacher the reviewer has never marked starts from a default of the last 7 days, so
- *  the very first visit shows a week of uploads rather than every file ever submitted. */
-export async function getWeeklyReview(reviewerId: string, days: number): Promise<WeeklyReview> {
-  const now = Date.now();
-  const firstPassFromMs = now - 7 * DAY_MS;
-  const windowStartMs = now - days * DAY_MS;
-  const firstPassFrom = new Date(firstPassFromMs).toISOString();
+type AttachmentRow = {
+  id: string;
+  teacher_id: string;
+  category: string;
+  subcategory: string | null;
+  file_name: string;
+  file_path: string;
+  mime_type: string | null;
+  uploaded_at: string;
+  review_status: string | null;
+  review_note: string | null;
+};
+type ScheduleRow = { id: string; teacher_id: string; file_name: string; file_path: string; uploaded_at: string };
 
-  const [{ data: teachers }, { data: marks }] = await Promise.all([
-    supabaseAdmin.from("users").select("id, name, subject").eq("role", "teacher").is("deleted_at", null).order("name"),
-    supabaseAdmin.from("weekly_review_marks").select("teacher_id, reviewed_at").eq("reviewer_id", reviewerId),
-  ]);
-  const teacherList = teachers ?? [];
-  // Timestamps from the database and from JS have different string formats, so compare as numbers.
-  const markOf = new Map((marks ?? []).map((m) => [m.teacher_id as string, new Date(m.reviewed_at as string).getTime()]));
-
-  // The oldest point any teacher's "new" window can start from bounds how far back to fetch.
-  const fetchFrom = new Date(Math.min(firstPassFromMs, windowStartMs, ...markOf.values())).toISOString();
-
-  const [{ data: attachments }, { data: schedules }] = await Promise.all([
-    supabaseAdmin
-      .from("attachments")
-      .select("id, teacher_id, category, subcategory, file_name, file_path, mime_type, uploaded_at, uploaded_by, review_status, review_note")
-      .gte("uploaded_at", fetchFrom)
-      .is("deleted_at", null)
-      .order("uploaded_at", { ascending: false })
-      .limit(5000),
-    supabaseAdmin
-      .from("schedules")
-      .select("id, teacher_id, file_name, file_path, uploaded_at, uploaded_by")
-      .gte("uploaded_at", fetchFrom)
-      .is("deleted_at", null),
-  ]);
-
-  // Only what the teacher uploaded themselves counts -- files an admin uploaded *for* a teacher
-  // aren't something the teacher "sent".
-  const fromTeacher = <T extends { teacher_id: string; uploaded_by: string }>(rows: T[] | null) =>
-    (rows ?? []).filter((r) => r.uploaded_by === r.teacher_id);
-  const ownAttachments = fromTeacher(attachments);
-  const ownSchedules = fromTeacher(schedules);
-
-  const baselineOf = (teacherId: string) => markOf.get(teacherId) ?? firstPassFromMs;
-
-  const newAttachments = ownAttachments.filter((a) => new Date(a.uploaded_at).getTime() > baselineOf(a.teacher_id));
-  const newSchedules = ownSchedules.filter((s) => new Date(s.uploaded_at).getTime() > baselineOf(s.teacher_id));
-
+/** Signs the files' URLs and shapes them for the review screens, grouped by teacher. */
+async function toReviewFiles(attachments: AttachmentRow[], schedules: ScheduleRow[]): Promise<Map<string, ReviewFile[]>> {
+  const newAttachments = attachments;
+  const newSchedules = schedules;
   const signed = new Map<string, string>();
   const sign = async (bucket: string, paths: string[]) => {
     for (let i = 0; i < paths.length; i += 200) {
@@ -160,6 +129,59 @@ export async function getWeeklyReview(reviewerId: string, days: number): Promise
       reviewNote: null,
     });
   }
+  return filesByTeacher;
+}
+
+/** What `reviewerId` has yet to look at, plus who hasn't uploaded in the last `days` days.
+ *
+ *  "New" is per teacher: files the teacher uploaded after the reviewer last pressed "تمت المراجعة"
+ *  on them. A teacher the reviewer has never marked starts from a default of the last 7 days, so
+ *  the very first visit shows a week of uploads rather than every file ever submitted. */
+export async function getWeeklyReview(reviewerId: string, days: number): Promise<WeeklyReview> {
+  const now = Date.now();
+  const firstPassFromMs = now - 7 * DAY_MS;
+  const windowStartMs = now - days * DAY_MS;
+  const firstPassFrom = new Date(firstPassFromMs).toISOString();
+
+  const [{ data: teachers }, { data: marks }] = await Promise.all([
+    supabaseAdmin.from("users").select("id, name, subject").eq("role", "teacher").is("deleted_at", null).order("name"),
+    supabaseAdmin.from("weekly_review_marks").select("teacher_id, reviewed_at").eq("reviewer_id", reviewerId),
+  ]);
+  const teacherList = teachers ?? [];
+  // Timestamps from the database and from JS have different string formats, so compare as numbers.
+  const markOf = new Map((marks ?? []).map((m) => [m.teacher_id as string, new Date(m.reviewed_at as string).getTime()]));
+
+  // The oldest point any teacher's "new" window can start from bounds how far back to fetch.
+  const fetchFrom = new Date(Math.min(firstPassFromMs, windowStartMs, ...markOf.values())).toISOString();
+
+  const [{ data: attachments }, { data: schedules }] = await Promise.all([
+    supabaseAdmin
+      .from("attachments")
+      .select("id, teacher_id, category, subcategory, file_name, file_path, mime_type, uploaded_at, uploaded_by, review_status, review_note")
+      .gte("uploaded_at", fetchFrom)
+      .is("deleted_at", null)
+      .order("uploaded_at", { ascending: false })
+      .limit(5000),
+    supabaseAdmin
+      .from("schedules")
+      .select("id, teacher_id, file_name, file_path, uploaded_at, uploaded_by")
+      .gte("uploaded_at", fetchFrom)
+      .is("deleted_at", null),
+  ]);
+
+  // Only what the teacher uploaded themselves counts -- files an admin uploaded *for* a teacher
+  // aren't something the teacher "sent".
+  const fromTeacher = <T extends { teacher_id: string; uploaded_by: string }>(rows: T[] | null) =>
+    (rows ?? []).filter((r) => r.uploaded_by === r.teacher_id);
+  const ownAttachments = fromTeacher(attachments);
+  const ownSchedules = fromTeacher(schedules);
+
+  const baselineOf = (teacherId: string) => markOf.get(teacherId) ?? firstPassFromMs;
+
+  const newAttachments = ownAttachments.filter((a) => new Date(a.uploaded_at).getTime() > baselineOf(a.teacher_id));
+  const newSchedules = ownSchedules.filter((s) => new Date(s.uploaded_at).getTime() > baselineOf(s.teacher_id));
+
+  const filesByTeacher = await toReviewFiles(newAttachments, newSchedules);
 
   const groups: ReviewGroup[] = teacherList
     .filter((t) => filesByTeacher.has(t.id))
@@ -216,4 +238,26 @@ export async function getFilesNeedingRevision(teacherId: string) {
       note: (a.review_note as string | null) ?? null,
     };
   });
+}
+
+/** Everything one teacher has ever uploaded themselves (newest first), for reviewing older files that
+ *  fell outside the weekly window -- the same accept / send-back verdicts apply. */
+export async function getAllFilesForTeacher(teacherId: string): Promise<ReviewFile[]> {
+  const [{ data: attachments }, { data: schedules }] = await Promise.all([
+    supabaseAdmin
+      .from("attachments")
+      .select("id, teacher_id, category, subcategory, file_name, file_path, mime_type, uploaded_at, uploaded_by, review_status, review_note")
+      .eq("teacher_id", teacherId)
+      .is("deleted_at", null)
+      .order("uploaded_at", { ascending: false })
+      .limit(1000),
+    supabaseAdmin
+      .from("schedules")
+      .select("id, teacher_id, file_name, file_path, uploaded_at, uploaded_by")
+      .eq("teacher_id", teacherId)
+      .is("deleted_at", null),
+  ]);
+  const own = <T extends { uploaded_by: string }>(rows: T[] | null) => (rows ?? []).filter((r) => r.uploaded_by === teacherId);
+  const grouped = await toReviewFiles(own(attachments) as AttachmentRow[], own(schedules) as ScheduleRow[]);
+  return (grouped.get(teacherId) ?? []).sort((x, y) => new Date(y.uploadedAt).getTime() - new Date(x.uploadedAt).getTime());
 }
