@@ -97,8 +97,6 @@ export const PORTFOLIO_SECTIONS: PortfolioSection[] = [
       { key: "remedial_plan", labelAr: "الخطة العلاجية" },
       { key: "impact_measurement", labelAr: "قياس الأثر" },
       { key: "student_followup_sheet", labelAr: "كشف متابعة الطلاب" },
-      { key: "student_affairs_agent_contact", labelAr: "التواصل مع وكيل شؤون الطلاب" },
-      { key: "student_counselor_contact", labelAr: "التواصل مع الموجهين الطلابيين" },
     ],
     teacherWritable: true,
     accentColor: "#e11d48",

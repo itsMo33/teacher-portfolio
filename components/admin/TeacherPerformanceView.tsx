@@ -94,15 +94,16 @@ export function TeacherPerformanceView({
   // Saves for the same name go out strictly in click order, so tapping through the colors quickly
   // always ends on the state you see; and only the newest load's answer is ever applied.
   const saveQueue = useRef(new Map<string, Promise<void>>());
+  const pendingSaves = useRef(0);
   const loadSeq = useRef(0);
   const [statsTeacherId, setStatsTeacherId] = useState("");
   const [statsRecords, setStatsRecords] = useState<StatsRecord[]>([]);
   const [statsLoaded, setStatsLoaded] = useState(true);
   const [expandedTeacherId, setExpandedTeacherId] = useState<string | null>(null);
 
-  const load = useCallback((d: string) => {
+  const load = useCallback((d: string, silent = false) => {
     const seq = ++loadSeq.current;
-    setLoading(true);
+    if (!silent) setLoading(true);
     return fetch(`/api/teacher-performance?date=${d}`)
       .then((res) => {
         if (!res.ok) throw new Error("failed");
@@ -131,6 +132,16 @@ export function TeacherPerformanceView({
     load(date);
   }, [date, load]);
 
+  // The marks are shared between everyone who tracks the day (رائد, the وكلاء, مفيد, صالح), so keep the
+  // screen in step with what the others record -- but never refresh over this user's own unsaved taps.
+  useEffect(() => {
+    if (viewMode !== "track") return;
+    const timer = setInterval(() => {
+      if (document.visibilityState === "visible" && pendingSaves.current === 0) load(date, true);
+    }, 8000);
+    return () => clearInterval(timer);
+  }, [viewMode, date, load]);
+
   const loadPrep = useCallback((d: string) => {
     return fetch(`/api/teacher-performance/madrasati-prep?date=${d}`)
       .then((res) => {
@@ -152,12 +163,15 @@ export function TeacherPerformanceView({
    *  screen to what the server really has instead of leaving a mark that never got stored. */
   const enqueueSave = useCallback(
     (key: string, task: () => Promise<Response>, onFail: () => void) => {
+      pendingSaves.current++;
       const run = async () => {
         try {
           const res = await task();
           if (!res.ok) throw new Error("failed");
         } catch {
           onFail();
+        } finally {
+          pendingSaves.current--;
         }
       };
       const previous = saveQueue.current.get(key) ?? Promise.resolve();
