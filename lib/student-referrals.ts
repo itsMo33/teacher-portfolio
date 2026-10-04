@@ -12,7 +12,8 @@ export function getReferralActor(user: { role: string; restrictedCategory?: stri
   if (user.role === "teacher") return "teacher";
   if (user.role === "agent" && user.restrictedCategory === "student_affairs_agent") return "agent";
   if (user.role === "agent" && user.restrictedCategory === "student_guidance") return "counselor";
-  if (user.role === "manager" && !user.restrictedCategory) return "viewer";
+  // The manager and رائد (an agent with no category scope) follow every referral, read-only for رائد.
+  if ((user.role === "manager" || user.role === "agent") && !user.restrictedCategory) return "viewer";
   return null;
 }
 

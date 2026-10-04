@@ -122,6 +122,9 @@ export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ 
   const referral = await getReferral(id);
   if (!referral || !canView(actor, session.user.id, referral)) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
+  // رائد follows referrals but doesn't act on them; only the manager can remove one from the viewer side.
+  if (actor === "viewer" && session.user.role !== "manager") return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+
   if (actor === "teacher" && referral.status !== "draft") {
     return NextResponse.json({ error: "لا يمكن حذف نموذج بعد إرساله" }, { status: 409 });
   }

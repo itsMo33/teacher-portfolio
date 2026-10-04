@@ -7,6 +7,7 @@ import { FileUploadDropzone } from "@/components/portfolio/FileUploadDropzone";
 import { SchoolFileList } from "@/components/admin/SchoolFileList";
 import { DownloadAllFilesButton } from "@/components/admin/DownloadAllFilesButton";
 import { canReview } from "@/lib/weekly-review";
+import { getReferralActor } from "@/lib/student-referrals";
 
 interface DashboardCard {
   href: string;
@@ -166,7 +167,7 @@ export default async function AdminDashboard() {
       <h2 className="text-xl font-bold text-slate-900 dark:text-slate-50 mb-4">لوحة تحكم الإدارة</h2>
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         {DASHBOARD_CARDS.filter((card) => {
-          if (card.href === "/admin/student-referrals") return session?.user?.role === "manager";
+          if (card.href === "/admin/student-referrals") return !!session && getReferralActor(session.user) === "viewer";
           if (card.href === "/admin/weekly-review") return !!session && canReview(session.user);
           return true;
         }).map((card, index) => (

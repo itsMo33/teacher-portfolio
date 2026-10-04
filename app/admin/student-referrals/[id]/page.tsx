@@ -99,7 +99,7 @@ export default async function StudentReferralDetailPage({ params }: { params: Pr
         />
       )}
 
-      {!session!.user.demoViewOnly && <DeleteReferralButton referralId={referral.id} studentName={referral.studentName} />}
+      {!session!.user.demoViewOnly && (actor !== "viewer" || session!.user.role === "manager") && <DeleteReferralButton referralId={referral.id} studentName={referral.studentName} />}
     </div>
   );
 }

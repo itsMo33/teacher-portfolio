@@ -36,28 +36,34 @@ function FilePreview({ file }: { file: ReviewFileItem }) {
 }
 
 export function FileRow({ file }: { file: ReviewFileItem }) {
-  const router = useRouter();
+  // The verdict shows at once and is saved in the background -- no waiting on a full page refresh.
+  const [verdict, setVerdictState] = useState<{ status: ReviewFileItem["reviewStatus"]; note: string | null }>({
+    status: file.reviewStatus,
+    note: file.reviewNote,
+  });
   const [previewing, setPreviewing] = useState(false);
   const [returning, setReturning] = useState(false);
-  const [note, setNote] = useState(file.reviewNote ?? "");
-  const [busy, setBusy] = useState(false);
+  const [note, setNote] = useState(verdict.note ?? "");
   const [error, setError] = useState("");
 
   async function setVerdict(status: "accepted" | "needs_revision" | null, verdictNote = "") {
-    setBusy(true);
+    const previous = verdict;
+    setVerdictState({ status, note: status === "needs_revision" ? verdictNote.trim() : null });
+    setReturning(false);
     setError("");
-    const res = await fetch("/api/weekly-review/files", {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ attachmentId: file.id, status, note: verdictNote }),
-    });
-    if (!res.ok) {
-      setError((await res.json().catch(() => ({}))).error ?? "تعذّر الحفظ");
-    } else {
-      setReturning(false);
-      router.refresh();
+    try {
+      const res = await fetch("/api/weekly-review/files", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ attachmentId: file.id, status, note: verdictNote }),
+      });
+      if (!res.ok) throw new Error((await res.json().catch(() => ({}))).error ?? "تعذّر الحفظ");
+    } catch (e) {
+      // the save didn't go through -- put the old verdict back so the screen never lies
+      setVerdictState(previous);
+      setError(e instanceof Error ? e.message : "تعذّر الحفظ");
+      if (status === "needs_revision") setReturning(true);
     }
-    setBusy(false);
   }
 
   return (
@@ -69,21 +75,21 @@ export function FileRow({ file }: { file: ReviewFileItem }) {
             {file.sectionLabel} -- {new Date(file.uploadedAt).toLocaleDateString("ar-SA")}
           </p>
         </div>
-        {file.reviewStatus && (
+        {verdict.status && (
           <span
             className={`rounded-full px-2 py-0.5 text-xs whitespace-nowrap ${
-              file.reviewStatus === "accepted"
+              verdict.status === "accepted"
                 ? "bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300"
                 : "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300"
             }`}
           >
-            {STATUS_LABELS[file.reviewStatus]}
+            {STATUS_LABELS[verdict.status]}
           </span>
         )}
       </div>
 
-      {file.reviewStatus === "needs_revision" && file.reviewNote && (
-        <p className="text-xs text-amber-700 dark:text-amber-300">ملاحظتك للمعلم: {file.reviewNote}</p>
+      {verdict.status === "needs_revision" && verdict.note && (
+        <p className="text-xs text-amber-700 dark:text-amber-300">ملاحظتك للمعلم: {verdict.note}</p>
       )}
 
       <div className="flex flex-wrap items-center gap-3 text-xs">
@@ -97,7 +103,7 @@ export function FileRow({ file }: { file: ReviewFileItem }) {
           <>
             <button
               type="button"
-              disabled={busy || file.reviewStatus === "accepted"}
+              disabled={verdict.status === "accepted"}
               onClick={() => setVerdict("accepted")}
               className="rounded-full border border-green-300 dark:border-green-800 px-2.5 py-0.5 text-green-700 dark:text-green-300 hover:bg-green-50 dark:hover:bg-green-900/20 disabled:opacity-50"
             >
@@ -105,14 +111,13 @@ export function FileRow({ file }: { file: ReviewFileItem }) {
             </button>
             <button
               type="button"
-              disabled={busy}
               onClick={() => setReturning((v) => !v)}
               className="rounded-full border border-amber-300 dark:border-amber-800 px-2.5 py-0.5 text-amber-700 dark:text-amber-300 hover:bg-amber-50 dark:hover:bg-amber-900/20 disabled:opacity-50"
             >
               ↩ يحتاج تعديل
             </button>
-            {file.reviewStatus && (
-              <button type="button" disabled={busy} onClick={() => setVerdict(null)} className="text-slate-400 hover:underline disabled:opacity-50">
+            {verdict.status && (
+              <button type="button" onClick={() => setVerdict(null)} className="text-slate-400 hover:underline disabled:opacity-50">
                 إلغاء القرار
               </button>
             )}
@@ -132,7 +137,6 @@ export function FileRow({ file }: { file: ReviewFileItem }) {
           <div className="flex items-center gap-2">
             <button
               type="button"
-              disabled={busy}
               onClick={() => setVerdict("needs_revision", note)}
               className="rounded-lg bg-amber-600 hover:bg-amber-700 text-white text-xs px-3 py-1.5 disabled:opacity-50"
             >
