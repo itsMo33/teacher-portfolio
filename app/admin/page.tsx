@@ -35,10 +35,12 @@ async function RestrictedDashboard({
   categoryKey,
   userId,
   referralsOnly,
+  canTrackClassTime,
 }: {
   categoryKey: string;
   userId: string;
   referralsOnly: boolean;
+  canTrackClassTime: boolean;
 }) {
   const category = await getSchoolManagementCategory(categoryKey);
   if (!category) {
@@ -70,6 +72,19 @@ async function RestrictedDashboard({
           </p>
           <DownloadAllFilesButton />
         </div>
+      )}
+      {canTrackClassTime && (
+        <Link
+          href="/admin/class-time"
+          style={{ borderInlineStartColor: "#0d9488", borderInlineStartWidth: 4 }}
+          className="mb-6 flex items-center justify-between gap-2 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg"
+        >
+          <span className="flex items-center gap-2 font-semibold text-slate-900 dark:text-slate-50">
+            <span className="inline-block h-2.5 w-2.5 shrink-0 rounded-full bg-teal-600" />
+            الالتزام بزمن الحصة
+          </span>
+          <span className="text-xs text-slate-500 dark:text-slate-400">تسجيل تأخر المعلمين وغيابهم عن الحصص</span>
+        </Link>
       )}
       {waitingStatus && (
         <Link
@@ -145,6 +160,7 @@ export default async function AdminDashboard() {
         categoryKey={restrictedCategory}
         userId={session!.user.id}
         referralsOnly={REFERRALS_ONLY_NATIONAL_IDS.has(session!.user.nationalId)}
+        canTrackClassTime={session!.user.canTrackClassTime}
       />;
   }
 
