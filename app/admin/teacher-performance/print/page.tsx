@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { supabaseAdmin } from "@/lib/supabase/server";
+import { getWaitingAssignments } from "@/lib/waiting-activation";
 import { getPerformanceCategory } from "@/lib/teacher-performance";
 import { SCHOOL_NAME } from "@/lib/school";
 import { PrintButton } from "@/components/admin/PrintButton";
@@ -21,7 +22,7 @@ export default async function TeacherPerformancePrintPage({
     supabaseAdmin.from("users").select("id, name").eq("role", "teacher").is("deleted_at", null).order("name"),
     supabaseAdmin
       .from("teacher_performance_records")
-      .select("teacher_id, status, period")
+      .select("teacher_id, status, period, late_minutes")
       .eq("category", category.key)
       .eq("record_date", date),
   ]);
@@ -41,17 +42,21 @@ export default async function TeacherPerformancePrintPage({
   // by teacher then period -- everyone else is compliant by default and isn't listed at all.
   const periodRows = isPeriodMode
     ? (records ?? [])
-        .map((r) => ({ name: nameById.get(r.teacher_id) ?? "", period: r.period, status: r.status as "late" | "absent" }))
+        .map((r) => ({ name: nameById.get(r.teacher_id) ?? "", period: r.period, status: r.status as "late" | "absent", minutes: r.late_minutes as number | null }))
         .filter((r) => r.name)
         .sort((a, b) => a.name.localeCompare(b.name, "ar") || a.period.localeCompare(b.period))
     : [];
 
   // Other modes: one row per teacher for that day (rules unchanged from before).
+  const waiting = category.mode === "waiting-auto" ? (await getWaitingAssignments([date], teachers ?? [])).get(date)! : null;
   const statusByTeacher = new Map((records ?? []).map((r) => [r.teacher_id, r.status as "present" | "absent"]));
   const defaultStatus = category.mode === "assumed-present" ? "present" : null;
   const simpleRows = !isPeriodMode
     ? (teachers ?? [])
-        .map((t) => ({ name: t.name, status: statusByTeacher.get(t.id) ?? defaultStatus }))
+        .map((t) => ({
+          name: t.name,
+          status: statusByTeacher.get(t.id) ?? (waiting ? (waiting.has(t.id) ? "present" : null) : defaultStatus),
+        }))
         .filter((r) => r.status !== null)
     : [];
 
@@ -99,7 +104,7 @@ export default async function TeacherPerformancePrintPage({
                   <td className="py-1.5 px-2 tabular-nums">{i + 1}</td>
                   <td className="py-1.5 px-2">{r.name}</td>
                   <td className="py-1.5 px-2 tabular-nums">{r.period}</td>
-                  <td className="py-1.5 px-2">{r.status === "late" ? "متأخر" : "لم يحضر"}</td>
+                  <td className="py-1.5 px-2">{r.status === "late" ? (r.minutes ? `متأخر ${r.minutes} دقيقة` : "متأخر") : "لم يحضر"}</td>
                 </tr>
               ))
             : simpleRows.map((r, i) => (

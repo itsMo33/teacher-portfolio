@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { supabaseAdmin } from "@/lib/supabase/server";
+import { getWaitingAssignments } from "@/lib/waiting-activation";
 import { addDays, PERFORMANCE_CATEGORIES, schoolWeekDays, weekStartOf } from "@/lib/teacher-performance";
 import { SCHOOL_NAME } from "@/lib/school";
 import { PrintButton } from "@/components/admin/PrintButton";
@@ -47,6 +48,7 @@ export default async function WeeklyPrintPage({ searchParams }: { searchParams: 
     supabaseAdmin.from("madrasati_prep_weeks").select("teacher_id, status").eq("week_start", weekStart),
   ]);
 
+  const waitingByDay = await getWaitingAssignments(days, teachers ?? []);
   const recordsByKey = new Map<string, { status: string; period: string }[]>();
   for (const r of records ?? []) {
     const key = `${r.teacher_id}|${r.category}|${r.record_date}`;
@@ -71,6 +73,11 @@ export default async function WeeklyPrintPage({ searchParams }: { searchParams: 
     if (mode === "assumed-present") {
       if (recs.some((r) => r.status === "absent")) return { kind: "absent", text: "✗" };
       return future ? { kind: "blank", text: "" } : { kind: "ok", text: "✓" };
+    }
+    if (mode === "waiting-auto") {
+      // green for whoever the waiting table put in as المنتظر that day, red if marked absent
+      if (recs.some((r) => r.status === "absent")) return { kind: "absent", text: "✗" };
+      return waitingByDay.get(day)?.has(teacherId) ? { kind: "ok", text: "✓" } : { kind: "blank", text: "" };
     }
     // explicit: only teachers who actually had the duty that day have a row
     const rec = recs[0];

@@ -24,7 +24,7 @@ export async function GET(req: NextRequest) {
 
   const { data, error: fetchError } = await supabaseAdmin
     .from("teacher_performance_records")
-    .select("category, record_date, status, period")
+    .select("category, record_date, status, period, late_minutes")
     .eq("teacher_id", teacherId)
     .order("record_date", { ascending: false });
 
@@ -36,6 +36,7 @@ export async function GET(req: NextRequest) {
       date: r.record_date,
       status: r.status,
       period: r.period || null,
+      minutes: r.late_minutes ?? null,
     })),
   });
 }

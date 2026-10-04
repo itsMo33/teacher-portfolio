@@ -2,7 +2,7 @@ import { auth } from "@/lib/auth/auth-options";
 import { AppShell, type NavItem } from "@/components/ui/AppShell";
 import { PORTFOLIO_SECTIONS } from "@/lib/portfolio-sections";
 
-function buildNavItems(canBuildSchedule?: boolean): NavItem[] {
+function buildNavItems(canBuildSchedule?: boolean, canTrackClassTime?: boolean): NavItem[] {
   return [
     { href: "/teacher", label: "لوحة التحكم" },
     ...PORTFOLIO_SECTIONS.filter((s) => s.key !== "schedule").map((s) => ({
@@ -15,6 +15,7 @@ function buildNavItems(canBuildSchedule?: boolean): NavItem[] {
     // that tool lives under /admin, entirely separate from this teacher-side nav, so without this
     // link they'd have no way to reach it short of typing the URL themselves.
     ...(canBuildSchedule ? [{ href: "/admin/schedule-builder", label: "بناء الجدول المدرسي" }] : []),
+    ...(canTrackClassTime ? [{ href: "/admin/class-time", label: "الالتزام بزمن الحصة" }] : []),
     { href: "/teacher/settings", label: "الإعدادات" },
   ];
 }
@@ -26,7 +27,7 @@ export default async function TeacherLayout({ children }: { children: React.Reac
     <AppShell
       title="أثر"
       userName={session?.user?.name ?? ""}
-      navItems={buildNavItems(session?.user?.canBuildSchedule)}
+      navItems={buildNavItems(session?.user?.canBuildSchedule, session?.user?.canTrackClassTime)}
       demoViewOnly={session?.user?.demoViewOnly}
     >
       {children}

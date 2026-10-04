@@ -151,7 +151,7 @@ export default async function AdminDashboard() {
   // only where the builder's "رجوع" and the header land, so send them to their own teacher
   // dashboard (which links into the builder). Sending them back to the builder instead made
   // "رجوع" a loop they couldn't leave.
-  if (session?.user?.role === "teacher" && session?.user?.canBuildSchedule) {
+  if (session?.user?.role === "teacher" && (session?.user?.canBuildSchedule || session?.user?.canTrackClassTime)) {
     redirect("/teacher");
   }
 

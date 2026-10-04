@@ -15,6 +15,8 @@ declare module "next-auth" {
       /** When true, a teacher-role account can additionally reach /admin/schedule-builder to build
        *  the real weekly جدول مدرسي, on top of their normal teacher access. */
       canBuildSchedule: boolean;
+      /** When true, the account can open the الالتزام بزمن الحصة tracker (and only that part of متابعة الأداء). */
+      canTrackClassTime: boolean;
     } & DefaultSession["user"];
   }
 
@@ -26,6 +28,7 @@ declare module "next-auth" {
     restrictedCategory?: string | null;
     demoViewOnly?: boolean;
     canBuildSchedule?: boolean;
+    canTrackClassTime?: boolean;
   }
 }
 
@@ -37,5 +40,6 @@ declare module "next-auth/jwt" {
     restrictedCategory: string | null;
     demoViewOnly: boolean;
     canBuildSchedule: boolean;
+    canTrackClassTime: boolean;
   }
 }

@@ -33,6 +33,7 @@ export default auth((req) => {
   const restrictedCategory = session?.user?.restrictedCategory;
   const canBuildSchedule = session?.user?.canBuildSchedule ?? false;
   const demoViewOnly = session?.user?.demoViewOnly ?? false;
+  const canTrackClassTime = session?.user?.canTrackClassTime ?? false;
 
   // A demo/presentation account can browse both /teacher and /admin no matter its role, but can
   // never change anything -- block every mutating request up front, before any other rule runs.
@@ -43,7 +44,7 @@ export default auth((req) => {
   // A teacher additionally scoped to one إدارة المدرسة category, or granted the جدول مدرسي
   // builder (e.g. مؤيد), is still a normal teacher everywhere else -- only pull them out of the
   // teacher-only redirect below so they can reach /admin; their own /api/portfolio etc. stay untouched.
-  if (session && isAdminPath && role === "teacher" && !restrictedCategory && !canBuildSchedule && !demoViewOnly) {
+  if (session && isAdminPath && role === "teacher" && !restrictedCategory && !canBuildSchedule && !canTrackClassTime && !demoViewOnly) {
     return NextResponse.redirect(new URL("/teacher", nextUrl.origin));
   }
 
@@ -57,12 +58,15 @@ export default auth((req) => {
   // admin pages are locked down this way -- their own teacher-facing APIs stay fully usable.
   // A teacher additionally granted canBuildSchedule gets the same treatment, scoped instead to
   // /admin/schedule-builder + /api/schedule-builder -- the two capabilities combine if both are set.
-  if (session && role === "teacher" && (restrictedCategory || canBuildSchedule)) {
+  if (session && role === "teacher" && (restrictedCategory || canBuildSchedule || canTrackClassTime)) {
     const allowedApi =
       nextUrl.pathname.startsWith("/api/school-files") ||
-      (canBuildSchedule && nextUrl.pathname.startsWith("/api/schedule-builder"));
+      (canBuildSchedule && nextUrl.pathname.startsWith("/api/schedule-builder")) ||
+      (canTrackClassTime && nextUrl.pathname === "/api/teacher-performance");
     const allowedPage =
-      nextUrl.pathname === "/admin" || (canBuildSchedule && nextUrl.pathname.startsWith("/admin/schedule-builder"));
+      nextUrl.pathname === "/admin" ||
+      (canBuildSchedule && nextUrl.pathname.startsWith("/admin/schedule-builder")) ||
+      (canTrackClassTime && nextUrl.pathname === "/admin/class-time");
     const lockedDown = isAdminPath;
 
     if (!allowedApi && !allowedPage && lockedDown) {
@@ -83,10 +87,12 @@ export default auth((req) => {
     const allowedApi =
       nextUrl.pathname.startsWith("/api/school-files") ||
       (inReferralWorkflow && nextUrl.pathname.startsWith("/api/student-referrals")) ||
+      (canTrackClassTime && nextUrl.pathname === "/api/teacher-performance") ||
       (restrictedCategory === "teacher_affairs_agent" && nextUrl.pathname === "/api/teachers/files-manifest");
     const allowedPage =
       nextUrl.pathname === "/admin" ||
-      (inReferralWorkflow && nextUrl.pathname.startsWith("/admin/student-referrals"));
+      (inReferralWorkflow && nextUrl.pathname.startsWith("/admin/student-referrals")) ||
+      (canTrackClassTime && nextUrl.pathname === "/admin/class-time");
     const lockedDown = isAdminPath || isProtectedApi;
 
     if (!allowedApi && !allowedPage && lockedDown) {

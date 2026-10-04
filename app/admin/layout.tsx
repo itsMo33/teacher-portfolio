@@ -35,6 +35,13 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   // to its own dashboard -- otherwise this sidebar is a dead end.
   const teacherHome: NavItem[] = session?.user?.role === "teacher" ? [{ href: "/teacher", label: "لوحة المعلم" }] : [];
 
+  // The class-time tracker is a grant on top of whatever else the account is; full admins already have it
+  // inside متابعة أداء المعلمين.
+  const classTimeNav: NavItem[] =
+    session?.user?.canTrackClassTime && (session.user.role === "teacher" || restrictedCategory)
+      ? [{ href: "/admin/class-time", label: "الالتزام بزمن الحصة" }]
+      : [];
+
   const navItems: NavItem[] = restrictedCategory
     ? [
         ...teacherHome,
@@ -42,10 +49,15 @@ export default async function AdminLayout({ children }: { children: React.ReactN
         ...(restrictedCategory === "student_affairs_agent" || restrictedCategory === "student_guidance"
           ? [{ href: "/admin/student-referrals", label: "تحويلات الطلاب" }]
           : []),
+        ...classTimeNav,
         ...(canBuildSchedule ? [{ href: "/admin/schedule-builder", label: "جدول مدرسي" }] : []),
       ]
-    : canBuildSchedule
-      ? [...teacherHome, { href: "/admin/schedule-builder", label: "جدول مدرسي" }]
+    : canBuildSchedule || classTimeNav.length > 0
+      ? [
+          ...teacherHome,
+          ...classTimeNav,
+          ...(canBuildSchedule ? [{ href: "/admin/schedule-builder", label: "جدول مدرسي" }] : []),
+        ]
       : fullNavItems.filter((item) => {
           if (item.href === "/admin/student-referrals") return session?.user?.role === "manager";
           if (item.href === "/admin/weekly-review") return !!session && canReview(session.user);

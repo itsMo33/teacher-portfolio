@@ -17,7 +17,7 @@ export default async function TeacherPerformanceStatsPrintPage({
     supabaseAdmin.from("users").select("id, name, national_id, subject").eq("id", teacherId).eq("role", "teacher").is("deleted_at", null).maybeSingle(),
     supabaseAdmin
       .from("teacher_performance_records")
-      .select("category, record_date, status, period")
+      .select("category, record_date, status, period, late_minutes")
       .eq("teacher_id", teacherId)
       .order("record_date", { ascending: false }),
   ]);
@@ -71,7 +71,7 @@ export default async function TeacherPerformanceStatsPrintPage({
                 <div className="flex items-center justify-between">
                   <h3 className="font-bold">{c.labelAr}</h3>
                   <span className="text-slate-600">
-                    {c.mode === "assumed-present"
+                    {c.mode === "assumed-present" || c.mode === "waiting-auto"
                       ? `غياب: ${absentCount} مرة`
                       : c.mode === "period-exception"
                         ? `متأخر: ${lateCount} — لم يحضر: ${absentCount}`
@@ -82,7 +82,7 @@ export default async function TeacherPerformanceStatsPrintPage({
                   <ul className="mt-1 flex flex-wrap gap-x-4 gap-y-1 pr-3 text-xs text-slate-600">
                     {recs.map((r) => (
                       <li key={`${r.record_date}-${r.period ?? ""}`}>
-                        {r.status === "present" ? "✓" : r.status === "late" ? "متأخر" : r.status === "absent" && c.mode === "period-exception" ? "لم يحضر" : "✗"}
+                        {r.status === "present" ? "✓" : r.status === "late" ? (r.late_minutes ? `متأخر ${r.late_minutes} د` : "متأخر") : r.status === "absent" && c.mode === "period-exception" ? "لم يحضر" : "✗"}
                         {r.period ? ` (الحصة ${r.period})` : ""}{" "}
                         {new Date(`${r.record_date}T00:00:00`).toLocaleDateString("ar-SA", {
                           year: "numeric",

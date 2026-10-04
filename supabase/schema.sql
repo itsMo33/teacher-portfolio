@@ -430,3 +430,8 @@ create table if not exists student_referral_routing (
   agent_id uuid not null references users(id) on delete cascade
 );
 alter table student_referral_routing enable row level security;
+
+-- الالتزام بزمن الحصة: how many minutes a teacher was late (set only on 'late' rows), and a per-account
+-- grant to use just that one tracking section (for وكلاء الطلاب and the teachers who help with it).
+alter table teacher_performance_records add column if not exists late_minutes integer;
+alter table users add column if not exists can_track_class_time boolean not null default false;

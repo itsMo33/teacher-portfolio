@@ -21,7 +21,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
 
         const { data: user, error } = await supabaseAdmin
           .from("users")
-          .select("id, national_id, password_hash, role, name, subject, restricted_category, demo_view_only, can_build_schedule")
+          .select("id, national_id, password_hash, role, name, subject, restricted_category, demo_view_only, can_build_schedule, can_track_class_time")
           .eq("national_id", nationalId)
           .is("deleted_at", null)
           .maybeSingle();
@@ -40,6 +40,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           restrictedCategory: user.restricted_category,
           demoViewOnly: user.demo_view_only ?? false,
           canBuildSchedule: user.can_build_schedule ?? false,
+          canTrackClassTime: user.can_track_class_time ?? false,
         };
       },
     }),
@@ -53,6 +54,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         token.restrictedCategory = (user as { restrictedCategory: string | null }).restrictedCategory ?? null;
         token.demoViewOnly = (user as { demoViewOnly?: boolean }).demoViewOnly ?? false;
         token.canBuildSchedule = (user as { canBuildSchedule?: boolean }).canBuildSchedule ?? false;
+        token.canTrackClassTime = (user as { canTrackClassTime?: boolean }).canTrackClassTime ?? false;
       }
       return token;
     },
@@ -64,6 +66,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         session.user.restrictedCategory = (token.restrictedCategory as string | null) ?? null;
         session.user.demoViewOnly = (token.demoViewOnly as boolean) ?? false;
         session.user.canBuildSchedule = (token.canBuildSchedule as boolean) ?? false;
+        session.user.canTrackClassTime = (token.canTrackClassTime as boolean) ?? false;
       }
       return session;
     },

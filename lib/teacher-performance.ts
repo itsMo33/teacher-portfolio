@@ -19,15 +19,17 @@ export interface PerformanceCategoryConfig {
    *  exception row; "explicit" categories default every teacher to blank and require the admin to
    *  actively mark 'present' or 'absent' for whoever the duty actually applied to that day.
    *  "period-exception" defaults every teacher to ملتزم (compliant) for every period, and an
-   *  exception (متأخر/لم يحضر) is recorded against one specific period rather than the whole day. */
-  mode: "assumed-present" | "explicit" | "period-exception";
+   *  exception (متأخر/لم يحضر) is recorded against one specific period rather than the whole day.
+   *  "waiting-auto" takes who counts as present from the waiting table (a teacher put in as المنتظر is
+   *  green for that day); only a no-show is stored, as an 'absent' row. */
+  mode: "assumed-present" | "explicit" | "period-exception" | "waiting-auto";
 }
 
 export const PERFORMANCE_CATEGORIES: PerformanceCategoryConfig[] = [
   { key: "morning_lineup", labelAr: "الطابور الصباحي", mode: "assumed-present" },
   { key: "supervision", labelAr: "الإشراف", mode: "explicit" },
   { key: "duty", labelAr: "المناوبة", mode: "explicit" },
-  { key: "waiting_period_activation", labelAr: "تفعيل حصص الانتظار", mode: "explicit" },
+  { key: "waiting_period_activation", labelAr: "تفعيل حصص الانتظار", mode: "waiting-auto" },
   { key: "class_time_commitment", labelAr: "الالتزام بزمن الحصة", mode: "period-exception" },
 ];
 
