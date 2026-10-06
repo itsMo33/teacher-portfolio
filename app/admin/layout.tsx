@@ -11,6 +11,7 @@ const fullNavItems: NavItem[] = [
   { href: "/admin/substitute-schedule", label: "جدول الانتظار" },
   { href: "/admin/schedule-builder", label: "جدول مدرسي" },
   { href: "/admin/teacher-performance", label: "متابعة أداء المعلمين" },
+  { href: "/admin/school-schedule", label: "الجدول المدرسي للشعب" },
   { href: "/admin/teachers/new", label: "إضافة معلم" },
   { href: "/admin/teachers/import", label: "استيراد معلمين" },
   { href: "/admin/statistics", label: "الإحصائيات" },
