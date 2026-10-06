@@ -20,10 +20,10 @@ interface DashboardCard {
 // five) stays reachable from the sidebar nav (see fullNavItems in app/admin/layout.tsx).
 const DASHBOARD_CARDS: DashboardCard[] = [
   { href: "/admin/teachers", label: "قائمة المعلمين", description: "استعراض جميع المعلمين ونسب إنجازهم", accentColor: "#2563eb" },
+  { href: "/admin/school-schedule", label: "الجدول المدرسي للشعب", description: "جداول الشعب بالمادة والمعلم والغياب والانتظار", accentColor: "#2563eb" },
   { href: "/admin/substitute-schedule", label: "جدول الانتظار", description: "إسناد المعلمين المنتظرين لتغطية الحصص", accentColor: "#0d9488" },
   { href: "/admin/statistics", label: "الإحصائيات", description: "نسب رفع الملفات لكل قسم بين المعلمين", accentColor: "#d97706" },
   { href: "/admin/teacher-performance", label: "متابعة أداء المعلمين", description: "الطابور الصباحي، الإشراف، المناوبة، وغيرها", accentColor: "#9333ea" },
-  { href: "/admin/school-schedule", label: "الجدول المدرسي للشعب", description: "جداول الشعب بالمادة والمعلم والغياب والانتظار", accentColor: "#2563eb" },
   { href: "/admin/weekly-review", label: "متابعة ملفات المعلمين", description: "الملفات الجديدة من المعلمين ومن لم يرفع بعد", accentColor: "#059669" },
 ];
 
