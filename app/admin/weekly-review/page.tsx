@@ -56,7 +56,7 @@ export default async function WeeklyReviewPage({ searchParams }: { searchParams:
       <div>
         <h2 className="flex items-center gap-2 text-xl font-bold text-slate-900 dark:text-slate-50">
           <span className="inline-block h-3 w-3 shrink-0 rounded-full bg-emerald-600" />
-          مراجعة الأسبوع
+          متابعة ملفات المعلمين
         </h2>
         <p className="text-sm text-slate-500 mt-1">
           يعرض لك ما رفعه المعلمون منذ آخر مراجعة لك فقط. اضغط «تمت المراجعة» على كل معلم بعد ما تخلص منه، وتختفي ملفاته إلى أن يرفع جديد.

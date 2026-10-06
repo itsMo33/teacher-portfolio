@@ -10,7 +10,7 @@ export const REVIEW_STATUS_LABELS: Record<ReviewStatus, string> = {
   needs_revision: "يحتاج تعديل",
 };
 
-/** Who may use مراجعة الأسبوع: admin-level accounts with no category scope (e.g. رائد الحمدان, the
+/** Who may use متابعة ملفات المعلمين (the weekly review): admin-level accounts with no category scope (e.g. رائد الحمدان, the
  *  manager). They can already open every teacher's files one by one, so this adds no new access. */
 export function canReview(user: { role: string; restrictedCategory?: string | null; demoViewOnly?: boolean }): boolean {
   return (user.role === "agent" || user.role === "manager") && !user.restrictedCategory && !user.demoViewOnly;

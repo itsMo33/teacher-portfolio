@@ -18,7 +18,7 @@ const fullNavItems: NavItem[] = [
   { href: "/admin/accountability", label: "المسائلات" },
   { href: "/admin/reports", label: "تصدير تقرير" },
   { href: "/admin/school-management", label: "الإنجاز المدرسي" },
-  { href: "/admin/weekly-review", label: "مراجعة الأسبوع" },
+  { href: "/admin/weekly-review", label: "متابعة ملفات المعلمين" },
   { href: "/admin/student-referrals", label: "تحويلات الطلاب" },
   { href: "/admin/activity-log", label: "سجل النشاط" },
   { href: "/admin/trash", label: "سلة المحذوفات" },

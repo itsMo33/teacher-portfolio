@@ -8,7 +8,6 @@ import { SchoolFileList } from "@/components/admin/SchoolFileList";
 import { DownloadAllFilesButton } from "@/components/admin/DownloadAllFilesButton";
 import { canReview } from "@/lib/weekly-review";
 import { getRecentClassTimeFlags } from "@/lib/class-time-flags";
-import { getReferralActor } from "@/lib/student-referrals";
 
 interface DashboardCard {
   href: string;
@@ -25,9 +24,7 @@ const DASHBOARD_CARDS: DashboardCard[] = [
   { href: "/admin/statistics", label: "الإحصائيات", description: "نسب رفع الملفات لكل قسم بين المعلمين", accentColor: "#d97706" },
   { href: "/admin/teacher-performance", label: "متابعة أداء المعلمين", description: "الطابور الصباحي، الإشراف، المناوبة، وغيرها", accentColor: "#9333ea" },
   { href: "/admin/school-schedule", label: "الجدول المدرسي للشعب", description: "جداول الشعب بالمادة والمعلم والغياب والانتظار", accentColor: "#2563eb" },
-  { href: "/admin/school-management", label: "الإنجاز المدرسي", description: "ملفات مدير المدرسة والوكلاء والموجه الطلابي", accentColor: "#7c3aed" },
-  { href: "/admin/student-referrals", label: "تحويلات الطلاب", description: "تحويلات المعلمين لوكيل شؤون الطلاب والموجه الطلابي", accentColor: "#b45309" },
-  { href: "/admin/weekly-review", label: "مراجعة الأسبوع", description: "الملفات الجديدة من المعلمين ومن لم يرفع بعد", accentColor: "#059669" },
+  { href: "/admin/weekly-review", label: "متابعة ملفات المعلمين", description: "الملفات الجديدة من المعلمين ومن لم يرفع بعد", accentColor: "#059669" },
 ];
 
 // Accounts that only handle student referrals -- their dashboard has no file-upload sections.
@@ -221,7 +218,6 @@ export default async function AdminDashboard() {
       )}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         {DASHBOARD_CARDS.filter((card) => {
-          if (card.href === "/admin/student-referrals") return !!session && getReferralActor(session.user) === "viewer";
           if (card.href === "/admin/weekly-review") return !!session && canReview(session.user);
           return true;
         }).map((card, index) => (

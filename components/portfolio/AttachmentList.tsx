@@ -12,7 +12,7 @@ export interface AttachmentItem {
   viewed_at?: string | null;
   mime_type?: string;
   accountability_status?: AccountabilityStatus | null;
-  /** The weekly reviewer's verdict (مراجعة الأسبوع), shown to the teacher next to the file. */
+  /** The weekly reviewer's verdict (متابعة ملفات المعلمين), shown to the teacher next to the file. */
   review_status?: "accepted" | "needs_revision" | null;
   review_note?: string | null;
 }
