@@ -76,13 +76,16 @@ function todayStr(): string {
 export function TeacherPerformanceView({
   classTimeOnly = false,
   backHref = "/admin",
+  initialCategory,
 }: {
   classTimeOnly?: boolean;
   backHref?: string;
+  /** Which category tab to open on (a link can land straight on one, e.g. الالتزام بزمن الحصة). */
+  initialCategory?: PerformanceCategory;
 }) {
   const [date, setDate] = useState(todayStr());
   const [activeCategory, setActiveCategory] = useState<PerformanceCategory>(
-    classTimeOnly ? "class_time_commitment" : PERFORMANCE_CATEGORIES[0].key
+    classTimeOnly ? "class_time_commitment" : initialCategory ?? PERFORMANCE_CATEGORIES[0].key
   );
   const [teachers, setTeachers] = useState<Teacher[]>([]);
   // تفعيل حصص الانتظار: who was put in as المنتظر on the chosen day (from the waiting table), and in which periods.

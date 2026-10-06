@@ -213,7 +213,7 @@ export default async function AdminDashboard() {
               </li>
             ))}
           </ul>
-          <Link href="/admin/teacher-performance" className="text-xs text-red-700 dark:text-red-300 hover:underline">
+          <Link href="/admin/teacher-performance?category=class_time_commitment" className="text-xs text-red-700 dark:text-red-300 hover:underline">
             فتح الالتزام بزمن الحصة
           </Link>
         </div>
