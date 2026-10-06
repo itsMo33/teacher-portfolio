@@ -40,7 +40,10 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   // inside متابعة أداء المعلمين.
   const classTimeNav: NavItem[] =
     session?.user?.canTrackClassTime && (session.user.role === "teacher" || restrictedCategory)
-      ? [{ href: "/admin/class-time", label: "الالتزام بزمن الحصة" }]
+      ? [
+          { href: "/admin/class-time", label: "الالتزام بزمن الحصة" },
+          { href: "/admin/school-schedule", label: "الجدول المدرسي" },
+        ]
       : [];
 
   const navItems: NavItem[] = restrictedCategory

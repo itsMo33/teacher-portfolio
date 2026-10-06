@@ -7,6 +7,7 @@ import { FileUploadDropzone } from "@/components/portfolio/FileUploadDropzone";
 import { SchoolFileList } from "@/components/admin/SchoolFileList";
 import { DownloadAllFilesButton } from "@/components/admin/DownloadAllFilesButton";
 import { canReview } from "@/lib/weekly-review";
+import { getRecentClassTimeFlags } from "@/lib/class-time-flags";
 import { getReferralActor } from "@/lib/student-referrals";
 
 interface DashboardCard {
@@ -72,6 +73,19 @@ async function RestrictedDashboard({
           </p>
           <DownloadAllFilesButton />
         </div>
+      )}
+      {canTrackClassTime && (
+        <Link
+          href="/admin/school-schedule"
+          style={{ borderInlineStartColor: "#2563eb", borderInlineStartWidth: 4 }}
+          className="mb-6 flex items-center justify-between gap-2 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg"
+        >
+          <span className="flex items-center gap-2 font-semibold text-slate-900 dark:text-slate-50">
+            <span className="inline-block h-2.5 w-2.5 shrink-0 rounded-full bg-blue-600" />
+            الجدول المدرسي
+          </span>
+          <span className="text-xs text-slate-500 dark:text-slate-400">جداول الشعب بالمادة والمعلم والغياب والانتظار</span>
+        </Link>
       )}
       {canTrackClassTime && (
         <Link
@@ -178,9 +192,32 @@ export default async function AdminDashboard() {
     .eq("role", "teacher")
     .is("deleted_at", null);
 
+  // رائد (and the manager) are told whenever someone records a teacher late or absent in a class period.
+  const classTimeFlags = session && canReview(session.user) ? await getRecentClassTimeFlags() : [];
+
   return (
     <div>
       <h2 className="text-xl font-bold text-slate-900 dark:text-slate-50 mb-4">لوحة تحكم الإدارة</h2>
+      {classTimeFlags.length > 0 && (
+        <div className="mb-5 flex flex-col gap-2 rounded-xl border border-red-300 dark:border-red-900 bg-red-50 dark:bg-red-900/20 p-4">
+          <p className="font-semibold text-red-800 dark:text-red-200">
+            تنبيهات الالتزام بزمن الحصة (آخر 7 أيام) -- {classTimeFlags.length}
+          </p>
+          <ul className="flex max-h-72 flex-col gap-1.5 overflow-y-auto text-sm text-red-900 dark:text-red-100">
+            {classTimeFlags.map((f) => (
+              <li key={`${f.teacherId}-${f.date}-${f.period}`}>
+                <strong>{f.teacherName}</strong> --{" "}
+                {f.status === "absent" ? "لم يحضر" : `متأخر${f.minutes ? ` ${f.minutes} دقيقة` : ""}`} في الحصة {f.period} يوم{" "}
+                {new Date(`${f.date}T00:00:00`).toLocaleDateString("ar-SA", { weekday: "long", day: "numeric", month: "long" })}
+                {f.recordedByName ? ` -- رصده ${f.recordedByName}` : ""}
+              </li>
+            ))}
+          </ul>
+          <Link href="/admin/teacher-performance" className="text-xs text-red-700 dark:text-red-300 hover:underline">
+            فتح الالتزام بزمن الحصة
+          </Link>
+        </div>
+      )}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         {DASHBOARD_CARDS.filter((card) => {
           if (card.href === "/admin/student-referrals") return !!session && getReferralActor(session.user) === "viewer";

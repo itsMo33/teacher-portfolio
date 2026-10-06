@@ -15,7 +15,12 @@ function buildNavItems(canBuildSchedule?: boolean, canTrackClassTime?: boolean):
     // that tool lives under /admin, entirely separate from this teacher-side nav, so without this
     // link they'd have no way to reach it short of typing the URL themselves.
     ...(canBuildSchedule ? [{ href: "/admin/schedule-builder", label: "بناء الجدول المدرسي" }] : []),
-    ...(canTrackClassTime ? [{ href: "/admin/class-time", label: "الالتزام بزمن الحصة" }] : []),
+    ...(canTrackClassTime
+      ? [
+          { href: "/admin/class-time", label: "الالتزام بزمن الحصة" },
+          { href: "/admin/school-schedule", label: "الجدول المدرسي للشعب" },
+        ]
+      : []),
     { href: "/teacher/settings", label: "الإعدادات" },
   ];
 }

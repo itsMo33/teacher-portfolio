@@ -36,12 +36,18 @@ export async function GET(req: NextRequest) {
     supabaseAdmin.from("users").select("id, name").eq("role", "teacher").is("deleted_at", null).order("name"),
     supabaseAdmin
       .from("teacher_performance_records")
-      .select("teacher_id, category, status, period, late_minutes")
+      .select("teacher_id, category, status, period, late_minutes, recorded_by")
       .eq("record_date", date),
   ]);
 
   if (teachersError) return NextResponse.json({ error: teachersError.message }, { status: 500 });
   if (recordsError) return NextResponse.json({ error: recordsError.message }, { status: 500 });
+
+  const recorderIds = [...new Set((records ?? []).map((x) => x.recorded_by as string | null).filter(Boolean) as string[])];
+  const { data: recorders } = recorderIds.length
+    ? await supabaseAdmin.from("users").select("id, name").in("id", recorderIds)
+    : { data: [] };
+  const recorderName = new Map((recorders ?? []).map((u) => [u.id as string, u.name as string]));
 
   const waiting = (await getWaitingAssignments([date], teachers ?? [])).get(date)!;
 
@@ -56,13 +62,14 @@ export async function GET(req: NextRequest) {
         status: r.status,
         period: r.period || null,
         minutes: r.late_minutes ?? null,
+        recordedBy: r.recorded_by ? recorderName.get(r.recorded_by as string) ?? null : null,
       })),
   });
 }
 
 /** Sets a teacher's status for one (category, date[, period]) slot. */
 export async function PUT(req: NextRequest) {
-  const { error, classTimeOnly } = await requireAccess();
+  const { error, classTimeOnly, session } = await requireAccess();
   if (error) return error;
 
   const { teacherId, category, date, status, period, minutes } = await req.json();
@@ -111,6 +118,7 @@ export async function PUT(req: NextRequest) {
       status,
       period: periodValue,
       late_minutes: lateMinutes,
+      recorded_by: session.user.id,
       updated_at: new Date().toISOString(),
     },
     { onConflict: "teacher_id,category,record_date,period" }

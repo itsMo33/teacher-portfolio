@@ -49,3 +49,28 @@ export async function getWaitingAssignments(
   }
   return result;
 }
+
+export interface WeekSubstitution {
+  day: string;
+  period: string;
+  section: string;
+  absentTeacher: string;
+  substitute: string;
+}
+
+/** The waiting-table assignments made during the school week that starts on `weekStart` (archived
+ *  ones included), for showing "المعلم غائب -- المنتظر: ..." on the school schedule. */
+export async function getWeekSubstitutions(weekStart: string): Promise<WeekSubstitution[]> {
+  const { data } = await supabaseAdmin
+    .from("substitute_assignments")
+    .select("day, period, section, absent_teacher, substitute, created_at");
+  return (data ?? [])
+    .filter((r) => weekStartOf(riyadhDay(r.created_at as string)) === weekStart)
+    .map((r) => ({
+      day: r.day as string,
+      period: r.period as string,
+      section: r.section as string,
+      absentTeacher: r.absent_teacher as string,
+      substitute: r.substitute as string,
+    }));
+}

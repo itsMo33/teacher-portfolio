@@ -28,6 +28,8 @@ interface Record_ {
   period: string | null;
   /** Minutes late -- only ever set on a "late" period record. */
   minutes: number | null;
+  /** Who recorded it (set by the server; empty until the next refresh for a mark just made here). */
+  recordedBy?: string | null;
 }
 
 interface StatsRecord {
@@ -577,6 +579,16 @@ export function TeacherPerformanceView({
                               {pStatus === "absent" && " — لم يحضر"}
                             </button>
                           );
+                        })}
+                        {PERFORMANCE_PERIODS.filter((p) => periodStatusFor(t.id, p) !== null).map((p) => {
+                          const by = records.find(
+                            (x) => x.teacherId === t.id && x.category === activeCategory && x.period === p
+                          )?.recordedBy;
+                          return by ? (
+                            <p key={`by-${p}`} className="w-full text-xs text-slate-500">
+                              الحصة {p}: {periodStatusFor(t.id, p) === "late" ? "متأخر" : "لم يحضر"} -- رصده {by}
+                            </p>
+                          ) : null;
                         })}
                         {PERFORMANCE_PERIODS.filter((p) => periodStatusFor(t.id, p) === "late").map((p) => (
                           <div

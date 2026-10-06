@@ -10,6 +10,7 @@ import {
 import { TEACHER_COMPLETION_SLOTS, TOTAL_TEACHER_COMPLETION_SLOTS } from "@/lib/portfolio-sections";
 import { getSchoolManagementCategory } from "@/lib/school-files";
 import { getFilesNeedingRevision } from "@/lib/weekly-review";
+import { getRecentClassTimeFlags } from "@/lib/class-time-flags";
 import { ProgressGrid } from "@/components/portfolio/ProgressGrid";
 
 export default async function TeacherDashboard() {
@@ -22,6 +23,8 @@ export default async function TeacherDashboard() {
     getProfessionalLicenseExempt(session!.user.id),
     getFilesNeedingRevision(session!.user.id),
   ]);
+
+  const classTimeFlags = await getRecentClassTimeFlags(session!.user.id);
 
   const restrictedCategoryLabel = session!.user.restrictedCategory
     ? (await getSchoolManagementCategory(session!.user.restrictedCategory))?.labelAr ?? session!.user.restrictedCategory
@@ -81,6 +84,33 @@ export default async function TeacherDashboard() {
           </ul>
           <p className="text-xs text-amber-700 dark:text-amber-300">ارفع النسخة المعدّلة في نفس القسم، ويمكنك حذف القديمة.</p>
         </div>
+      )}
+      {classTimeFlags.length > 0 && (
+        <div className="mb-4 flex flex-col gap-2 rounded-xl border border-red-300 dark:border-red-900 bg-red-50 dark:bg-red-900/20 p-4">
+          <p className="font-semibold text-red-800 dark:text-red-200">تنبيهات الالتزام بزمن الحصة (آخر 7 أيام)</p>
+          <ul className="flex flex-col gap-1.5 text-sm text-red-900 dark:text-red-100">
+            {classTimeFlags.map((f) => (
+              <li key={`${f.date}-${f.period}`}>
+                تم رصد {f.status === "absent" ? "غياب" : `تأخر${f.minutes ? ` ${f.minutes} دقيقة` : ""}`} في الحصة {f.period} يوم{" "}
+                {new Date(`${f.date}T00:00:00`).toLocaleDateString("ar-SA", { weekday: "long", day: "numeric", month: "long" })}
+                {f.recordedByName ? ` بواسطة ${f.recordedByName}` : ""}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+      {session!.user.canTrackClassTime && (
+        <Link
+          href="/admin/school-schedule"
+          style={{ borderInlineStartColor: "#2563eb", borderInlineStartWidth: 4 }}
+          className="mb-4 flex items-center justify-between gap-2 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg"
+        >
+          <span className="flex items-center gap-2 font-semibold text-slate-900 dark:text-slate-50">
+            <span className="inline-block h-2.5 w-2.5 shrink-0 rounded-full bg-blue-600" />
+            الجدول المدرسي
+          </span>
+          <span className="text-xs text-slate-500 dark:text-slate-400">جداول الشعب بالمادة والمعلم والغياب والانتظار</span>
+        </Link>
       )}
       {session!.user.canTrackClassTime && (
         <Link

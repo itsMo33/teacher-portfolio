@@ -435,3 +435,7 @@ alter table student_referral_routing enable row level security;
 -- grant to use just that one tracking section (for وكلاء الطلاب and the teachers who help with it).
 alter table teacher_performance_records add column if not exists late_minutes integer;
 alter table users add column if not exists can_track_class_time boolean not null default false;
+
+-- الالتزام بزمن الحصة: who recorded the late / absent mark, so the schedule view, the teacher's own
+-- notice and رائد's alerts can say "بواسطة ...".
+alter table teacher_performance_records add column if not exists recorded_by uuid references users(id) on delete set null;

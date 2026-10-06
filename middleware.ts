@@ -66,7 +66,7 @@ export default auth((req) => {
     const allowedPage =
       nextUrl.pathname === "/admin" ||
       (canBuildSchedule && nextUrl.pathname.startsWith("/admin/schedule-builder")) ||
-      (canTrackClassTime && nextUrl.pathname === "/admin/class-time");
+      (canTrackClassTime && (nextUrl.pathname === "/admin/class-time" || nextUrl.pathname === "/admin/school-schedule"));
     const lockedDown = isAdminPath;
 
     if (!allowedApi && !allowedPage && lockedDown) {
@@ -92,7 +92,7 @@ export default auth((req) => {
     const allowedPage =
       nextUrl.pathname === "/admin" ||
       (inReferralWorkflow && nextUrl.pathname.startsWith("/admin/student-referrals")) ||
-      (canTrackClassTime && nextUrl.pathname === "/admin/class-time");
+      (canTrackClassTime && (nextUrl.pathname === "/admin/class-time" || nextUrl.pathname === "/admin/school-schedule"));
     const lockedDown = isAdminPath || isProtectedApi;
 
     if (!allowedApi && !allowedPage && lockedDown) {
