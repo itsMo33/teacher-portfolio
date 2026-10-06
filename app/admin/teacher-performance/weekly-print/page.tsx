@@ -42,18 +42,18 @@ export default async function WeeklyPrintPage({ searchParams }: { searchParams: 
     supabaseAdmin.from("users").select("id, name").eq("role", "teacher").is("deleted_at", null).order("name"),
     supabaseAdmin
       .from("teacher_performance_records")
-      .select("teacher_id, category, record_date, status, period")
+      .select("teacher_id, category, record_date, status, period, late_minutes")
       .gte("record_date", days[0])
       .lte("record_date", days[4]),
     supabaseAdmin.from("madrasati_prep_weeks").select("teacher_id, status").eq("week_start", weekStart),
   ]);
 
   const waitingByDay = await getWaitingAssignments(days, teachers ?? []);
-  const recordsByKey = new Map<string, { status: string; period: string }[]>();
+  const recordsByKey = new Map<string, { status: string; period: string; minutes: number | null }[]>();
   for (const r of records ?? []) {
     const key = `${r.teacher_id}|${r.category}|${r.record_date}`;
     const list = recordsByKey.get(key) ?? [];
-    list.push({ status: r.status, period: r.period });
+    list.push({ status: r.status, period: r.period, minutes: (r.late_minutes as number | null) ?? null });
     recordsByKey.set(key, list);
   }
   const prepByTeacher = new Map((prep ?? []).map((p) => [p.teacher_id as string, p.status as "yellow" | "red"]));
@@ -64,7 +64,10 @@ export default async function WeeklyPrintPage({ searchParams }: { searchParams: 
 
     if (mode === "period-exception") {
       if (recs.length > 0) {
-        const periods = recs.map((r) => r.period).sort();
+        // a late period carries its minutes in brackets, e.g. 3(10)
+        const periods = [...recs]
+          .sort((a, b) => a.period.localeCompare(b.period))
+          .map((r) => (r.status === "late" && r.minutes ? `${r.period}(${r.minutes})` : r.period));
         const worst = recs.some((r) => r.status === "absent") ? "absent" : "late";
         return { kind: worst, text: periods.length <= 3 ? periods.join(",") : `${periods.length}ح` };
       }
@@ -180,7 +183,7 @@ export default async function WeeklyPrintPage({ searchParams }: { searchParams: 
       </table>
 
       <p className="mt-1 text-slate-600" style={{ fontSize: "6.5px" }}>
-        الطابور الصباحي والالتزام بزمن الحصة: ✓ = ملتزم، وتبقى الخانة فاضية للأيام اللي ما جت بعد. الإشراف والمناوبة وتفعيل حصص الانتظار: ✓ حاضر و✗ غائب للي عليه المهمة فقط. الأرقام بخانة الالتزام بزمن الحصة = أرقام الحصص
+        الطابور الصباحي والالتزام بزمن الحصة: ✓ = ملتزم، وتبقى الخانة فاضية للأيام اللي ما جت بعد. الإشراف والمناوبة وتفعيل حصص الانتظار: ✓ حاضر و✗ غائب للي عليه المهمة فقط. الأرقام بخانة الالتزام بزمن الحصة = أرقام الحصص (والرقم بين القوسين = دقائق التأخر)
         (أصفر: متأخر، أحمر: لم يحضر). تحضير مدرستي: أخضر أكمل، أصفر ناقص، أحمر لم يحضّر.
       </p>
     </div>

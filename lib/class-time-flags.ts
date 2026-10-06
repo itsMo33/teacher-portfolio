@@ -18,10 +18,10 @@ export function riyadhToday(): string {
   return new Date(Date.now() + 3 * 60 * 60 * 1000).toISOString().slice(0, 10);
 }
 
-/** Late / absent marks from الالتزام بزمن الحصة in the last 7 days (today included), newest first.
+/** Late / absent marks from الالتزام بزمن الحصة in the last `days` days (today included), newest first.
  *  `teacherId` limits it to one teacher (their own notice); without it, everyone's (رائد's alerts). */
-export async function getRecentClassTimeFlags(teacherId?: string): Promise<ClassTimeFlag[]> {
-  const from = addDays(riyadhToday(), -6);
+export async function getRecentClassTimeFlags(teacherId?: string, days = 7): Promise<ClassTimeFlag[]> {
+  const from = addDays(riyadhToday(), -(days - 1));
   let query = supabaseAdmin
     .from("teacher_performance_records")
     .select("teacher_id, record_date, period, status, late_minutes, recorded_by, updated_at")

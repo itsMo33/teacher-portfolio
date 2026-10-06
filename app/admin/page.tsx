@@ -192,8 +192,8 @@ export default async function AdminDashboard() {
     .eq("role", "teacher")
     .is("deleted_at", null);
 
-  // رائد (and the manager) are told whenever someone records a teacher late or absent in a class period.
-  const classTimeFlags = session && canReview(session.user) ? await getRecentClassTimeFlags() : [];
+  // رائد (and the manager) are told, for today, whenever someone records a teacher late or absent in a class period.
+  const classTimeFlags = session && canReview(session.user) ? await getRecentClassTimeFlags(undefined, 1) : [];
 
   return (
     <div>
@@ -201,7 +201,7 @@ export default async function AdminDashboard() {
       {classTimeFlags.length > 0 && (
         <div className="mb-5 flex flex-col gap-2 rounded-xl border border-red-300 dark:border-red-900 bg-red-50 dark:bg-red-900/20 p-4">
           <p className="font-semibold text-red-800 dark:text-red-200">
-            تنبيهات الالتزام بزمن الحصة (آخر 7 أيام) -- {classTimeFlags.length}
+            تنبيهات الالتزام بزمن الحصة اليوم -- {classTimeFlags.length}
           </p>
           <ul className="flex max-h-72 flex-col gap-1.5 overflow-y-auto text-sm text-red-900 dark:text-red-100">
             {classTimeFlags.map((f) => (
