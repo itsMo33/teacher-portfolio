@@ -93,7 +93,7 @@ export default async function TeacherDashboard() {
               <li key={`${f.date}-${f.period}`}>
                 تم رصد {f.status === "absent" ? "غياب" : `تأخر${f.minutes ? ` ${f.minutes} دقيقة` : ""}`} في الحصة {f.period} يوم{" "}
                 {new Date(`${f.date}T00:00:00`).toLocaleDateString("ar-SA", { weekday: "long", day: "numeric", month: "long" })}
-                {f.recordedByName ? ` بواسطة ${f.recordedByName}` : ""}
+                {" بواسطة الإدارة"}
               </li>
             ))}
           </ul>
