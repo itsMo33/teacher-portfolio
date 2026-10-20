@@ -41,6 +41,11 @@ export interface StudentReferral {
   counselorExtraServices: string | null;
   counselorNotes: string | null;
   createdAt: string;
+  /** When the وكيل / الموجه first opened it -- null until they do. */
+  agentOpenedAt: string | null;
+  counselorOpenedAt: string | null;
+  agentDoneAt: string | null;
+  completedAt: string | null;
 }
 
 /** A referral the وكيل شؤون الطلاب filed himself (a student violation) rather than one a teacher
@@ -59,7 +64,7 @@ export interface ReferralFile {
 }
 
 const REFERRAL_SELECT =
-  "id, teacher_id, student_name, class_name, subject, reasons, problem_description, status, sent_to_agent_at, agent_procedures, agent_notes, sent_to_counselor_at, counselor_procedures, counselor_extra_services, counselor_notes, created_at, assigned_agent_id, assigned_counselor_id, teacher:users!student_referrals_teacher_id_fkey(name), agent:users!student_referrals_assigned_agent_id_fkey(name), counselor:users!student_referrals_assigned_counselor_id_fkey(name)";
+  "id, teacher_id, student_name, class_name, subject, reasons, problem_description, status, sent_to_agent_at, agent_procedures, agent_notes, sent_to_counselor_at, counselor_procedures, counselor_extra_services, counselor_notes, created_at, assigned_agent_id, assigned_counselor_id, agent_opened_at, counselor_opened_at, agent_done_at, completed_at, teacher:users!student_referrals_teacher_id_fkey(name), agent:users!student_referrals_assigned_agent_id_fkey(name), counselor:users!student_referrals_assigned_counselor_id_fkey(name)";
 
 interface ReferralRow {
   id: string;
@@ -80,6 +85,10 @@ interface ReferralRow {
   created_at: string;
   assigned_agent_id: string | null;
   assigned_counselor_id: string | null;
+  agent_opened_at: string | null;
+  counselor_opened_at: string | null;
+  agent_done_at: string | null;
+  completed_at: string | null;
   teacher: NamedRelation;
   agent: NamedRelation;
   counselor: NamedRelation;
@@ -112,6 +121,10 @@ function toReferral(row: ReferralRow): StudentReferral {
     counselorExtraServices: row.counselor_extra_services,
     counselorNotes: row.counselor_notes,
     createdAt: row.created_at,
+    agentOpenedAt: row.agent_opened_at,
+    counselorOpenedAt: row.counselor_opened_at,
+    agentDoneAt: row.agent_done_at,
+    completedAt: row.completed_at,
   };
 }
 
@@ -126,8 +139,8 @@ export async function getReferral(id: string): Promise<StudentReferral | null> {
 export async function listReferralsFor(actor: ReferralActor, userId: string): Promise<StudentReferral[]> {
   let query = supabaseAdmin.from("student_referrals").select(REFERRAL_SELECT).order("created_at", { ascending: false });
   if (actor === "teacher") query = query.eq("teacher_id", userId);
-  else if (actor === "agent") query = query.eq("assigned_agent_id", userId).in("status", ["with_agent", "with_counselor"]);
-  else if (actor === "counselor") query = query.eq("assigned_counselor_id", userId).eq("status", "with_counselor");
+  else if (actor === "agent") query = query.eq("assigned_agent_id", userId).in("status", ["with_agent", "with_counselor", "agent_done", "completed"]);
+  else if (actor === "counselor") query = query.eq("assigned_counselor_id", userId).in("status", ["with_counselor", "completed"]);
   else query = query.neq("status", "draft");
 
   const { data } = await query;
@@ -169,9 +182,11 @@ export function canEditStage(
 export function canView(actor: ReferralActor, userId: string, referral: StudentReferral): boolean {
   if (actor === "teacher") return referral.teacherId === userId;
   if (actor === "agent") {
-    return referral.assignedAgentId === userId && (referral.status === "with_agent" || referral.status === "with_counselor");
+    return referral.assignedAgentId === userId && referral.status !== "draft";
   }
-  if (actor === "counselor") return referral.assignedCounselorId === userId && referral.status === "with_counselor";
+  if (actor === "counselor") {
+    return referral.assignedCounselorId === userId && (referral.status === "with_counselor" || referral.status === "completed");
+  }
   return referral.status !== "draft";
 }
 

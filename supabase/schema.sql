@@ -439,3 +439,16 @@ alter table users add column if not exists can_track_class_time boolean not null
 -- الالتزام بزمن الحصة: who recorded the late / absent mark, so the schedule view, the teacher's own
 -- notice and رائد's alerts can say "بواسطة ...".
 alter table teacher_performance_records add column if not exists recorded_by uuid references users(id) on delete set null;
+
+-- Student referrals: "opened" tracking and the two ways a stage can finish. The وكيل can finish a referral
+-- himself (agent_done) or forward it; the موجه finishes it (completed). *_opened_at is set the first time the
+-- person it's with opens it, so رائد and the manager can see whether it has been looked at.
+alter table student_referrals drop constraint if exists student_referrals_status_check;
+alter table student_referrals add constraint student_referrals_status_check
+  check (status in ('draft', 'with_agent', 'with_counselor', 'agent_done', 'completed'));
+alter table student_referrals add column if not exists agent_opened_at timestamptz;
+alter table student_referrals add column if not exists counselor_opened_at timestamptz;
+alter table student_referrals add column if not exists agent_done_at timestamptz;
+alter table student_referrals add column if not exists completed_at timestamptz;
+-- referrals that were already forwarded before this existed obviously had their agent stage opened
+update student_referrals set agent_opened_at = coalesce(sent_to_counselor_at, updated_at) where status = 'with_counselor' and agent_opened_at is null;

@@ -5,6 +5,8 @@ import { AGENT_PROCEDURES, COUNSELOR_PROCEDURES } from "@/lib/student-referral-c
 import { canEditStage, canView, getCounselors, getReferral, getReferralActor, getReferralFiles, isAgentFiled } from "@/lib/student-referrals";
 import { ReferralStatusBadge } from "@/components/referrals/ReferralStatusBadge";
 import { ReferralStageForm } from "@/components/referrals/ReferralStageForm";
+import { MarkReferralOpened } from "@/components/referrals/MarkReferralOpened";
+import { ReferralProgress } from "@/components/referrals/ReferralProgress";
 import { DeleteReferralButton } from "@/components/referrals/DeleteReferralButton";
 
 export default async function StudentReferralDetailPage({ params }: { params: Promise<{ id: string }> }) {
@@ -52,6 +54,9 @@ export default async function StudentReferralDetailPage({ params }: { params: Pr
         </a>
       </div>
 
+      {(actor === "agent" || actor === "counselor") && <MarkReferralOpened referralId={referral.id} />}
+      <ReferralProgress referral={referral} />
+
       <section className="flex flex-col gap-1.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4 text-sm">
         <div className="flex items-center justify-between gap-2 mb-1">
           <h3 className="font-bold text-slate-800 dark:text-slate-100">{filedByAgent ? "نموذج مخالفة طالب" : "نموذج تحويل الطالب"}</h3>
@@ -84,7 +89,7 @@ export default async function StudentReferralDetailPage({ params }: { params: Pr
         files={agentFiles}
       />
 
-      {referral.status === "with_counselor" && (
+      {(referral.status === "with_counselor" || referral.status === "completed") && (
         <ReferralStageForm
           kind="counselor"
           referralId={referral.id}

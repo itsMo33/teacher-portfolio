@@ -132,7 +132,7 @@ export default async function StudentReferralPrintPage({ params }: { params: Pro
   // The teacher only ever prints their own form; the agent, counselor and manager print the whole
   // packet as far as it has travelled.
   const showAgent = actor !== "teacher" && referral.status !== "draft";
-  const showCounselor = actor !== "teacher" && referral.status === "with_counselor";
+  const showCounselor = actor !== "teacher" && (referral.status === "with_counselor" || referral.status === "completed");
 
   const files = showAgent ? await getReferralFiles(id) : [];
 

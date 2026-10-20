@@ -2,6 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { auth } from "@/lib/auth/auth-options";
 import { getReferralActor, isAgentFiled, listReferralsFor, type StudentReferral } from "@/lib/student-referrals";
+import { ReferralProgress } from "@/components/referrals/ReferralProgress";
 import { ReferralStatusBadge } from "@/components/referrals/ReferralStatusBadge";
 
 function ReferralRow({ r }: { r: StudentReferral }) {
@@ -22,6 +23,7 @@ function ReferralRow({ r }: { r: StudentReferral }) {
         {r.reasons.join("، ")} --{" "}
         {new Date(r.sentToAgentAt ?? r.createdAt).toLocaleDateString("ar-SA")}
       </p>
+      <ReferralProgress referral={r} />
     </Link>
   );
 }

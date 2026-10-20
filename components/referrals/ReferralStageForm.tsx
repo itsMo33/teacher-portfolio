@@ -71,6 +71,23 @@ export function ReferralStageForm({
     setBusy(false);
   }
 
+  /** "تم الانتهاء": saves what's filled in and closes this stage without forwarding. */
+  async function handleComplete() {
+    const who = kind === "agent" ? "الوكيل" : "الموجه";
+    if (!confirm(`تأكيد إنهاء الإجراءات (${who})؟ ما راح تقدر تعدّل عليه بعد الإنهاء.`)) return;
+    setBusy(true);
+    setMessage(null);
+    if (await save()) {
+      const res = await fetch(`/api/student-referrals/${referralId}/complete`, { method: "POST" });
+      if (!res.ok) {
+        setMessage({ text: (await res.json().catch(() => ({}))).error ?? "تعذّر الإنهاء", ok: false });
+      } else {
+        router.refresh();
+      }
+    }
+    setBusy(false);
+  }
+
   async function handleForward() {
     const counselor = counselors?.find((c) => c.id === counselorId);
     if (!counselor) {
@@ -161,6 +178,14 @@ export function ReferralStageForm({
           >
             حفظ
           </button>
+          <button
+            type="button"
+            onClick={handleComplete}
+            disabled={busy}
+            className="rounded-lg bg-green-600 hover:bg-green-700 text-white text-sm px-4 py-2 transition-colors disabled:opacity-50"
+          >
+            تم الانتهاء
+          </button>
           {kind === "agent" && (
             <>
               <select
@@ -181,7 +206,7 @@ export function ReferralStageForm({
                 disabled={busy}
                 className="rounded-lg border border-[var(--brand-primary)] text-[var(--brand-primary)] text-sm px-4 py-2 hover:bg-[var(--brand-primary)]/10 transition-colors disabled:opacity-50"
               >
-                حفظ وتحويل للموجه الطلابي
+                تحويل للموجه الطلابي
               </button>
             </>
           )}

@@ -78,12 +78,14 @@ export const COUNSELOR_PROCEDURES: { n: number; text: string }[] = [
   { n: 18, text: "توعية أولياء الأمور بأهمية متابعة أبنائهم وتحفيزهم على استخدام منصة مدرستي" },
 ];
 
-export type ReferralStatus = "draft" | "with_agent" | "with_counselor";
+export type ReferralStatus = "draft" | "with_agent" | "with_counselor" | "agent_done" | "completed";
 
 export const STATUS_LABELS: Record<ReferralStatus, string> = {
   draft: "مسودة (لم تُرسل)",
   with_agent: "عند وكيل شؤون الطلاب",
   with_counselor: "عند الموجه الطلابي",
+  agent_done: "تم الانتهاء من الإجراءات (الوكيل)",
+  completed: "تم الانتهاء من الإجراءات (الموجه)",
 };
 
 export type ReferralFileStage = "agent" | "counselor";
