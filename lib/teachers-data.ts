@@ -33,10 +33,23 @@ export async function getTeachersWithCompletion(): Promise<TeacherWithCompletion
     .is("deleted_at", null)
     .order("name");
 
-  const { data: attachments } = await supabaseAdmin
-    .from("attachments")
-    .select("teacher_id, category, subcategory, admin_viewed_at")
-    .is("deleted_at", null);
+  // PostgREST hands back at most 1000 rows per request, and there are more attachments than that --
+  // read them page by page, otherwise teachers' percentages in the lists come out too low.
+  const attachments: { teacher_id: string; category: string; subcategory: string | null; admin_viewed_at: string | null }[] = [];
+  for (let from = 0; ; from += 1000) {
+    const { data: page } = await supabaseAdmin
+      .from("attachments")
+      .select("teacher_id, category, subcategory, admin_viewed_at")
+      .is("deleted_at", null)
+      .order("id")
+      .range(from, from + 999);
+    attachments.push(...(page ?? []));
+    if (!page || page.length < 1000) break;
+  }
+
+  // قياس الأثر is filled in as structured entries rather than uploaded files, but counts toward the same
+  // slot -- exactly as getSlotCounts does for the teacher's own dashboard.
+  const { data: impactRows } = await supabaseAdmin.from("impact_measurements").select("teacher_id");
 
   const { data: schedules } = await supabaseAdmin
     .from("schedules")
@@ -46,7 +59,7 @@ export async function getTeachersWithCompletion(): Promise<TeacherWithCompletion
 
   const slotCountsByTeacher = new Map<string, Record<string, number>>();
   const unviewedByAdminTeacherIds = new Set<string>();
-  for (const a of attachments ?? []) {
+  for (const a of attachments) {
     const slotKey = `${a.category}:${a.subcategory ?? ""}`;
     if (!slotCountsByTeacher.has(a.teacher_id)) {
       slotCountsByTeacher.set(a.teacher_id, {});
@@ -54,9 +67,15 @@ export async function getTeachersWithCompletion(): Promise<TeacherWithCompletion
     const counts = slotCountsByTeacher.get(a.teacher_id)!;
     counts[slotKey] = (counts[slotKey] ?? 0) + 1;
 
-    if (!a.admin_viewed_at && TEACHER_WRITABLE_CATEGORIES.includes(a.category)) {
+    if (!a.admin_viewed_at && (TEACHER_WRITABLE_CATEGORIES as string[]).includes(a.category)) {
       unviewedByAdminTeacherIds.add(a.teacher_id);
     }
+  }
+
+  for (const row of impactRows ?? []) {
+    const counts = slotCountsByTeacher.get(row.teacher_id) ?? {};
+    counts["learning_outcomes:impact_measurement"] = (counts["learning_outcomes:impact_measurement"] ?? 0) + 1;
+    slotCountsByTeacher.set(row.teacher_id, counts);
   }
 
   return (teachers ?? []).map((t) => {
