@@ -452,3 +452,33 @@ alter table student_referrals add column if not exists agent_done_at timestamptz
 alter table student_referrals add column if not exists completed_at timestamptz;
 -- referrals that were already forwarded before this existed obviously had their agent stage opened
 update student_referrals set agent_opened_at = coalesce(sent_to_counselor_at, updated_at) where status = 'with_counselor' and agent_opened_at is null;
+
+-- المسائلات: one row per teacher per inquiry, cut out of a PDF that محمد الخميس uploads.
+-- kind 'delay' (مسائلات تأخير حضوري): the teacher justifies, the system suggests accept/reject by the minutes
+-- late, رائد confirms or changes it, and only then does the teacher see the decision. kind 'other' (المسائلات
+-- الأخرى): sent to the teacher as-is and رائد decides. teacher_opened_at is when the teacher first opened it.
+create table if not exists inquiries (
+  id uuid primary key default gen_random_uuid(),
+  kind text not null check (kind in ('delay', 'other')),
+  teacher_id uuid not null references users(id) on delete cascade,
+  batch_id uuid not null,
+  source_path text not null,
+  source_page integer,
+  teacher_file_path text,
+  extracted_text text not null default '',
+  delay_minutes integer,
+  uploaded_by uuid references users(id) on delete set null,
+  created_at timestamptz not null default now(),
+  teacher_opened_at timestamptz,
+  justification text,
+  justified_at timestamptz,
+  system_decision text check (system_decision in ('accepted', 'rejected')),
+  system_note text,
+  decision text check (decision in ('accepted', 'rejected')),
+  decision_note text,
+  decided_by uuid references users(id) on delete set null,
+  decided_at timestamptz
+);
+create index if not exists idx_inquiries_teacher on inquiries(teacher_id);
+create index if not exists idx_inquiries_kind on inquiries(kind, created_at desc);
+alter table inquiries enable row level security;

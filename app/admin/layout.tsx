@@ -19,6 +19,7 @@ const fullNavItems: NavItem[] = [
   { href: "/admin/reports", label: "تصدير تقرير" },
   { href: "/admin/school-management", label: "الإنجاز المدرسي" },
   { href: "/admin/weekly-review", label: "متابعة ملفات المعلمين" },
+  { href: "/admin/inquiries", label: "المسائلات" },
   { href: "/admin/student-referrals", label: "تحويلات الطلاب" },
   { href: "/admin/activity-log", label: "سجل النشاط" },
   { href: "/admin/trash", label: "سلة المحذوفات" },
@@ -54,6 +55,12 @@ export default async function AdminLayout({ children }: { children: React.ReactN
         ...(restrictedCategory === "student_affairs_agent" || restrictedCategory === "student_guidance"
           ? [{ href: "/admin/student-referrals", label: "تحويلات الطلاب" }]
           : []),
+        ...(restrictedCategory === "inquiries_officer"
+          ? [
+              { href: "/admin/inquiries?kind=delay", label: "مسائلات تأخير (حضوري)" },
+              { href: "/admin/inquiries?kind=other", label: "المسائلات الأخرى" },
+            ]
+          : []),
         ...classTimeNav,
         ...(canBuildSchedule ? [{ href: "/admin/schedule-builder", label: "جدول مدرسي" }] : []),
       ]
@@ -65,7 +72,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
         ]
       : fullNavItems.filter((item) => {
           if (item.href === "/admin/student-referrals") return !!session && getReferralActor(session.user) === "viewer";
-          if (item.href === "/admin/weekly-review") return !!session && canReview(session.user);
+          if (item.href === "/admin/weekly-review" || item.href === "/admin/inquiries") return !!session && canReview(session.user);
           return true;
         });
 

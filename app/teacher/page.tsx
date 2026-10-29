@@ -10,6 +10,7 @@ import {
 import { TEACHER_COMPLETION_SLOTS, TOTAL_TEACHER_COMPLETION_SLOTS } from "@/lib/portfolio-sections";
 import { getSchoolManagementCategory } from "@/lib/school-files";
 import { getFilesNeedingRevision } from "@/lib/weekly-review";
+import { listInquiries } from "@/lib/inquiries";
 import { getRecentClassTimeFlags } from "@/lib/class-time-flags";
 import { ProgressGrid } from "@/components/portfolio/ProgressGrid";
 
@@ -25,6 +26,7 @@ export default async function TeacherDashboard() {
   ]);
 
   const classTimeFlags = await getRecentClassTimeFlags(session!.user.id);
+  const pendingInquiries = (await listInquiries({ teacherId: session!.user.id })).filter((i) => !i.decidedAt && !i.justifiedAt).length;
 
   const restrictedCategoryLabel = session!.user.restrictedCategory
     ? (await getSchoolManagementCategory(session!.user.restrictedCategory))?.labelAr ?? session!.user.restrictedCategory
@@ -84,6 +86,15 @@ export default async function TeacherDashboard() {
           </ul>
           <p className="text-xs text-amber-700 dark:text-amber-300">ارفع النسخة المعدّلة في نفس القسم، ويمكنك حذف القديمة.</p>
         </div>
+      )}
+      {pendingInquiries > 0 && (
+        <Link
+          href="/teacher/inquiries"
+          className="mb-4 flex items-center justify-between gap-2 rounded-xl border border-red-300 dark:border-red-900 bg-red-50 dark:bg-red-900/20 p-4 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg"
+        >
+          <span className="font-semibold text-red-800 dark:text-red-200">عندك {pendingInquiries} مسائلة بانتظار تبريرك</span>
+          <span className="text-xs text-red-700 dark:text-red-300">اضغط لفتحها</span>
+        </Link>
       )}
       {classTimeFlags.length > 0 && (
         <div className="mb-4 flex flex-col gap-2 rounded-xl border border-red-300 dark:border-red-900 bg-red-50 dark:bg-red-900/20 p-4">

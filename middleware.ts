@@ -20,7 +20,8 @@ export default auth((req) => {
     nextUrl.pathname.startsWith("/api/schedule-builder") ||
     nextUrl.pathname.startsWith("/api/impact-measurements") ||
     nextUrl.pathname.startsWith("/api/student-referrals") ||
-    nextUrl.pathname.startsWith("/api/weekly-review");
+    nextUrl.pathname.startsWith("/api/weekly-review") ||
+    nextUrl.pathname.startsWith("/api/inquiries");
 
   if (!session && (isAdminPath || isTeacherPath || isProtectedApi)) {
     if (nextUrl.pathname.startsWith("/api/")) {
@@ -88,10 +89,12 @@ export default auth((req) => {
       nextUrl.pathname.startsWith("/api/school-files") ||
       (inReferralWorkflow && nextUrl.pathname.startsWith("/api/student-referrals")) ||
       (canTrackClassTime && nextUrl.pathname === "/api/teacher-performance") ||
-      (restrictedCategory === "teacher_affairs_agent" && nextUrl.pathname === "/api/teachers/files-manifest");
+      (restrictedCategory === "teacher_affairs_agent" && nextUrl.pathname === "/api/teachers/files-manifest") ||
+      (restrictedCategory === "inquiries_officer" && nextUrl.pathname.startsWith("/api/inquiries"));
     const allowedPage =
       nextUrl.pathname === "/admin" ||
       (inReferralWorkflow && nextUrl.pathname.startsWith("/admin/student-referrals")) ||
+      (restrictedCategory === "inquiries_officer" && nextUrl.pathname.startsWith("/admin/inquiries")) ||
       (canTrackClassTime && (nextUrl.pathname === "/admin/class-time" || nextUrl.pathname === "/admin/school-schedule"));
     const lockedDown = isAdminPath || isProtectedApi;
 
@@ -122,5 +125,6 @@ export const config = {
     "/api/impact-measurements/:path*",
     "/api/student-referrals/:path*",
     "/api/weekly-review/:path*",
+    "/api/inquiries/:path*",
   ],
 };

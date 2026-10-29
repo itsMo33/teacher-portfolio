@@ -7,6 +7,7 @@ import { FileUploadDropzone } from "@/components/portfolio/FileUploadDropzone";
 import { SchoolFileList } from "@/components/admin/SchoolFileList";
 import { DownloadAllFilesButton } from "@/components/admin/DownloadAllFilesButton";
 import { canReview } from "@/lib/weekly-review";
+import { INQUIRY_OFFICER_CATEGORY, listInquiries } from "@/lib/inquiries";
 import { getRecentClassTimeFlags } from "@/lib/class-time-flags";
 
 interface DashboardCard {
@@ -41,6 +42,28 @@ async function RestrictedDashboard({
   referralsOnly: boolean;
   canTrackClassTime: boolean;
 }) {
+  // The account that sends out the مسائلات PDFs has just those two sections -- no file-upload sections.
+  if (categoryKey === INQUIRY_OFFICER_CATEGORY) {
+    return (
+      <div className="grid max-w-2xl grid-cols-1 gap-4 sm:grid-cols-2">
+        {[
+          { href: "/admin/inquiries?kind=delay", label: "مسائلات تأخير (حضوري)", description: "ارفع ملف PDF وأرسل كل معلم مسائلته", accentColor: "#dc2626" },
+          { href: "/admin/inquiries?kind=other", label: "المسائلات الأخرى", description: "ارفع ملف PDF وأرسله للمعلمين لتقييم رائد", accentColor: "#7c3aed" },
+        ].map((card) => (
+          <Link
+            key={card.href}
+            href={card.href}
+            style={{ borderInlineStartColor: card.accentColor, borderInlineStartWidth: 4 }}
+            className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg"
+          >
+            <h3 className="font-semibold text-slate-900 dark:text-slate-50">{card.label}</h3>
+            <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">{card.description}</p>
+          </Link>
+        ))}
+      </div>
+    );
+  }
+
   const category = await getSchoolManagementCategory(categoryKey);
   if (!category) {
     return <p className="text-sm text-red-600 dark:text-red-400">القسم المخصص لهذا الحساب غير موجود.</p>;
@@ -192,10 +215,23 @@ export default async function AdminDashboard() {
 
   // رائد (and the manager) are told, for today, whenever someone records a teacher late or absent in a class period.
   const classTimeFlags = session && canReview(session.user) ? await getRecentClassTimeFlags(undefined, 1) : [];
+  // مسائلات: what is waiting on رائد's decision, and how many teachers haven't even opened theirs.
+  const allInquiries = session && canReview(session.user) ? await listInquiries() : [];
+  const inquiriesAwaiting = allInquiries.filter((i) => !i.decision).length;
+  const inquiriesUnopened = allInquiries.filter((i) => !i.decision && !i.teacherOpenedAt).length;
 
   return (
     <div>
       <h2 className="text-xl font-bold text-slate-900 dark:text-slate-50 mb-4">لوحة تحكم الإدارة</h2>
+      {inquiriesAwaiting > 0 && (
+        <Link
+          href="/admin/inquiries"
+          className="mb-5 flex flex-wrap items-center justify-between gap-2 rounded-xl border border-amber-300 dark:border-amber-900 bg-amber-50 dark:bg-amber-900/20 p-4 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg"
+        >
+          <span className="font-semibold text-amber-900 dark:text-amber-200">المسائلات بانتظار قرارك: {inquiriesAwaiting}</span>
+          <span className="text-xs text-amber-800 dark:text-amber-300">منها {inquiriesUnopened} لم يفتحها المعلم</span>
+        </Link>
+      )}
       {classTimeFlags.length > 0 && (
         <div className="mb-5 flex flex-col gap-2 rounded-xl border border-red-300 dark:border-red-900 bg-red-50 dark:bg-red-900/20 p-4">
           <p className="font-semibold text-red-800 dark:text-red-200">
