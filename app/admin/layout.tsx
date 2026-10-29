@@ -20,6 +20,7 @@ const fullNavItems: NavItem[] = [
   { href: "/admin/school-management", label: "الإنجاز المدرسي" },
   { href: "/admin/weekly-review", label: "متابعة ملفات المعلمين" },
   { href: "/admin/inquiries", label: "المسائلات" },
+  { href: "/admin/late-minutes", label: "دقائق تأخر المعلمين" },
   { href: "/admin/student-referrals", label: "تحويلات الطلاب" },
   { href: "/admin/activity-log", label: "سجل النشاط" },
   { href: "/admin/trash", label: "سلة المحذوفات" },
@@ -72,7 +73,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
         ]
       : fullNavItems.filter((item) => {
           if (item.href === "/admin/student-referrals") return !!session && getReferralActor(session.user) === "viewer";
-          if (item.href === "/admin/weekly-review" || item.href === "/admin/inquiries") return !!session && canReview(session.user);
+          if (item.href === "/admin/weekly-review" || item.href === "/admin/inquiries" || item.href === "/admin/late-minutes") return !!session && canReview(session.user);
           return true;
         });
 

@@ -25,6 +25,7 @@ const DASHBOARD_CARDS: DashboardCard[] = [
   { href: "/admin/substitute-schedule", label: "جدول الانتظار", description: "إسناد المعلمين المنتظرين لتغطية الحصص", accentColor: "#0d9488" },
   { href: "/admin/statistics", label: "الإحصائيات", description: "نسب رفع الملفات لكل قسم بين المعلمين", accentColor: "#d97706" },
   { href: "/admin/teacher-performance", label: "متابعة أداء المعلمين", description: "الطابور الصباحي، الإشراف، المناوبة، وغيرها", accentColor: "#9333ea" },
+  { href: "/admin/late-minutes", label: "دقائق تأخر المعلمين", description: "مجموع دقائق تأخر كل معلم في فترة تختارها", accentColor: "#dc2626" },
   { href: "/admin/weekly-review", label: "متابعة ملفات المعلمين", description: "الملفات الجديدة من المعلمين ومن لم يرفع بعد", accentColor: "#059669" },
 ];
 
@@ -254,7 +255,7 @@ export default async function AdminDashboard() {
       )}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         {DASHBOARD_CARDS.filter((card) => {
-          if (card.href === "/admin/weekly-review") return !!session && canReview(session.user);
+          if (card.href === "/admin/weekly-review" || card.href === "/admin/late-minutes") return !!session && canReview(session.user);
           return true;
         }).map((card, index) => (
           <Link
