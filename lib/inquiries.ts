@@ -4,7 +4,7 @@ import { getDocumentProxy, extractText } from "unpdf";
 import { PDFDocument } from "pdf-lib";
 import { supabaseAdmin } from "@/lib/supabase/server";
 import { getSignedUrl, PORTFOLIO_BUCKET } from "@/lib/supabase/storage";
-import { evaluateDelay, parseInquiryPages, type InquiryDecision, type InquiryKind, type ParsedInquiry } from "@/lib/inquiry-logic";
+import { displayText, evaluateDelay, parseInquiryPages, type InquiryDecision, type InquiryKind, type ParsedInquiry } from "@/lib/inquiry-logic";
 
 export const INQUIRY_OFFICER_CATEGORY = "inquiries_officer";
 
@@ -102,6 +102,8 @@ export interface TeacherInquiryView {
   createdAt: string;
   delayMinutes: number | null;
   extractedText: string;
+  /** False when the PDF's text came out garbled -- the page itself is then the thing to read. */
+  textReadable: boolean;
   hasTeacherFile: boolean;
   justification: string | null;
   justifiedAt: string | null;
@@ -111,12 +113,14 @@ export interface TeacherInquiryView {
 
 export function toTeacherView(i: Inquiry): TeacherInquiryView {
   const decided = i.decidedAt !== null;
+  const shown = displayText(i.extractedText);
   return {
     id: i.id,
     kind: i.kind,
     createdAt: i.createdAt,
     delayMinutes: i.delayMinutes,
-    extractedText: i.extractedText,
+    extractedText: shown.text,
+    textReadable: shown.readable,
     hasTeacherFile: i.hasTeacherFile,
     justification: i.justification,
     justifiedAt: i.justifiedAt,

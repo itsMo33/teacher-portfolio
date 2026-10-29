@@ -68,7 +68,11 @@ function Card({ item }: { item: TeacherInquiryView }) {
 
       {open && (
         <div className="flex flex-col gap-3 border-t border-slate-100 dark:border-slate-800 pt-3">
-          <p className="whitespace-pre-wrap rounded-lg bg-slate-50 dark:bg-slate-800/50 p-3 text-slate-700 dark:text-slate-200">{item.extractedText}</p>
+          {item.textReadable || !item.hasTeacherFile ? (
+            <p className="whitespace-pre-wrap rounded-lg bg-slate-50 dark:bg-slate-800/50 p-3 text-slate-700 dark:text-slate-200">{item.extractedText}</p>
+          ) : (
+            <p className="rounded-lg bg-slate-50 dark:bg-slate-800/50 p-3 text-slate-600 dark:text-slate-300">افتح ملف المسائلة لقراءتها.</p>
+          )}
           {item.hasTeacherFile && (
             <button type="button" onClick={viewFile} className="self-start text-xs text-[var(--brand-primary)] hover:underline">
               فتح ملف المسائلة

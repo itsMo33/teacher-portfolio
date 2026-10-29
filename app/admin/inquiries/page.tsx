@@ -2,6 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { auth } from "@/lib/auth/auth-options";
 import { getInquiryRole, listInquiries } from "@/lib/inquiries";
+import { displayText } from "@/lib/inquiry-logic";
 import { InquiryUploader } from "@/components/inquiries/InquiryUploader";
 import { InquiryReviewList } from "@/components/inquiries/InquiryReviewList";
 
@@ -55,7 +56,8 @@ export default async function InquiriesPage({ searchParams }: { searchParams: Pr
             teacherName: i.teacherName,
             createdAt: i.createdAt,
             delayMinutes: i.delayMinutes,
-            extractedText: i.extractedText,
+            extractedText: displayText(i.extractedText).text,
+            textReadable: displayText(i.extractedText).readable,
             teacherOpenedAt: i.teacherOpenedAt,
             justification: i.justification,
             systemDecision: i.systemDecision,

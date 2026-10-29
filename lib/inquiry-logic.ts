@@ -257,3 +257,14 @@ export function evaluateDelay(minutes: number | null, justification: string | nu
       : `تأخر ${minutes} دقيقة ولم يكتب تبريراً -- رُفضت المسائلة تلقائياً`,
   };
 }
+
+/** The extracted PDF text made fit to show: Arabic presentation forms folded back to plain letters, and a check for
+ *  whether it came out readable. Text with stray symbols (a font whose letters don't map back) or long runs of
+ *  letters with no spaces is not worth showing -- the original page is better. */
+export function displayText(raw: string): { text: string; readable: boolean } {
+  const text = raw.normalize("NFKC").replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F]/g, "");
+  // anything outside Arabic, Latin letters, digits, spaces and everyday punctuation is a sign of broken text
+  const stray = /[^؀-ۿݐ-ݿA-Za-z0-9\s.,:;!?()\-–—/«»"'،؛؟%+=_‎‏]/.test(text);
+  const merged = /[؀-ۿ]{26,}/.test(text);
+  return { text, readable: !stray && !merged };
+}

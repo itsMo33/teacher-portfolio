@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { detectExcuses, evaluateDelay, extractMinutes, parseInquiryPages } from "./inquiry-logic";
+import { detectExcuses, displayText, evaluateDelay, extractMinutes, parseInquiryPages } from "./inquiry-logic";
 
 const teachers = [
   { id: "t1", name: "عبدالرحيم محمد القرني" },
@@ -85,5 +85,17 @@ describe("parseInquiryPages with awkward PDF text", () => {
     const reversed = [..."مسائلة المعلم عبدالرحيم محمد القرني"].reverse().join("");
     const items = parseInquiryPages([reversed], teachers);
     expect(items[0].teacherId).toBe("t1");
+  });
+});
+
+describe("displayText", () => {
+  it("folds presentation forms and accepts clean text", () => {
+    expect(displayText("ﻣﺴﺎﺋﻞ ﺗﺄﺧﺮ 5 ﺩﻗﺎﺋﻖ").readable).toBe(true);
+    expect(displayText("مسائلة تأخر 5 دقائق").text).toBe("مسائلة تأخر 5 دقائق");
+  });
+
+  it("flags text with stray symbols or merged words as unreadable", () => {
+    expect(displayText("ﺍǄﺜﺎﻧﻲ ﺗﺄﺧﺮ").readable).toBe(false);
+    expect(displayText("تأخر٥دقائقعنالطابورالصباحيهذاالملفتجريبي").readable).toBe(false);
   });
 });

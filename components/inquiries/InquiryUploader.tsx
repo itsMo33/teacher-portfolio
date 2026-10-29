@@ -2,6 +2,7 @@
 
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import { displayText } from "@/lib/inquiry-logic";
 
 interface PreviewItem {
   teacherId: string | null;
@@ -179,7 +180,9 @@ export function InquiryUploader({ kind }: { kind: "delay" | "other" }) {
                     </label>
                   )}
                 </div>
-                <p className="line-clamp-2 text-xs text-slate-500">{item.text}</p>
+                <p className="line-clamp-2 text-xs text-slate-500">
+                  {displayText(item.text).readable ? displayText(item.text).text : "النص ما انقرأ بشكل واضح من الملف -- راجع الاسم والدقائق."}
+                </p>
               </li>
             ))}
           </ul>

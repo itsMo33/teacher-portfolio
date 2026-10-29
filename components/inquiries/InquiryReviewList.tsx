@@ -10,6 +10,7 @@ export interface ReviewInquiry {
   createdAt: string;
   delayMinutes: number | null;
   extractedText: string;
+  textReadable: boolean;
   teacherOpenedAt: string | null;
   justification: string | null;
   systemDecision: "accepted" | "rejected" | null;
@@ -132,7 +133,11 @@ function Row({ item }: { item: ReviewInquiry }) {
           فتح ملف PDF
         </button>
       </div>
-      {open && <p className="whitespace-pre-wrap rounded-lg bg-slate-50 dark:bg-slate-800/50 p-2 text-xs text-slate-600 dark:text-slate-300">{item.extractedText}</p>}
+      {open && (
+        <p className="whitespace-pre-wrap rounded-lg bg-slate-50 dark:bg-slate-800/50 p-2 text-xs text-slate-600 dark:text-slate-300">
+          {item.textReadable ? item.extractedText : "النص ما انقرأ بشكل واضح من الملف -- افتح ملف PDF."}
+        </p>
+      )}
 
       {!item.decision ? (
         <div className="flex flex-col gap-2 border-t border-slate-100 dark:border-slate-800 pt-2">
