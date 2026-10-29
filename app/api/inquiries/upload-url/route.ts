@@ -11,7 +11,8 @@ const MAX_PDF_BYTES = 30 * 1024 * 1024;
 export async function POST(req: NextRequest) {
   const session = await auth();
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  if (getInquiryRole(session.user) !== "officer") return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  const inquiryRole = getInquiryRole(session.user);
+  if (inquiryRole !== "officer" && inquiryRole !== "reviewer") return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
   const { fileName, size } = await req.json();
   if (typeof fileName !== "string" || !fileName.toLowerCase().endsWith(".pdf")) {

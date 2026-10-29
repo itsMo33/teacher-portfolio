@@ -9,7 +9,8 @@ export const maxDuration = 60;
 export async function POST(req: NextRequest) {
   const session = await auth();
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  if (getInquiryRole(session.user) !== "officer") return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  const inquiryRole = getInquiryRole(session.user);
+  if (inquiryRole !== "officer" && inquiryRole !== "reviewer") return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
   const { path } = await req.json();
   if (typeof path !== "string" || !path.startsWith("inquiries/uploads/") || path.includes("..")) {

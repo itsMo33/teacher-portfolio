@@ -41,7 +41,7 @@ export default async function InquiriesPage({ searchParams }: { searchParams: Pr
         </div>
       </div>
 
-      {role === "officer" && !session!.user.demoViewOnly && <InquiryUploader kind={kind} />}
+      {!session!.user.demoViewOnly && <InquiryUploader kind={kind} />}
 
       {role === "officer" ? (
         <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4 text-sm text-slate-600 dark:text-slate-300">
