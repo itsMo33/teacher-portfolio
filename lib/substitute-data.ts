@@ -81,7 +81,7 @@ function editDistance(a: string, b: string): number {
  * plus a fuzzy (edit-distance) comparison of the last word, which tolerates both the dropped
  * middle name and minor "ال"/"آل" family-name spelling drift between the two sources.
  */
-export function matchShortName(fullName: string): string | null {
+export function matchShortName(fullName: string, names: string[] = Object.keys(OFFICIAL_LOAD)): string | null {
   const fullWords = normalizeArabic(fullName).split(/\s+/).filter(Boolean);
   if (fullWords.length === 0) return null;
   const fullFirst = fullWords[0];
@@ -91,7 +91,7 @@ export function matchShortName(fullName: string): string | null {
   // within edit distance of the same account (أحمد براك vs محمد البحار for "احمد عبدالله البراك"),
   // and the one whose first word matches exactly is the right one.
   let best: { name: string; dist: number } | null = null;
-  for (const shortName of Object.keys(OFFICIAL_LOAD)) {
+  for (const shortName of names) {
     const shortWords = normalizeArabic(shortName).split(/\s+/).filter(Boolean);
     if (shortWords.length === 0) continue;
     const firstDist = editDistance(shortWords[0], fullFirst);

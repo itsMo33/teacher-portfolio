@@ -14,7 +14,7 @@ export default async function TeacherPerformanceStatsPrintPage({
   if (!teacherId) notFound();
 
   const [{ data: teacher }, { data: records }] = await Promise.all([
-    supabaseAdmin.from("users").select("id, name, national_id, subject").eq("id", teacherId).eq("role", "teacher").is("deleted_at", null).maybeSingle(),
+    supabaseAdmin.from("users").select("id, name, national_id, subject").eq("id", teacherId).or("role.eq.teacher,track_performance.eq.true").is("deleted_at", null).maybeSingle(),
     supabaseAdmin
       .from("teacher_performance_records")
       .select("category, record_date, status, period, late_minutes")

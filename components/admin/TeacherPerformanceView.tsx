@@ -90,6 +90,8 @@ export function TeacherPerformanceView({
   const [teachers, setTeachers] = useState<Teacher[]>([]);
   // تفعيل حصص الانتظار: who was put in as المنتظر on the chosen day (from the waiting table), and in which periods.
   const [waiting, setWaiting] = useState<Record<string, string[]>>({});
+  // who the waiting table has down as ABSENT on the chosen day, and in which periods -- shown as غائب so they aren't marked late
+  const [absentWaiting, setAbsentWaiting] = useState<Record<string, string[]>>({});
   const [records, setRecords] = useState<Record_[]>([]);
   const [loaded, setLoaded] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -117,6 +119,9 @@ export function TeacherPerformanceView({
       .then((data) => {
         if (seq !== loadSeq.current) return;
         setTeachers(data.teachers ?? []);
+        setAbsentWaiting(
+          Object.fromEntries(((data.absentWaiting ?? []) as { teacherId: string; periods: string[] }[]).map((w) => [w.teacherId, w.periods]))
+        );
         setWaiting(
           Object.fromEntries(((data.waiting ?? []) as { teacherId: string; periods: string[] }[]).map((w) => [w.teacherId, w.periods]))
         );
@@ -527,6 +532,11 @@ export function TeacherPerformanceView({
                 >
                   <span className="font-bold">{status === "green" ? "✓" : status === "yellow" ? "!" : "✗"}</span>
                   <span className="truncate">{t.name}</span>
+                  {absentWaiting[t.id] && (
+                    <span className="mr-auto shrink-0 rounded-full bg-slate-800 px-1.5 py-0.5 text-[10px] text-white dark:bg-slate-200 dark:text-slate-900">
+                      غائب (انتظار)
+                    </span>
+                  )}
                 </button>
               );
             })}
@@ -559,11 +569,27 @@ export function TeacherPerformanceView({
                     >
                       <span className="font-bold">{agg === "present" ? "✓" : agg === "late" ? "⏱" : "✗"}</span>
                       <span className="truncate">{t.name}</span>
+                      {absentWaiting[t.id] && (
+                        <span className="mr-auto shrink-0 rounded-full bg-slate-800 px-1.5 py-0.5 text-[10px] text-white dark:bg-slate-200 dark:text-slate-900">
+                          غائب (انتظار)
+                        </span>
+                      )}
                     </button>
                     {isExpanded && (
                       <div className="col-span-full flex flex-wrap gap-1.5 rounded-lg border border-dashed border-slate-300 dark:border-slate-700 p-2">
                         {PERFORMANCE_PERIODS.map((p) => {
                           const pStatus = periodStatusFor(t.id, p);
+                          if (absentWaiting[t.id]?.includes(p)) {
+                            // absent in the waiting table for this period -- nothing to mark here
+                            return (
+                              <span
+                                key={p}
+                                className="rounded-full border border-slate-400 bg-slate-200 px-3 py-1.5 text-xs text-slate-700 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-300"
+                              >
+                                الحصة {p} — غائب (جدول الانتظار)
+                              </span>
+                            );
+                          }
                           const pColor =
                             pStatus === "absent"
                               ? STATUS_COLORS.absent
@@ -647,6 +673,11 @@ export function TeacherPerformanceView({
                 >
                   <span className="font-bold">{status === "present" ? "✓" : status === "absent" ? "✗" : ""}</span>
                   <span className="truncate">{t.name}</span>
+                  {absentWaiting[t.id] && (
+                    <span className="mr-auto shrink-0 rounded-full bg-slate-800 px-1.5 py-0.5 text-[10px] text-white dark:bg-slate-200 dark:text-slate-900">
+                      غائب (انتظار)
+                    </span>
+                  )}
                   {category.mode === "waiting-auto" && waiting[t.id] && (
                     <span className="mr-auto shrink-0 text-xs opacity-80">
                       الحصة {[...waiting[t.id]].sort().join("، ")}

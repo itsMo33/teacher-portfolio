@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth/auth-options";
 import { supabaseAdmin } from "@/lib/supabase/server";
-import { getWaitingAssignments } from "@/lib/waiting-activation";
+import { getTrackedPeople } from "@/lib/performance-people";
+import { getWaitingAbsences, getWaitingAssignments } from "@/lib/waiting-activation";
 import { getPerformanceCategory, isValidPerformanceCategory, PERFORMANCE_PERIODS } from "@/lib/teacher-performance";
 
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
@@ -32,15 +33,14 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "Missing or invalid date (expected YYYY-MM-DD)" }, { status: 400 });
   }
 
-  const [{ data: teachers, error: teachersError }, { data: records, error: recordsError }] = await Promise.all([
-    supabaseAdmin.from("users").select("id, name").eq("role", "teacher").is("deleted_at", null).order("name"),
+  const [{ data: teachers }, { data: records, error: recordsError }] = await Promise.all([
+    getTrackedPeople(),
     supabaseAdmin
       .from("teacher_performance_records")
       .select("teacher_id, category, status, period, late_minutes, recorded_by")
       .eq("record_date", date),
   ]);
 
-  if (teachersError) return NextResponse.json({ error: teachersError.message }, { status: 500 });
   if (recordsError) return NextResponse.json({ error: recordsError.message }, { status: 500 });
 
   const recorderIds = [...new Set((records ?? []).map((x) => x.recorded_by as string | null).filter(Boolean) as string[])];
@@ -50,10 +50,13 @@ export async function GET(req: NextRequest) {
   const recorderName = new Map((recorders ?? []).map((u) => [u.id as string, u.name as string]));
 
   const waiting = (await getWaitingAssignments([date], teachers ?? [])).get(date)!;
+  // teachers the waiting table has down as absent today (and in which periods) -- they must not be marked late
+  const absentWaiting = (await getWaitingAbsences([date], teachers ?? [])).get(date)!;
 
   return NextResponse.json({
     teachers: teachers ?? [],
     waiting: [...waiting].map(([teacherId, periods]) => ({ teacherId, periods })),
+    absentWaiting: [...absentWaiting].map(([teacherId, periods]) => ({ teacherId, periods })),
     records: (records ?? [])
       .filter((r) => !classTimeOnly || r.category === CLASS_TIME)
       .map((r) => ({
@@ -99,6 +102,17 @@ export async function PUT(req: NextRequest) {
     periodValue = period;
   } else if (status !== "present" && status !== "absent") {
     return NextResponse.json({ error: "Invalid status" }, { status: 400 });
+  }
+
+  // a teacher the waiting table has down as absent in that period can't also be marked late or absent here
+  if (category === CLASS_TIME && periodValue) {
+    const { data: person } = await supabaseAdmin.from("users").select("id, name").eq("id", teacherId).maybeSingle();
+    if (person) {
+      const absent = (await getWaitingAbsences([date], [person as { id: string; name: string }])).get(date)?.get(teacherId) ?? [];
+      if (absent.includes(periodValue)) {
+        return NextResponse.json({ error: "المعلم غائب في جدول الانتظار في هذه الحصة" }, { status: 409 });
+      }
+    }
   }
 
   // Minutes only mean something on a "late" row: a whole number of minutes, or none yet.

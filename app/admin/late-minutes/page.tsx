@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { auth } from "@/lib/auth/auth-options";
 import { supabaseAdmin } from "@/lib/supabase/server";
 import { canReview } from "@/lib/weekly-review";
+import { getTrackedPeople } from "@/lib/performance-people";
 import { riyadhToday } from "@/lib/class-time-flags";
 import { addDays } from "@/lib/teacher-performance";
 import { PrintButton } from "@/components/admin/PrintButton";
@@ -48,7 +49,7 @@ export default async function LateMinutesPage({
   const skipAccepted = params.skipAccepted === "1";
 
   const [{ data: teachers }, periodRows, inquiryRows] = await Promise.all([
-    supabaseAdmin.from("users").select("id, name").eq("role", "teacher").is("deleted_at", null).order("name"),
+    getTrackedPeople(),
     readAll<{ teacher_id: string; late_minutes: number | null }>((a, b) =>
       supabaseAdmin
         .from("teacher_performance_records")

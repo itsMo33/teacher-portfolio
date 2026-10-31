@@ -1,4 +1,5 @@
-export type Role = "teacher" | "agent" | "manager";
+/** "staff" is someone tracked in متابعة أداء المعلمين who has no login of their own. */
+export type Role = "teacher" | "agent" | "manager" | "staff";
 
 export interface AppUser {
   id: string;

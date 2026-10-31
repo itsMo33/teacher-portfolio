@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { supabaseAdmin } from "@/lib/supabase/server";
+import { getTrackedPeople } from "@/lib/performance-people";
 import { getWaitingAssignments } from "@/lib/waiting-activation";
 import { addDays, PERFORMANCE_CATEGORIES, schoolWeekDays, weekStartOf } from "@/lib/teacher-performance";
 import { SCHOOL_NAME } from "@/lib/school";
@@ -39,7 +40,7 @@ export default async function WeeklyPrintPage({ searchParams }: { searchParams: 
   const days = schoolWeekDays(weekStart);
 
   const [{ data: teachers }, { data: records }, { data: prep }] = await Promise.all([
-    supabaseAdmin.from("users").select("id, name").eq("role", "teacher").is("deleted_at", null).order("name"),
+    getTrackedPeople(),
     supabaseAdmin
       .from("teacher_performance_records")
       .select("teacher_id, category, record_date, status, period, late_minutes")

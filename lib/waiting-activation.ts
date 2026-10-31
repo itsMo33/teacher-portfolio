@@ -1,6 +1,6 @@
 import "server-only";
 import { supabaseAdmin } from "@/lib/supabase/server";
-import { matchShortName } from "@/lib/substitute-data";
+import { matchShortName, OFFICIAL_LOAD, RESERVE_TEACHER_NAMES } from "@/lib/substitute-data";
 import { weekStartOf } from "@/lib/teacher-performance";
 
 const DAY_KEYS = ["احد", "اثنين", "ثلاثاء", "اربعاء", "خميس"] as const;
@@ -24,20 +24,40 @@ export async function getWaitingAssignments(
   dates: string[],
   teachers: { id: string; name: string }[]
 ): Promise<Map<string, Map<string, string[]>>> {
+  return collectByDate(dates, teachers, "substitute");
+}
+
+/** The other side of the waiting table: who was put down as ABSENT on each date, and in which periods. Used so the
+ *  performance tracker shows them as absent instead of letting them be marked late. */
+export async function getWaitingAbsences(
+  dates: string[],
+  teachers: { id: string; name: string }[]
+): Promise<Map<string, Map<string, string[]>>> {
+  return collectByDate(dates, teachers, "absent_teacher");
+}
+
+// the waiting table names people by short name, and its reserve substitutes have no official load
+const WAITING_NAMES = [...Object.keys(OFFICIAL_LOAD), ...RESERVE_TEACHER_NAMES];
+
+async function collectByDate(
+  dates: string[],
+  teachers: { id: string; name: string }[],
+  field: "substitute" | "absent_teacher"
+): Promise<Map<string, Map<string, string[]>>> {
   const result = new Map<string, Map<string, string[]>>(dates.map((d) => [d, new Map()]));
   if (dates.length === 0) return result;
 
   const idByShortName = new Map<string, string>();
   for (const t of teachers) {
-    const short = matchShortName(t.name);
+    const short = matchShortName(t.name, WAITING_NAMES);
     if (short) idByShortName.set(short, t.id);
   }
 
   const weeks = new Set(dates.map(weekStartOf));
-  const { data } = await supabaseAdmin.from("substitute_assignments").select("day, period, substitute, created_at");
+  const { data } = await supabaseAdmin.from("substitute_assignments").select("day, period, substitute, absent_teacher, created_at");
 
   for (const row of data ?? []) {
-    const teacherId = idByShortName.get(row.substitute as string);
+    const teacherId = idByShortName.get(row[field] as string);
     if (!teacherId) continue;
     const week = weekStartOf(riyadhDay(row.created_at as string));
     if (!weeks.has(week)) continue;
