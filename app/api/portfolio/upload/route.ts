@@ -98,13 +98,13 @@ async function handleConfirm(req: NextRequest, session: Session) {
     return NextResponse.json({ error: "Missing category, filePath or fileName" }, { status: 400 });
   }
 
-  const resolved = resolveTeacherIdOrError(session, category, subcategory ?? null, teacherIdInput ?? null);
+  const resolved = resolveTeacherIdOrError(session, category, subcategory || null, teacherIdInput ?? null);
   if ("error" in resolved) return resolved.error;
 
   return finalizeAttachment(session, {
     teacherId: resolved.teacherId,
     category,
-    subcategory: subcategory ?? null,
+    subcategory: subcategory || null,
     filePath,
     fileName,
     mimeType,

@@ -58,7 +58,7 @@ async function finalize(
 async function handleConfirm(req: NextRequest, session: Session) {
   const { category, subcategory, filePath, fileName, mimeType } = await req.json();
 
-  if (!category || !filePath || !fileName || !(await isValidSchoolManagementSlot(category, subcategory ?? null))) {
+  if (!category || !filePath || !fileName || !(await isValidSchoolManagementSlot(category, subcategory || null))) {
     return NextResponse.json({ error: "Missing or invalid category, subcategory, filePath or fileName" }, { status: 400 });
   }
 
@@ -66,7 +66,7 @@ async function handleConfirm(req: NextRequest, session: Session) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 
-  return finalize(session, category, subcategory ?? null, filePath, fileName, mimeType);
+  return finalize(session, category, subcategory || null, filePath, fileName, mimeType);
 }
 
 export async function POST(req: NextRequest) {

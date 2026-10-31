@@ -20,7 +20,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Missing category, fileName or size" }, { status: 400 });
   }
 
-  if (!isValidCategory(category, subcategory ?? null)) {
+  if (!isValidCategory(category, subcategory || null)) {
     return NextResponse.json({ error: "Invalid category/subcategory" }, { status: 400 });
   }
 
@@ -53,7 +53,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "File too large (max 10MB)" }, { status: 400 });
   }
 
-  const path = buildPortfolioPath(teacherId, category, subcategory ?? null, fileName);
+  const path = buildPortfolioPath(teacherId, category, subcategory || null, fileName);
 
   try {
     const { signedUrl, token } = await createUploadSignedUrl(PORTFOLIO_BUCKET, path);

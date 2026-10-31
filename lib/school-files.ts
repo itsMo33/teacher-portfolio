@@ -59,7 +59,7 @@ export async function getSchoolFiles(category: string, subcategory: string | nul
     .is("deleted_at", null)
     .order("uploaded_at", { ascending: false });
 
-  query = subcategory ? query.eq("subcategory", subcategory) : query.is("subcategory", null);
+  query = subcategory ? query.eq("subcategory", subcategory) : query.or("subcategory.is.null,subcategory.eq.");
 
   const { data } = await query;
 

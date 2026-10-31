@@ -179,7 +179,8 @@ export async function getSectionAttachments(
     .is("deleted_at", null)
     .order("uploaded_at", { ascending: false });
 
-  query = subcategory ? query.eq("subcategory", subcategory) : query.is("subcategory", null);
+  // a section without subsections is stored with no subcategory -- either null or an empty string (older large-file uploads wrote ""), and both mean the same
+  query = subcategory ? query.eq("subcategory", subcategory) : query.or("subcategory.is.null,subcategory.eq.");
 
   const { data } = await query;
 

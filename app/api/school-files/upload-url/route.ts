@@ -20,7 +20,7 @@ export async function POST(req: NextRequest) {
 
   const { category, subcategory, fileName, mimeType, size } = await req.json();
 
-  if (!category || !fileName || typeof size !== "number" || !(await isValidSchoolManagementSlot(category, subcategory ?? null))) {
+  if (!category || !fileName || typeof size !== "number" || !(await isValidSchoolManagementSlot(category, subcategory || null))) {
     return NextResponse.json({ error: "Missing or invalid category, subcategory, fileName or size" }, { status: 400 });
   }
 
@@ -42,7 +42,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "File too large (max 10MB)" }, { status: 400 });
   }
 
-  const path = buildSchoolFilePath(category, subcategory ?? null, fileName);
+  const path = buildSchoolFilePath(category, subcategory || null, fileName);
 
   try {
     const { signedUrl, token } = await createUploadSignedUrl(PORTFOLIO_BUCKET, path);
