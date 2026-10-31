@@ -532,11 +532,6 @@ export function TeacherPerformanceView({
                 >
                   <span className="font-bold">{status === "green" ? "✓" : status === "yellow" ? "!" : "✗"}</span>
                   <span className="truncate">{t.name}</span>
-                  {absentWaiting[t.id] && (
-                    <span className="mr-auto shrink-0 rounded-full bg-slate-800 px-1.5 py-0.5 text-[10px] text-white dark:bg-slate-200 dark:text-slate-900">
-                      غائب (انتظار)
-                    </span>
-                  )}
                 </button>
               );
             })}
@@ -557,6 +552,20 @@ export function TeacherPerformanceView({
               ? [...teachers].sort((a, b) => Number(!!waiting[b.id]) - Number(!!waiting[a.id]))
               : teachers
             ).map((t) => {
+              // marked absent in the waiting table that day: absent for the whole day, nothing to record
+              if (absentWaiting[t.id]) {
+                return (
+                  <div
+                    key={t.id}
+                    title="غائب في جدول الانتظار لهذا اليوم"
+                    className="flex w-full cursor-not-allowed select-none items-center gap-1.5 rounded-xl border border-slate-400 bg-slate-300 px-3 py-2.5 text-right text-sm text-slate-700 dark:border-slate-600 dark:bg-slate-700 dark:text-slate-200"
+                  >
+                    <span className="font-bold">غ</span>
+                    <span className="truncate">{t.name}</span>
+                    <span className="mr-auto shrink-0 text-xs">غائب (انتظار)</span>
+                  </div>
+                );
+              }
               if (category.mode === "period-exception") {
                 const agg = aggregateStatusFor(t.id);
                 const isExpanded = expandedTeacherId === t.id;
@@ -569,11 +578,6 @@ export function TeacherPerformanceView({
                     >
                       <span className="font-bold">{agg === "present" ? "✓" : agg === "late" ? "⏱" : "✗"}</span>
                       <span className="truncate">{t.name}</span>
-                      {absentWaiting[t.id] && (
-                        <span className="mr-auto shrink-0 rounded-full bg-slate-800 px-1.5 py-0.5 text-[10px] text-white dark:bg-slate-200 dark:text-slate-900">
-                          غائب (انتظار)
-                        </span>
-                      )}
                     </button>
                     {isExpanded && (
                       <div className="col-span-full flex flex-wrap gap-1.5 rounded-lg border border-dashed border-slate-300 dark:border-slate-700 p-2">
@@ -673,11 +677,6 @@ export function TeacherPerformanceView({
                 >
                   <span className="font-bold">{status === "present" ? "✓" : status === "absent" ? "✗" : ""}</span>
                   <span className="truncate">{t.name}</span>
-                  {absentWaiting[t.id] && (
-                    <span className="mr-auto shrink-0 rounded-full bg-slate-800 px-1.5 py-0.5 text-[10px] text-white dark:bg-slate-200 dark:text-slate-900">
-                      غائب (انتظار)
-                    </span>
-                  )}
                   {category.mode === "waiting-auto" && waiting[t.id] && (
                     <span className="mr-auto shrink-0 text-xs opacity-80">
                       الحصة {[...waiting[t.id]].sort().join("، ")}

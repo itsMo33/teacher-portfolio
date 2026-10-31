@@ -104,14 +104,12 @@ export async function PUT(req: NextRequest) {
     return NextResponse.json({ error: "Invalid status" }, { status: 400 });
   }
 
-  // a teacher the waiting table has down as absent in that period can't also be marked late or absent here
-  if (category === CLASS_TIME && periodValue) {
+  // a teacher the waiting table has down as absent that day is absent for the whole day: nothing is recorded for them
+  {
     const { data: person } = await supabaseAdmin.from("users").select("id, name").eq("id", teacherId).maybeSingle();
     if (person) {
-      const absent = (await getWaitingAbsences([date], [person as { id: string; name: string }])).get(date)?.get(teacherId) ?? [];
-      if (absent.includes(periodValue)) {
-        return NextResponse.json({ error: "المعلم غائب في جدول الانتظار في هذه الحصة" }, { status: 409 });
-      }
+      const absent = (await getWaitingAbsences([date], [person as { id: string; name: string }])).get(date)?.has(teacherId);
+      if (absent) return NextResponse.json({ error: "المعلم غائب في جدول الانتظار لهذا اليوم" }, { status: 409 });
     }
   }
 

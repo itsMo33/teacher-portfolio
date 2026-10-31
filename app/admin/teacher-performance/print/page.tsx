@@ -2,7 +2,7 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import { supabaseAdmin } from "@/lib/supabase/server";
 import { getTrackedPeople } from "@/lib/performance-people";
-import { getWaitingAssignments } from "@/lib/waiting-activation";
+import { getWaitingAbsences, getWaitingAssignments } from "@/lib/waiting-activation";
 import { getPerformanceCategory } from "@/lib/teacher-performance";
 import { SCHOOL_NAME } from "@/lib/school";
 import { PrintButton } from "@/components/admin/PrintButton";
@@ -50,13 +50,17 @@ export default async function TeacherPerformancePrintPage({
 
   // Other modes: one row per teacher for that day (rules unchanged from before).
   const waiting = category.mode === "waiting-auto" ? (await getWaitingAssignments([date], teachers ?? [])).get(date)! : null;
+  // teachers the waiting table has down as absent that day: shown as absent for the day, not as a mark of their own
+  const away = (await getWaitingAbsences([date], teachers ?? [])).get(date)!;
   const statusByTeacher = new Map((records ?? []).map((r) => [r.teacher_id, r.status as "present" | "absent"]));
   const defaultStatus = category.mode === "assumed-present" ? "present" : null;
   const simpleRows = !isPeriodMode
     ? (teachers ?? [])
         .map((t) => ({
           name: t.name,
-          status: statusByTeacher.get(t.id) ?? (waiting ? (waiting.has(t.id) ? "present" : null) : defaultStatus),
+          status: away.has(t.id)
+            ? ("away" as const)
+            : statusByTeacher.get(t.id) ?? (waiting ? (waiting.has(t.id) ? "present" : null) : defaultStatus),
         }))
         .filter((r) => r.status !== null)
     : [];
@@ -112,7 +116,7 @@ export default async function TeacherPerformancePrintPage({
                 <tr key={r.name} className="border-b border-slate-100">
                   <td className="py-1.5 px-2 tabular-nums">{i + 1}</td>
                   <td className="py-1.5 px-2">{r.name}</td>
-                  <td className="py-1.5 px-2">{r.status === "present" ? "✓ حاضر" : "✗ غائب"}</td>
+                  <td className="py-1.5 px-2">{r.status === "away" ? "غائب (جدول الانتظار)" : r.status === "present" ? "✓ حاضر" : "✗ غائب"}</td>
                 </tr>
               ))}
         </tbody>

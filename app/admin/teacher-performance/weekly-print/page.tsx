@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { supabaseAdmin } from "@/lib/supabase/server";
 import { getTrackedPeople } from "@/lib/performance-people";
-import { getWaitingAssignments } from "@/lib/waiting-activation";
+import { getWaitingAbsences, getWaitingAssignments } from "@/lib/waiting-activation";
 import { addDays, PERFORMANCE_CATEGORIES, schoolWeekDays, weekStartOf } from "@/lib/teacher-performance";
 import { SCHOOL_NAME } from "@/lib/school";
 import { PrintButton } from "@/components/admin/PrintButton";
@@ -10,7 +10,7 @@ import { PrintButton } from "@/components/admin/PrintButton";
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 const DAY_LABELS = ["أحد", "اثنين", "ثلاثاء", "أربعاء", "خميس"];
 
-type CellKind = "ok" | "late" | "absent" | "blank";
+type CellKind = "ok" | "late" | "absent" | "away" | "blank";
 interface Cell {
   kind: CellKind;
   text: string;
@@ -20,6 +20,7 @@ const CELL_STYLE: Record<CellKind, string> = {
   ok: "#dcfce7",
   late: "#fde68a",
   absent: "#fca5a5",
+  away: "#cbd5e1",
   blank: "#ffffff",
 };
 
@@ -50,6 +51,7 @@ export default async function WeeklyPrintPage({ searchParams }: { searchParams: 
   ]);
 
   const waitingByDay = await getWaitingAssignments(days, teachers ?? []);
+  const awayByDay = await getWaitingAbsences(days, teachers ?? []);
   const recordsByKey = new Map<string, { status: string; period: string; minutes: number | null }[]>();
   for (const r of records ?? []) {
     const key = `${r.teacher_id}|${r.category}|${r.record_date}`;
@@ -60,6 +62,8 @@ export default async function WeeklyPrintPage({ searchParams }: { searchParams: 
   const prepByTeacher = new Map((prep ?? []).map((p) => [p.teacher_id as string, p.status as "yellow" | "red"]));
 
   function cellFor(teacherId: string, categoryKey: string, mode: string, day: string): Cell {
+    // absent in the waiting table that day: absent for the whole day, whatever the category
+    if (awayByDay.get(day)?.has(teacherId)) return { kind: "away", text: "غ" };
     const recs = recordsByKey.get(`${teacherId}|${categoryKey}|${day}`) ?? [];
     const future = day > today;
 
@@ -185,7 +189,7 @@ export default async function WeeklyPrintPage({ searchParams }: { searchParams: 
 
       <p className="mt-1 text-slate-600" style={{ fontSize: "6.5px" }}>
         الطابور الصباحي والالتزام بزمن الحصة: ✓ = ملتزم، وتبقى الخانة فاضية للأيام اللي ما جت بعد. الإشراف والمناوبة وتفعيل حصص الانتظار: ✓ حاضر و✗ غائب للي عليه المهمة فقط. الأرقام بخانة الالتزام بزمن الحصة = أرقام الحصص (والرقم بين القوسين = دقائق التأخر)
-        (أصفر: متأخر، أحمر: لم يحضر). تحضير مدرستي: أخضر أكمل، أصفر ناقص، أحمر لم يحضّر.
+        (أصفر: متأخر، أحمر: لم يحضر). غ (رمادي) = غائب في جدول الانتظار ذاك اليوم. تحضير مدرستي: أخضر أكمل، أصفر ناقص، أحمر لم يحضّر.
       </p>
     </div>
   );
