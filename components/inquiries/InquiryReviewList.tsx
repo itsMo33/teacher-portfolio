@@ -215,9 +215,9 @@ function Row({ item }: { item: ReviewInquiry }) {
   );
 }
 
-export function InquiryReviewList({ inquiries, kind }: { inquiries: ReviewInquiry[]; kind: "delay" | "other" }) {
+export function InquiryReviewList({ inquiries, kind }: { inquiries: ReviewInquiry[]; kind: "delay" | "other" | "all" }) {
   const [filter, setFilter] = useState<Filter>("all");
-  const ofKind = useMemo(() => inquiries.filter((i) => i.kind === kind), [inquiries, kind]);
+  const ofKind = useMemo(() => (kind === "all" ? inquiries : inquiries.filter((i) => i.kind === kind)), [inquiries, kind]);
   const shown = useMemo(() => ofKind.filter((i) => matches(i, filter)), [ofKind, filter]);
 
   return (
