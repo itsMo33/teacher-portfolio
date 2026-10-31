@@ -1,17 +1,18 @@
 import { auth } from "@/lib/auth/auth-options";
 import { AppShell, type NavItem } from "@/components/ui/AppShell";
 import { PORTFOLIO_SECTIONS } from "@/lib/portfolio-sections";
+import { inquiryAttention, listInquiries, toTeacherView } from "@/lib/inquiries";
 
-function buildNavItems(canBuildSchedule?: boolean, canTrackClassTime?: boolean): NavItem[] {
+function buildNavItems(canBuildSchedule?: boolean, canTrackClassTime?: boolean, inquiryCount = 0): NavItem[] {
   return [
     { href: "/teacher", label: "لوحة التحكم" },
     ...PORTFOLIO_SECTIONS.filter((s) => s.key !== "schedule").map((s) => ({
       href: `/teacher/portfolio/${s.key}`,
-      label: s.labelAr,
+      // the مسائلات section shows how many inquiries need the teacher's attention
+      label: s.key === "accountability" && inquiryCount > 0 ? `${s.labelAr} (${inquiryCount})` : s.labelAr,
     })),
     { href: "/teacher/schedule", label: "الجدول المدرسي" },
     { href: "/teacher/student-referrals", label: "تحويل الطالب لوكيل شؤون الطلاب" },
-    { href: "/teacher/inquiries", label: "المسائلات" },
     // A teacher granted جدول مدرسي access (e.g. مؤيد) needs a way into /admin/schedule-builder --
     // that tool lives under /admin, entirely separate from this teacher-side nav, so without this
     // link they'd have no way to reach it short of typing the URL themselves.
@@ -28,12 +29,17 @@ function buildNavItems(canBuildSchedule?: boolean, canTrackClassTime?: boolean):
 
 export default async function TeacherLayout({ children }: { children: React.ReactNode }) {
   const session = await auth();
+  let inquiryNavCount = 0;
+  if (session?.user?.role === "teacher") {
+    const attention = inquiryAttention((await listInquiries({ teacherId: session.user.id })).map(toTeacherView));
+    inquiryNavCount = attention.toJustify + attention.newResults;
+  }
 
   return (
     <AppShell
       title="أثر"
       userName={session?.user?.name ?? ""}
-      navItems={buildNavItems(session?.user?.canBuildSchedule, session?.user?.canTrackClassTime)}
+      navItems={buildNavItems(session?.user?.canBuildSchedule, session?.user?.canTrackClassTime, inquiryNavCount)}
       demoViewOnly={session?.user?.demoViewOnly}
     >
       {children}

@@ -45,5 +45,6 @@ export const ACTION_LABELS_AR: Record<string, string> = {
   send_referral_to_agent: "إرسال تحويل طالب لوكيل شؤون الطلاب",
   send_inquiries: "إرسال مسائلات للمعلمين",
   decide_inquiry: "البت في مسائلة",
+  delete_inquiry: "حذف مسائلة",
   forward_referral_to_counselor: "تحويل طالب للموجه الطلابي",
 };

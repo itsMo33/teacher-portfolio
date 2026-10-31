@@ -6,6 +6,9 @@ import { FileUploadDropzone } from "@/components/portfolio/FileUploadDropzone";
 import { AttachmentList } from "@/components/portfolio/AttachmentList";
 import { MarkViewedOnMount } from "@/components/portfolio/MarkViewedOnMount";
 import { ImpactMeasurementSection } from "@/components/portfolio/ImpactMeasurementSection";
+import { countInquiries, listInquiries, toTeacherView } from "@/lib/inquiries";
+import { InquirySummary } from "@/components/inquiries/InquirySummary";
+import { TeacherInquiries } from "@/components/inquiries/TeacherInquiries";
 
 export default async function TeacherPortfolioSectionPage({
   params,
@@ -20,6 +23,9 @@ export default async function TeacherPortfolioSectionPage({
   const session = await auth();
   const teacherId = session!.user.id;
   const readOnly = !!session!.user.demoViewOnly;
+
+  // مسائلات: the inquiries sent to this teacher (a teacher sees a result only once رائد has decided it)
+  const inquiries = section.key === "accountability" ? (await listInquiries({ teacherId })).map(toTeacherView) : [];
 
   const subsections = section.hasSubsections ? section.subsections! : [{ key: "", labelAr: "" }];
 
@@ -56,6 +62,13 @@ export default async function TeacherPortfolioSectionPage({
           <p className="text-sm text-amber-600 dark:text-amber-400 mt-1">{section.note}</p>
         )}
       </div>
+
+      {section.key === "accountability" && (
+        <div className="flex flex-col gap-3">
+          <InquirySummary counts={countInquiries(inquiries)} />
+          <TeacherInquiries inquiries={inquiries} />
+        </div>
+      )}
 
       {!section.teacherWritable && (
         <p className="text-sm text-slate-400">

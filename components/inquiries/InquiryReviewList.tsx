@@ -63,6 +63,17 @@ function Row({ item }: { item: ReviewInquiry }) {
     setBusy(false);
   }
 
+  async function remove() {
+    if (!confirm(`حذف مسائلة ${item.teacherName} نهائياً؟ تختفي من حساب المعلم أيضاً ولا يمكن التراجع.`)) return;
+    setBusy(true);
+    setError("");
+    const res = await fetch(`/api/inquiries/${item.id}`, { method: "DELETE" });
+    if (!res.ok) {
+      setError((await res.json().catch(() => ({}))).error ?? "تعذّر الحذف");
+      setBusy(false);
+    } else router.refresh();
+  }
+
   async function openFile() {
     const res = await fetch(`/api/inquiries/${item.id}/file?source=1`);
     if (res.ok) window.open((await res.json()).url, "_blank", "noopener");
@@ -131,6 +142,9 @@ function Row({ item }: { item: ReviewInquiry }) {
         </button>
         <button type="button" onClick={openFile} className="text-slate-600 dark:text-slate-300 hover:underline">
           فتح ملف PDF
+        </button>
+        <button type="button" disabled={busy} onClick={remove} className="mr-auto text-red-600 dark:text-red-400 hover:underline disabled:opacity-50">
+          حذف المسائلة
         </button>
       </div>
       {open && (

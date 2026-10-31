@@ -109,6 +109,8 @@ export interface TeacherInquiryView {
   justifiedAt: string | null;
   decision: InquiryDecision | null;
   decisionNote: string | null;
+  /** When رائد decided it -- null until then. */
+  decidedAt: string | null;
 }
 
 export function toTeacherView(i: Inquiry): TeacherInquiryView {
@@ -126,6 +128,7 @@ export function toTeacherView(i: Inquiry): TeacherInquiryView {
     justifiedAt: i.justifiedAt,
     decision: decided ? i.decision : null,
     decisionNote: decided ? i.decisionNote : null,
+    decidedAt: decided ? i.decidedAt : null,
   };
 }
 
@@ -225,4 +228,47 @@ export async function applyJustification(inquiry: Inquiry, justification: string
     .eq("id", inquiry.id)
     .is("decided_at", null);
   return error;
+}
+
+export interface InquiryCounts {
+  total: number;
+  accepted: number;
+  rejected: number;
+  /** Not decided yet (a teacher only counts a result once رائد has decided it). */
+  pending: number;
+}
+
+export function countInquiries(list: { decision: InquiryDecision | null }[]): InquiryCounts {
+  const accepted = list.filter((i) => i.decision === "accepted").length;
+  const rejected = list.filter((i) => i.decision === "rejected").length;
+  return { total: list.length, accepted, rejected, pending: list.length - accepted - rejected };
+}
+
+/** What needs a teacher's attention: inquiries still waiting for their justification, and results decided in the
+ *  last 7 days. Used for the dashboard notice and the count on the menu. */
+export function inquiryAttention(list: TeacherInquiryView[]): { toJustify: number; newResults: number } {
+  const weekAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
+  return {
+    toJustify: list.filter((i) => !i.decision && !i.justifiedAt).length,
+    newResults: list.filter((i) => i.decision !== null && i.decidedAt && new Date(i.decidedAt).getTime() >= weekAgo).length,
+  };
+}
+
+/** Removes an inquiry for good, with the page cut out for the teacher. The uploaded PDF is shared by every inquiry
+ *  from the same file, so it goes only when the last of them is deleted. */
+export async function deleteInquiry(id: string): Promise<boolean> {
+  const { data: row } = await supabaseAdmin.from("inquiries").select("source_path, teacher_file_path").eq("id", id).maybeSingle();
+  if (!row) return false;
+  const { error } = await supabaseAdmin.from("inquiries").delete().eq("id", id);
+  if (error) throw error;
+
+  const paths: string[] = [];
+  if (row.teacher_file_path) paths.push(row.teacher_file_path as string);
+  const { count } = await supabaseAdmin
+    .from("inquiries")
+    .select("id", { count: "exact", head: true })
+    .eq("source_path", row.source_path as string);
+  if (!count && row.source_path) paths.push(row.source_path as string);
+  if (paths.length > 0) await supabaseAdmin.storage.from(PORTFOLIO_BUCKET).remove(paths).catch(() => {});
+  return true;
 }
