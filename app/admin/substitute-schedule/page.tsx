@@ -80,7 +80,9 @@ function buildPrintHtml(assignments: SubstituteAssignment[], day: DayKey | null)
 <style>
   body { font-family: Tahoma, Arial, sans-serif; padding: 24px; color: #000; }
   h1 { font-size: 20px; margin-bottom: 16px; }
-  .slip { margin-bottom: 28px; page-break-inside: avoid; }
+  /* two slips to a page, each kept whole: a slip is never split across pages */
+  .slip { margin-bottom: 18px; page-break-inside: avoid; break-inside: avoid; }
+  .slip:nth-of-type(2n) { page-break-after: always; break-after: page; }
   .slip-header { display: flex; justify-content: space-between; gap: 16px; margin-bottom: 8px; font-size: 13px; }
   .slip-header p { margin: 2px 0; }
   .slip-header-side { text-align: left; white-space: nowrap; }
@@ -270,6 +272,8 @@ export default function SubstituteSchedulePage() {
   }
 
   const groups = useMemo(() => buildAbsenceGroups(assignments), [assignments]);
+  // the groups that actually get printed (all of them, or just the chosen day) -- they are paired two to a page
+  const printedGroups = useMemo(() => groups.filter((g) => !selectedDay || g.day === selectedDay), [groups, selectedDay]);
   const printDateStr = useMemo(
     () => new Date().toLocaleDateString("ar-SA", { year: "numeric", month: "long", day: "numeric" }),
     []
@@ -489,9 +493,10 @@ export default function SubstituteSchedulePage() {
           groups.map((group) => (
             <div
               key={`${group.day}-${group.absentTeacher}`}
-              className={`rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4 ${
-                selectedDay && group.day !== selectedDay ? "no-print" : ""
-              }`}
+              // printed two to a page: each table stays whole, and a new page starts after every second one
+              className={`rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4 print:break-inside-avoid print:p-2 ${
+                printedGroups.indexOf(group) % 2 === 1 ? "print:break-after-page" : ""
+              } ${selectedDay && group.day !== selectedDay ? "no-print" : ""}`}
             >
               <div className="flex flex-wrap items-start justify-between gap-2 mb-3 text-sm">
                 <div>
