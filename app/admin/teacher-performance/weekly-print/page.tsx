@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { supabaseAdmin } from "@/lib/supabase/server";
 import { getTrackedPeople } from "@/lib/performance-people";
+import { getWeeklyPlanStatuses } from "@/lib/weekly-plan";
 import { getWaitingAbsences, getWaitingAssignments } from "@/lib/waiting-activation";
 import { addDays, PERFORMANCE_CATEGORIES, schoolWeekDays, weekStartOf } from "@/lib/teacher-performance";
 import { SCHOOL_NAME } from "@/lib/school";
@@ -52,6 +53,7 @@ export default async function WeeklyPrintPage({ searchParams }: { searchParams: 
 
   const waitingByDay = await getWaitingAssignments(days, teachers ?? []);
   const awayByDay = await getWaitingAbsences(days, teachers ?? []);
+  const planById = new Map((await getWeeklyPlanStatuses(weekStart)).map((p) => [p.id, p.status]));
   const recordsByKey = new Map<string, { status: string; period: string; minutes: number | null }[]>();
   for (const r of records ?? []) {
     const key = `${r.teacher_id}|${r.category}|${r.record_date}`;
@@ -98,11 +100,12 @@ export default async function WeeklyPrintPage({ searchParams }: { searchParams: 
     name: t.name,
     cells: PERFORMANCE_CATEGORIES.flatMap((c) => days.map((d) => cellFor(t.id, c.key, c.mode, d))),
     prep: (prepByTeacher.get(t.id) ?? "green") as "green" | "yellow" | "red",
+    plan: planById.get(t.id) ?? "na",
   }));
 
   const prepStyle = { green: "#86efac", yellow: "#fde047", red: "#f87171" } as const;
   const prepText = { green: "✓", yellow: "!", red: "✗" } as const;
-  const totalColumns = 2 + PERFORMANCE_CATEGORIES.length * 5 + 1;
+  const totalColumns = 2 + PERFORMANCE_CATEGORIES.length * 5 + 2;
 
   return (
     <div className="bg-white text-slate-900">
@@ -137,6 +140,7 @@ export default async function WeeklyPrintPage({ searchParams }: { searchParams: 
           {Array.from({ length: PERFORMANCE_CATEGORIES.length * 5 }).map((_, i) => (
             <col key={i} />
           ))}
+          <col style={{ width: "11mm" }} />
           <col style={{ width: "13mm" }} />
         </colgroup>
         <thead>
@@ -153,6 +157,7 @@ export default async function WeeklyPrintPage({ searchParams }: { searchParams: 
                 {c.labelAr}
               </th>
             ))}
+            <th rowSpan={2} className="border border-slate-500 bg-slate-100">الخطة الأسبوعية</th>
             <th rowSpan={2} className="border border-slate-500 bg-slate-100">تحضير مدرستي</th>
           </tr>
           <tr>
@@ -168,7 +173,7 @@ export default async function WeeklyPrintPage({ searchParams }: { searchParams: 
         <tbody>
           {teacherRows.map((t, i) => (
             <tr key={t.id}>
-              <td className="border border-slate-500 tabular-nums leading-none" style={{ height: "3.5mm" }}>{i + 1}</td>
+              <td className="border border-slate-500 tabular-nums leading-none" style={{ height: "3.2mm" }}>{i + 1}</td>
               <td className="border border-slate-500 text-right pr-1 leading-none whitespace-nowrap overflow-hidden">{t.name}</td>
               {t.cells.map((cell, ci) => (
                 <td
@@ -179,6 +184,12 @@ export default async function WeeklyPrintPage({ searchParams }: { searchParams: 
                   {cell.text}
                 </td>
               ))}
+              <td
+                className="border border-slate-500 font-bold leading-none"
+                style={{ backgroundColor: t.plan === "uploaded" ? "#86efac" : t.plan === "missing" ? "#f87171" : "#cbd5e1", padding: 0 }}
+              >
+                {t.plan === "uploaded" ? "✓" : t.plan === "missing" ? "✗" : "—"}
+              </td>
               <td className="border border-slate-500 font-bold leading-none" style={{ backgroundColor: prepStyle[t.prep], padding: 0 }}>
                 {prepText[t.prep]}
               </td>

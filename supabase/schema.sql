@@ -482,3 +482,14 @@ create table if not exists inquiries (
 create index if not exists idx_inquiries_teacher on inquiries(teacher_id);
 create index if not exists idx_inquiries_kind on inquiries(kind, created_at desc);
 alter table inquiries enable row level security;
+
+-- الخطة الأسبوعية in متابعة أداء المعلمين: a teacher counts as having handed in the week's plan when they uploaded one
+-- (worked out from the uploads); a row here is رائد's manual override of that for one teacher and week.
+create table if not exists weekly_plan_marks (
+  teacher_id uuid not null references users(id) on delete cascade,
+  week_start date not null,
+  status text not null check (status in ('uploaded', 'missing')),
+  updated_at timestamptz not null default now(),
+  primary key (teacher_id, week_start)
+);
+alter table weekly_plan_marks enable row level security;

@@ -96,7 +96,7 @@ export function TeacherPerformanceView({
   const [loaded, setLoaded] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const [viewMode, setViewMode] = useState<"track" | "prep" | "stats">("track");
+  const [viewMode, setViewMode] = useState<"track" | "prep" | "plan" | "stats">("track");
   const [prepMarks, setPrepMarks] = useState<Partial<Record<string, "yellow" | "red">>>({});
   // Saves for the same name go out strictly in click order, so tapping through the colors quickly
   // always ends on the state you see; and only the newest load's answer is ever applied.
@@ -151,6 +151,43 @@ export function TeacherPerformanceView({
     }, 8000);
     return () => clearInterval(timer);
   }, [viewMode, date, load]);
+
+  // الخطة الأسبوعية: who handed in the plan for the chosen week (from the uploads), with رائد's manual overrides
+  const [planRows, setPlanRows] = useState<{ id: string; name: string; status: "uploaded" | "missing" | "na"; auto: string; overridden: boolean }[]>([]);
+  const [planLoaded, setPlanLoaded] = useState(false);
+  const loadPlan = useCallback((d: string) => {
+    return fetch(`/api/teacher-performance/weekly-plan?date=${d}`)
+      .then((res) => {
+        if (!res.ok) throw new Error("failed");
+        return res.json();
+      })
+      .then((data) => {
+        setPlanRows(data.rows);
+        setPlanLoaded(true);
+        setError("");
+      })
+      .catch(() => setError("تعذّر تحميل الخطة الأسبوعية"));
+  }, []);
+
+  useEffect(() => {
+    if (viewMode === "plan") loadPlan(date);
+  }, [viewMode, date, loadPlan]);
+
+  function handlePlanToggle(row: { id: string; status: "uploaded" | "missing" | "na" }) {
+    if (row.status === "na") return;
+    const next = row.status === "uploaded" ? "missing" : "uploaded";
+    setPlanRows((prev) => prev.map((x) => (x.id === row.id ? { ...x, status: next, overridden: next !== x.auto } : x)));
+    enqueueSave(
+      `${row.id}:plan:${weekStartOf(date)}`,
+      () =>
+        fetch("/api/teacher-performance/weekly-plan", {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ teacherId: row.id, date, status: next }),
+        }),
+      () => loadPlan(date)
+    );
+  }
 
   const loadPrep = useCallback((d: string) => {
     return fetch(`/api/teacher-performance/madrasati-prep?date=${d}`)
@@ -380,7 +417,9 @@ export function TeacherPerformanceView({
 
   const weekStart = weekStartOf(date);
   const descriptionText =
-    viewMode === "prep"
+    viewMode === "plan"
+      ? "الخطة الأسبوعية -- اضغط على الاسم لتغيير لونه"
+      : viewMode === "prep"
       ? "تحضير مدرستي مرة وحدة بالأسبوع -- الكل أخضر، اضغط على الاسم: أصفر، ثم أحمر، ثم يرجع أخضر"
       : category.mode === "waiting-auto"
       ? "المعلم اللي تحطه منتظر في جدول الانتظار يصير أخضر هنا تلقائيًا -- إذا ما حضر الانتظار اضغط على اسمه ليصير أحمر"
@@ -439,6 +478,20 @@ export function TeacherPerformanceView({
                 {c.labelAr}
               </button>
             ))}
+            <button
+              type="button"
+              onClick={() => {
+                setViewMode("plan");
+                setExpandedTeacherId(null);
+              }}
+              className={`rounded-lg border px-3 py-1.5 text-sm transition-colors ${
+                viewMode === "plan"
+                  ? "border-[var(--brand-primary)] bg-[var(--brand-primary)] text-white"
+                  : "border-slate-300 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800"
+              }`}
+            >
+              الخطة الأسبوعية
+            </button>
             <button
               type="button"
               onClick={() => {
@@ -507,7 +560,50 @@ export function TeacherPerformanceView({
         </div>
       )}
 
-      {viewMode === "prep" ? (
+      {viewMode === "plan" ? (
+        <div className={`flex flex-col gap-3 transition-opacity duration-200 ${!planLoaded ? "opacity-60" : ""}`}>
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-slate-500">
+            <span>
+              الأسبوع: {formatArDate(weekStart)} — {formatArDate(addDays(weekStart, 4))}
+            </span>
+            <span className="flex items-center gap-1">
+              <span className="h-2.5 w-2.5 rounded-full bg-green-500" /> رفع ({planRows.filter((x) => x.status === "uploaded").length})
+            </span>
+            <span className="flex items-center gap-1">
+              <span className="h-2.5 w-2.5 rounded-full bg-red-500" /> ما رفع ({planRows.filter((x) => x.status === "missing").length})
+            </span>
+            <span className="flex items-center gap-1">
+              <span className="h-2.5 w-2.5 rounded-full bg-slate-400" /> ما عليه خطة
+            </span>
+          </div>
+          <div className="grid grid-cols-2 gap-2 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-3 sm:grid-cols-3">
+            {[...planRows]
+              .sort((a, b) => Number(a.status === "na") - Number(b.status === "na"))
+              .map((row) =>
+                row.status === "na" ? (
+                  <div
+                    key={row.id}
+                    className="flex w-full select-none items-center gap-1.5 rounded-xl border border-slate-300 bg-slate-200 px-3 py-2.5 text-right text-sm text-slate-600 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-400"
+                  >
+                    <span className="font-bold">—</span>
+                    <span className="truncate">{row.name}</span>
+                  </div>
+                ) : (
+                  <button
+                    key={row.id}
+                    type="button"
+                    onClick={() => handlePlanToggle(row)}
+                    className={`${NAME_BUTTON} ${row.status === "uploaded" ? STATUS_COLORS.present : STATUS_COLORS.absent}`}
+                  >
+                    <span className="font-bold">{row.status === "uploaded" ? "✓" : "✗"}</span>
+                    <span className="truncate">{row.name}</span>
+                    {row.overridden && <span className="mr-auto shrink-0 text-[10px] opacity-70">معدّل يدوياً</span>}
+                  </button>
+                )
+              )}
+          </div>
+        </div>
+      ) : viewMode === "prep" ? (
         <div className={`flex flex-col gap-3 transition-opacity duration-200 ${!loaded ? "opacity-60" : ""}`}>
           <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-slate-500">
             <span>
