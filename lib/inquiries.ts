@@ -263,21 +263,17 @@ export function inquiryAttention(list: TeacherInquiryView[]): { toJustify: numbe
   };
 }
 
-/** Removes an inquiry for good, with the page cut out for the teacher. The uploaded PDF is shared by every inquiry
- *  from the same file, so it goes only when the last of them is deleted. */
+/** Removes an inquiry for good, with the page cut out for the teacher. The uploaded PDF itself is kept: it is the
+ *  school's original document, shared by every inquiry from that upload, and deleting inquiries (a test, a wrong
+ *  match) must never lose it. */
 export async function deleteInquiry(id: string): Promise<boolean> {
-  const { data: row } = await supabaseAdmin.from("inquiries").select("source_path, teacher_file_path").eq("id", id).maybeSingle();
+  const { data: row } = await supabaseAdmin.from("inquiries").select("teacher_file_path").eq("id", id).maybeSingle();
   if (!row) return false;
   const { error } = await supabaseAdmin.from("inquiries").delete().eq("id", id);
   if (error) throw error;
 
-  const paths: string[] = [];
-  if (row.teacher_file_path) paths.push(row.teacher_file_path as string);
-  const { count } = await supabaseAdmin
-    .from("inquiries")
-    .select("id", { count: "exact", head: true })
-    .eq("source_path", row.source_path as string);
-  if (!count && row.source_path) paths.push(row.source_path as string);
-  if (paths.length > 0) await supabaseAdmin.storage.from(PORTFOLIO_BUCKET).remove(paths).catch(() => {});
+  if (row.teacher_file_path) {
+    await supabaseAdmin.storage.from(PORTFOLIO_BUCKET).remove([row.teacher_file_path as string]).catch(() => {});
+  }
   return true;
 }

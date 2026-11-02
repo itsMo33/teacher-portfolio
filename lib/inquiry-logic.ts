@@ -343,18 +343,21 @@ const isShaped = (ch: string) => SHAPED.test(ch);
  *  letters of connected words reversed, as presentation-form glyphs. Reading it back means undoing that per
  *  word -- reverse the run of glyphs, keep plain letters and digits as they are -- and then reversing the words. */
 export function fixVisualArabic(raw: string): string {
+  // three kinds of character: presentation-form glyphs (reversed in the export), plain Arabic letters (an alef or a
+  // ta can come out in its base form right next to the glyphs), and everything else (digits, punctuation, symbols)
+  const kindOf = (ch: string) => (isShaped(ch) ? "shaped" : /[؀-ۿ]/.test(ch) ? "base" : "other");
   const fixToken = (token: string): string => {
-    const runs: { shaped: boolean; text: string }[] = [];
+    const runs: { kind: string; text: string }[] = [];
     for (const ch of token) {
-      const shaped = isShaped(ch);
+      const kind = kindOf(ch);
       const last = runs[runs.length - 1];
-      if (last && last.shaped === shaped) last.text += ch;
-      else runs.push({ shaped, text: ch });
+      if (last && last.kind === kind) last.text += ch;
+      else runs.push({ kind, text: ch });
     }
     return runs
       .reverse()
       // a glyph can expand to more than one letter (لا, الله): reverse the glyphs, not the letters they expand to
-      .map((r) => (r.shaped ? [...r.text].map((g) => g.normalize("NFKC")).reverse().join("") : r.text))
+      .map((r) => (r.kind === "shaped" ? [...r.text].map((g) => g.normalize("NFKC")).reverse().join("") : r.text))
       .join("");
   };
   return raw
