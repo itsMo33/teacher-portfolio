@@ -8,10 +8,13 @@ export async function DELETE(_req: Request, { params }: { params: Promise<{ id: 
   const { id } = await params;
   const session = await auth();
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  if (getInquiryRole(session.user) !== "reviewer") return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  const role = getInquiryRole(session.user);
+  if (role !== "reviewer" && role !== "officer") return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
   const inquiry = await getInquiry(id);
   if (!inquiry) return NextResponse.json({ error: "Not found" }, { status: 404 });
+  // the uploading account can only take back what it sent itself
+  if (role === "officer" && inquiry.uploadedBy !== session.user.id) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
   try {
     await deleteInquiry(id);

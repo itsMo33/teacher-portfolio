@@ -6,6 +6,7 @@ import { InquirySummary } from "@/components/inquiries/InquirySummary";
 import { displayText } from "@/lib/inquiry-logic";
 import { InquiryUploader } from "@/components/inquiries/InquiryUploader";
 import { InquiryReviewList } from "@/components/inquiries/InquiryReviewList";
+import { OfficerSentList } from "@/components/inquiries/OfficerSentList";
 import { AccountabilityFiles } from "@/components/admin/AccountabilityFiles";
 
 type Tab = "all" | "delay" | "other" | "files";
@@ -32,6 +33,18 @@ export default async function InquiriesPage({ searchParams }: { searchParams: Pr
 
   const inquiries = tab === "files" ? [] : await listInquiries();
   const shown = tab === "all" ? inquiries : inquiries.filter((i) => i.kind === tab);
+
+  // what the uploading account sent itself, grouped by upload (for its delete buttons)
+  const sentBatches = (() => {
+    if (role !== "officer") return [];
+    const map = new Map<string, { batchId: string; createdAt: string; items: { id: string; teacherName: string }[] }>();
+    for (const i of shown.filter((x) => x.uploadedBy === session!.user.id)) {
+      const batch = map.get(i.batchId) ?? { batchId: i.batchId, createdAt: i.createdAt, items: [] };
+      batch.items.push({ id: i.id, teacherName: i.teacherName });
+      map.set(i.batchId, batch);
+    }
+    return [...map.values()];
+  })();
 
   // per teacher: how many inquiries, how many accepted / rejected / still waiting (for the reviewers)
   const byTeacher = new Map<string, { name: string; list: typeof inquiries }>();
@@ -84,9 +97,7 @@ export default async function InquiriesPage({ searchParams }: { searchParams: Pr
             ))}
 
           {role === "officer" ? (
-            <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4 text-sm text-slate-600 dark:text-slate-300">
-              أُرسل من هذا النوع: {shown.length} مسائلة. المتابعة والقرار عند رائد.
-            </div>
+            <OfficerSentList batches={sentBatches} />
           ) : (
             <>
               <InquirySummary counts={countInquiries(shown)} />

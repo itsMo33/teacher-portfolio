@@ -36,15 +36,20 @@ export interface Inquiry {
   decision: InquiryDecision | null;
   decisionNote: string | null;
   decidedAt: string | null;
+  /** Which upload it came from, and who sent it -- the uploader can delete what they sent. */
+  batchId: string;
+  uploadedBy: string | null;
 }
 
 const SELECT =
-  "id, kind, teacher_id, created_at, delay_minutes, extracted_text, teacher_file_path, teacher_opened_at, justification, justified_at, system_decision, system_note, decision, decision_note, decided_at, teacher:users!inquiries_teacher_id_fkey(name)";
+  "id, kind, teacher_id, batch_id, uploaded_by, created_at, delay_minutes, extracted_text, teacher_file_path, teacher_opened_at, justification, justified_at, system_decision, system_note, decision, decision_note, decided_at, teacher:users!inquiries_teacher_id_fkey(name)";
 
 interface Row {
   id: string;
   kind: InquiryKind;
   teacher_id: string;
+  batch_id: string;
+  uploaded_by: string | null;
   created_at: string;
   delay_minutes: number | null;
   extracted_text: string;
@@ -78,6 +83,8 @@ function toInquiry(r: Row): Inquiry {
     decision: r.decision,
     decisionNote: r.decision_note,
     decidedAt: r.decided_at,
+    batchId: r.batch_id,
+    uploadedBy: r.uploaded_by,
   };
 }
 
