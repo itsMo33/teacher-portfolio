@@ -161,3 +161,20 @@ describe("name fallback guards", () => {
     expect(items[0].teacherId).toBeNull();
   });
 });
+
+describe("extractMinutes on the lateness form", () => {
+  it("reads the total from the 'عدد N مرة وبإجمالي دقائق T' line", () => {
+    expect(extractMinutes("تأخركم من بداية الدوام وحضوركم متأخرين عدد 3 مرة وبإجمالي دقائق 12 حسب التفصيل أدناه")).toBe(12);
+  });
+
+  it("falls back to adding up the table's durations", () => {
+    expect(extractMinutes("م التاريخ المدة 1 الأحد 04/10/2026 00:10 2 الاثنين 05/10/2026 00:05")).toBe(15);
+    expect(extractMinutes("عدم تواجدكم من الساعة ___:___ إلى الساعة ___:___")).toBeNull();
+  });
+});
+
+describe("extractMinutes with nothing late", () => {
+  it("treats zero minutes as unknown, not as on time", () => {
+    expect(extractMinutes("تأخركم عدد 1 مرة وبإجمالي دقائق 0 حسب التفصيل أدناه")).toBeNull();
+  });
+});

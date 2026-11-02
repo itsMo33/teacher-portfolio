@@ -47,13 +47,21 @@ export interface ParsedInquiry {
 export function extractMinutes(text: string): number | null {
   const find = (source: string): number | null => {
     const t = normalizeArabic(source);
+    // the school's lateness form: "... عدد 3 مرة وبإجمالي دقائق 10 حسب التفصيل أدناه" -- the total is what counts
+    const total = t.match(/اجمالي\s*(?:ال)?دقائق\s*[:\-]?\s*(\d{1,4})/);
+    if (total) return Number(total[1]);
     const direct = t.match(/(\d{1,3})\s*(?:دقيقه|دقايق|دقائق|دقيقة|د\b)/);
     if (direct) return Number(direct[1]);
-    const labelled = t.match(/(?:تاخر|تاخير|مده)\w*\s*[:\-]?\s*(\d{1,3})\b/);
-    return labelled ? Number(labelled[1]) : null;
+    const labelled = t.match(/(?:تاخر|تاخير)\w*\s*[:\-]?\s*(\d{1,3})\b/);
+    if (labelled) return Number(labelled[1]);
+    // last resort: the form's table lists each late day with its duration as hours:minutes (00:10) -- add them up
+    const durations = [...t.matchAll(/(?<![\d:])(\d{1,2}):(\d{2})(?![\d:])/g)];
+    return durations.length > 0 ? durations.reduce((sum, m) => sum + Number(m[1]) * 60 + Number(m[2]), 0) : null;
   };
   // as written first; a form exported in visual order has its words and letters reversed, so read it back if that fails
-  return find(text) ?? (isVisualOrder(text) ? find(fixVisualArabic(text)) : null);
+  const minutes = find(text) ?? (isVisualOrder(text) ? find(fixVisualArabic(text)) : null);
+  // zero minutes means the lateness line was left empty (the form was filled for leaving early / being away), not "on time"
+  return minutes === 0 ? null : minutes;
 }
 
 interface Hit {
