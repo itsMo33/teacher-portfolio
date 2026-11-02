@@ -87,13 +87,13 @@ export default async function TeacherPrintReportPage({
       <table className="print-plain w-full border-collapse">
         <thead>
           <tr>
-            <td className="pb-4">
-              <div className="border-b border-slate-300 pb-4 mb-4 text-center">
+            <td className="pb-2">
+              <div className="border-b border-slate-300 pb-2 mb-2 text-center">
                 <p className="text-sm text-slate-500">{SCHOOL_NAME}</p>
                 <h1 className="text-xl font-bold">تقرير ملف الإنجاز</h1>
               </div>
 
-              <div className="mb-4 flex justify-between text-sm">
+              <div className="mb-2 flex justify-between text-sm">
                 <div>
                   <p>
                     <strong>الاسم:</strong> {teacher.name}
@@ -129,7 +129,7 @@ export default async function TeacherPrintReportPage({
         <tbody>
           {sectionsData.map(({ section, subsectionData }) => (
             <tr key={section.key}>
-              <td className="break-inside-avoid pt-4">
+              <td className="break-inside-avoid pt-2">
                 <h3 className="font-bold border-b border-slate-200 pb-1 mb-1">{section.labelAr}</h3>
                 {subsectionData.map(({ sub, attachments }) => {
                   const isExemptLicense =
@@ -155,7 +155,7 @@ export default async function TeacherPrintReportPage({
             </tr>
           ))}
           <tr>
-            <td className="break-inside-avoid mt-4 pt-4 border-t border-slate-300">
+            <td className="break-inside-avoid pt-2 border-t border-slate-300">
               <h3 className="font-bold border-b border-slate-200 pb-1 mb-1">متابعة الأداء</h3>
               {performanceStats.map(({ category: c, presentCount, absentCount, lateCount }) => (
                 <div key={c.key} className="pr-3 mb-1 text-sm flex items-center justify-between">

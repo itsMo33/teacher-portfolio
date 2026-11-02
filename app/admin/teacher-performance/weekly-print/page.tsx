@@ -106,6 +106,9 @@ export default async function WeeklyPrintPage({ searchParams }: { searchParams: 
   const prepStyle = { green: "#86efac", yellow: "#fde047", red: "#f87171" } as const;
   const prepText = { green: "✓", yellow: "!", red: "✗" } as const;
   const totalColumns = 2 + PERFORMANCE_CATEGORIES.length * 5 + 2;
+  // Everything must stay on one landscape page: the rows share what is left after the title, the two header rows and the
+  // legend, so a longer list of names gets slimmer rows instead of pushing the legend onto a second page.
+  const rowMm = Math.min(4, Math.floor(((200 - 36) / Math.max(teacherRows.length, 1)) * 10) / 10);
 
   return (
     <div className="bg-white text-slate-900">
@@ -173,7 +176,7 @@ export default async function WeeklyPrintPage({ searchParams }: { searchParams: 
         <tbody>
           {teacherRows.map((t, i) => (
             <tr key={t.id}>
-              <td className="border border-slate-500 tabular-nums leading-none" style={{ height: "3.2mm" }}>{i + 1}</td>
+              <td className="border border-slate-500 tabular-nums leading-none" style={{ height: `${rowMm}mm` }}>{i + 1}</td>
               <td className="border border-slate-500 text-right pr-1 leading-none whitespace-nowrap overflow-hidden">{t.name}</td>
               {t.cells.map((cell, ci) => (
                 <td
@@ -198,7 +201,7 @@ export default async function WeeklyPrintPage({ searchParams }: { searchParams: 
         </tbody>
       </table>
 
-      <p className="mt-1 text-slate-600" style={{ fontSize: "6.5px" }}>
+      <p className="mt-0.5 text-slate-600" style={{ fontSize: "5.5px", lineHeight: 1.15 }}>
         الطابور الصباحي والالتزام بزمن الحصة: ✓ = ملتزم، وتبقى الخانة فاضية للأيام اللي ما جت بعد. الإشراف والمناوبة وتفعيل حصص الانتظار: ✓ حاضر و✗ غائب للي عليه المهمة فقط. الأرقام بخانة الالتزام بزمن الحصة = أرقام الحصص (والرقم بين القوسين = دقائق التأخر)
         (أصفر: متأخر، أحمر: لم يحضر). غ (رمادي) = غائب في جدول الانتظار ذاك اليوم. تحضير مدرستي: أخضر أكمل، أصفر ناقص، أحمر لم يحضّر.
       </p>

@@ -45,6 +45,9 @@ export default async function PrintAllSchedulesPage() {
   });
 
   const printDate = new Date().toLocaleDateString("ar-SA");
+  // One landscape page: rows share what is left after the title and the two header rows, so a longer list of teachers
+  // gets slimmer rows instead of spilling its last rows (and a repeated title) onto a second page.
+  const rowMm = Math.min(4.5, Math.floor((166 / Math.max(teachers.length, 1)) * 10) / 10);
 
   return (
     <div className="mx-auto bg-white text-slate-900">
@@ -58,7 +61,7 @@ export default async function PrintAllSchedulesPage() {
         <PrintButton />
       </div>
 
-      <table className="w-full border-collapse text-[9px] print:text-[6px]">
+      <table className="w-full border-collapse text-[9px] print:text-[6px]" style={{ ["--row" as string]: `${rowMm}mm` }}>
         <thead>
           <tr>
             <td colSpan={SCHEDULE_DAYS.length * SCHEDULE_PERIODS.length + 1} className="print-no-border pb-2 print:pb-1">
@@ -98,8 +101,8 @@ export default async function PrintAllSchedulesPage() {
             )}
           </tr>
           {teachers.map((teacher) => (
-            <tr key={teacher.id} className="break-inside-avoid">
-              <td className="border border-slate-300 p-0.5 font-bold whitespace-nowrap">{teacher.name}</td>
+            <tr key={teacher.id} className="break-inside-avoid print:h-[var(--row)]">
+              <td className="border border-slate-300 p-0.5 print:py-0 print:leading-none font-bold whitespace-nowrap">{teacher.name}</td>
               {SCHEDULE_DAYS.map((day) =>
                 SCHEDULE_PERIODS.map((period) => {
                   const cell = grid.get(`${teacher.id}::${day}::${period}`);
@@ -107,7 +110,7 @@ export default async function PrintAllSchedulesPage() {
                   return (
                     <td
                       key={`${day}-${period}`}
-                      className="border border-slate-300 p-0.5 text-center font-medium"
+                      className="border border-slate-300 p-0.5 print:py-0 print:leading-none text-center font-medium"
                       style={bgColor ? { backgroundColor: bgColor } : undefined}
                     >
                       {cell?.sectionName || <span className="text-slate-300">--</span>}
