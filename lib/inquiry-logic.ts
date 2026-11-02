@@ -325,9 +325,40 @@ export function evaluateDelay(minutes: number | null, justification: string | nu
  *  whether it came out readable. Text with stray symbols (a font whose letters don't map back) or long runs of
  *  letters with no spaces is not worth showing -- the original page is better. */
 export function displayText(raw: string): { text: string; readable: boolean } {
-  const text = raw.normalize("NFKC").replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F]/g, "");
+  // text that came out in visual order is put back in reading order first
+  const letters = [...raw].filter((c) => /[؀-ۿﭐ-﷿ﹰ-﻿]/.test(c));
+  const mostlyShaped = letters.length > 0 && letters.filter(isShaped).length / letters.length >= 0.5;
+  const text = (mostlyShaped ? fixVisualArabic(raw) : raw).normalize("NFKC").replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F]/g, "");
   // anything outside Arabic, Latin letters, digits, spaces and everyday punctuation is a sign of broken text
-  const stray = /[^؀-ۿݐ-ݿA-Za-z0-9\s.,:;!?()\-–—/«»"'،؛؟%+=_‎‏]/.test(text);
-  const merged = /[؀-ۿ]{26,}/.test(text);
+  const stray = /[^؀-ۿݐ-ݿA-Za-z0-9\s.,:;!?()\-–—/«»"'،؛؟%+=_‎‏☐☑☒✓✗•●■□]/.test(text);
+  // a form exported in visual order always has a few run-together words (labels and values), which is normal there
+  const merged = !mostlyShaped && /[؀-ۿ]{26,}/.test(text);
   return { text, readable: !stray && !merged };
+}
+
+const SHAPED = /[\uFB50-\uFDFF\uFE70-\uFEFF]/;
+const isShaped = (ch: string) => SHAPED.test(ch);
+
+/** Some PDFs (the school's report exports) hand back Arabic in visual order: words in reverse order and the
+ *  letters of connected words reversed, as presentation-form glyphs. Reading it back means undoing that per
+ *  word -- reverse the run of glyphs, keep plain letters and digits as they are -- and then reversing the words. */
+export function fixVisualArabic(raw: string): string {
+  const fixToken = (token: string): string => {
+    const runs: { shaped: boolean; text: string }[] = [];
+    for (const ch of token) {
+      const shaped = isShaped(ch);
+      const last = runs[runs.length - 1];
+      if (last && last.shaped === shaped) last.text += ch;
+      else runs.push({ shaped, text: ch });
+    }
+    return runs
+      .reverse()
+      // a glyph can expand to more than one letter (لا, الله): reverse the glyphs, not the letters they expand to
+      .map((r) => (r.shaped ? [...r.text].map((g) => g.normalize("NFKC")).reverse().join("") : r.text))
+      .join("");
+  };
+  return raw
+    .split("\n")
+    .map((line) => line.split(/\s+/).filter(Boolean).reverse().map(fixToken).join(" "))
+    .join("\n");
 }

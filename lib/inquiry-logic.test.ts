@@ -131,3 +131,19 @@ describe("parseInquiryPages by national ID", () => {
     expect(parseInquiryPages(["المعلم احمد يحيى الزهراني"], withIds)[0].teacherId).toBe("t2");
   });
 });
+
+describe("fixVisualArabic", () => {
+  it("puts a line that came out in visual order back in reading order", () => {
+    expect(displayText("ﻢﻴﻠﻌﺘﻟا وزارة").text).toBe("وزارة التعليم");
+    expect(displayText("ﻢﻴﻠﻌﺘﻠﻟ ﺔﻣﺎﻌﻟا دارةﻹا").text).toBe("الإدارة العامة للتعليم");
+  });
+
+  it("keeps lam-alef and الله intact", () => {
+    expect(displayText("ﷲ ﻪﻘﻓو").text).toBe("وفقه الله");
+    expect(displayText("ﺔﻟءﺎﺴﻣ ﺖﻳﻻا").text).toContain("مساءلة");
+  });
+
+  it("calls a whole visual-order form readable", () => {
+    expect(displayText("ﻞﺠﺴﻟا ﻢﻴﻠﻌﺘﻟا وزارة ☐").readable).toBe(true);
+  });
+});
