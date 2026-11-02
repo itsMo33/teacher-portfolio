@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth/auth-options";
 import { supabaseAdmin } from "@/lib/supabase/server";
-import { deleteInquiry, getInquiryRole } from "@/lib/inquiries";
+import { deleteInquiries, getInquiryRole } from "@/lib/inquiries";
 import { logActivity } from "@/lib/audit";
 
 /** Deletes every inquiry from one upload at once -- handy when a PDF was sent wrongly. رائد and the manager can do
@@ -19,7 +19,7 @@ export async function DELETE(_req: Request, { params }: { params: Promise<{ batc
   if (!data || data.length === 0) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
   try {
-    for (const row of data) await deleteInquiry(row.id as string);
+    await deleteInquiries(data.map((row) => row.id as string));
   } catch (err) {
     return NextResponse.json({ error: err instanceof Error ? err.message : "تعذّر الحذف" }, { status: 500 });
   }

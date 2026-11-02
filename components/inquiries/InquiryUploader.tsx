@@ -18,6 +18,9 @@ interface TeacherOption {
   name: string;
 }
 
+/** Teachers sent per call: each call cuts and stores that many pages, and has to finish within the server time limit. */
+const SEND_CHUNK = 15;
+
 const INPUT_CLASS =
   "rounded-lg border border-slate-300 dark:border-slate-700 bg-transparent px-2 py-1.5 text-sm text-slate-900 dark:text-slate-50 focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]";
 
@@ -90,22 +93,34 @@ export function InquiryUploader({ kind }: { kind: "delay" | "other" }) {
     if (!confirm(`إرسال ${ready.length} مسائلة للمعلمين؟`)) return;
     setBusy(true);
     setError("");
+    // A big file goes out in small groups (each call has a time limit); they all share one batch id so the whole upload
+    // still counts as one -- and if one group fails, the ones already sent are reported instead of silently lost.
+    let sent = 0;
+    let batchId: string | undefined;
     try {
-      const res = await fetch("/api/inquiries/send", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ kind, path, items: ready }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error ?? "تعذّر الإرسال");
-      setDone(data.created);
+      for (let i = 0; i < ready.length; i += SEND_CHUNK) {
+        setStep(`جارٍ الإرسال ${Math.min(i + SEND_CHUNK, ready.length)} من ${ready.length}...`);
+        const res = await fetch("/api/inquiries/send", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ kind, path, items: ready.slice(i, i + SEND_CHUNK), batchId }),
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error ?? "تعذّر الإرسال");
+        batchId = data.batchId;
+        sent += data.created;
+      }
+      setDone(sent);
       setItems([]);
       setPath(null);
-      router.refresh();
     } catch (e) {
-      setError(e instanceof Error ? e.message : "تعذّر الإرسال");
+      setError(
+        `${e instanceof Error ? e.message : "تعذّر الإرسال"}${sent > 0 ? ` -- انرسل ${sent} من ${ready.length} قبل ما يتوقف، وتقدر تحذفهم من "اللي أرسلته" وتعيد الرفع` : ""}`
+      );
     } finally {
+      setStep("");
       setBusy(false);
+      router.refresh();
     }
   }
 

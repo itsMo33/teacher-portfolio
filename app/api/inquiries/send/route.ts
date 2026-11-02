@@ -13,7 +13,7 @@ export async function POST(req: NextRequest) {
   const inquiryRole = getInquiryRole(session.user);
   if (inquiryRole !== "officer" && inquiryRole !== "reviewer") return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
-  const { kind, path, items } = await req.json();
+  const { kind, path, items, batchId: batchIdInput } = await req.json();
   if (kind !== "delay" && kind !== "other") return NextResponse.json({ error: "Invalid kind" }, { status: 400 });
   if (typeof path !== "string" || !path.startsWith("inquiries/uploads/") || path.includes("..")) {
     return NextResponse.json({ error: "Invalid path" }, { status: 400 });
@@ -40,14 +40,20 @@ export async function POST(req: NextRequest) {
   if (clean.length === 0) return NextResponse.json({ error: "ما فيه معلمين صالحين للإرسال" }, { status: 400 });
 
   try {
-    const { created } = await createInquiries({ kind, sourcePath: path, uploadedBy: session.user.id, items: clean });
+    const { created, batchId } = await createInquiries({
+      kind,
+      sourcePath: path,
+      uploadedBy: session.user.id,
+      items: clean,
+      batchId: typeof batchIdInput === "string" ? batchIdInput : undefined,
+    });
     await logActivity({
       actorId: session.user.id,
       actorName: session.user.name ?? "",
       action: "send_inquiries",
       details: `${kind === "delay" ? "مسائلات تأخير" : "مسائلات أخرى"}: ${created} معلم`,
     });
-    return NextResponse.json({ created });
+    return NextResponse.json({ created, batchId });
   } catch (err) {
     return NextResponse.json({ error: err instanceof Error ? err.message : "تعذّر الإرسال" }, { status: 500 });
   }

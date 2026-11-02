@@ -147,3 +147,17 @@ describe("fixVisualArabic", () => {
     expect(displayText("ﻞﺠﺴﻟا ﻢﻴﻠﻌﺘﻟا وزارة ☐").readable).toBe(true);
   });
 });
+
+describe("name fallback guards", () => {
+  const withIds = [{ id: "t1", name: "عبدالرحيم محمد القرني", nationalId: "1000000001" }];
+
+  it("does not guess a teacher by name when the page prints someone else's national ID", () => {
+    const items = parseInquiryPages(["السجل المدني 1000000099 المكرم عبدالرحيم محمد القرني"], withIds);
+    expect(items[0].teacherId).toBeNull();
+  });
+
+  it("never matches a name made of numbers", () => {
+    const items = parseInquiryPages(["شخص غير معلم 149"], [{ id: "t9", name: "معلم تجريبي 149" }]);
+    expect(items[0].teacherId).toBeNull();
+  });
+});

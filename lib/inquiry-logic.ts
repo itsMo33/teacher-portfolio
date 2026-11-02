@@ -45,11 +45,15 @@ export interface ParsedInquiry {
 
 /** Minutes late as written in a piece of text ("تأخر 7 دقائق", "٥ دقيقة", "10 د"), or null. */
 export function extractMinutes(text: string): number | null {
-  const t = normalizeArabic(text);
-  const direct = t.match(/(\d{1,3})\s*(?:دقيقه|دقايق|دقائق|دقيقة|د\b)/);
-  if (direct) return Number(direct[1]);
-  const labelled = t.match(/(?:تاخر|تاخير|مده)\w*\s*[:\-]?\s*(\d{1,3})\b/);
-  return labelled ? Number(labelled[1]) : null;
+  const find = (source: string): number | null => {
+    const t = normalizeArabic(source);
+    const direct = t.match(/(\d{1,3})\s*(?:دقيقه|دقايق|دقائق|دقيقة|د\b)/);
+    if (direct) return Number(direct[1]);
+    const labelled = t.match(/(?:تاخر|تاخير|مده)\w*\s*[:\-]?\s*(\d{1,3})\b/);
+    return labelled ? Number(labelled[1]) : null;
+  };
+  // as written first; a form exported in visual order has its words and letters reversed, so read it back if that fails
+  return find(text) ?? (isVisualOrder(text) ? find(fixVisualArabic(text)) : null);
 }
 
 interface Hit {
@@ -70,7 +74,8 @@ function findHits(words: string[], teachers: TeacherName[]): Hit[] {
       .split(/\s+/)
       .filter(Boolean)
       .map((w) => stripAl(w));
-    if (parts.length < 2) continue;
+    // a name is matched by its first and last words, which must be actual words (not numbers)
+    if (parts.length < 2 || /^\d+$/.test(parts[0]) || /^\d+$/.test(parts[parts.length - 1])) continue;
     const first = parts[0];
     const last = parts[parts.length - 1];
     const middle = parts.slice(1, -1);
@@ -139,6 +144,7 @@ function findCompactHits(text: string, teachers: TeacherName[]): CharHit[] {
         .filter(Boolean)
         .map((w) => stripAl(w).replace(/[^\p{L}\p{N}]/gu, ""));
       if (parts.length < 2 || parts[0].length < 3 || parts[parts.length - 1].length < 3) continue;
+      if (/^\d+$/.test(parts[0]) || /^\d+$/.test(parts[parts.length - 1])) continue;
       const first = parts[0];
       const last = parts[parts.length - 1];
       const middle = parts.slice(1, -1);
@@ -210,6 +216,12 @@ function findIdHits(pageText: string, teachers: TeacherName[]): IdHit[] {
   return firstHitPerTeacher(hits);
 }
 
+/** Whether the page prints a Saudi national / resident ID (10 digits starting with 1 or 2). */
+function printsOtherNationalId(pageText: string): boolean {
+  const scan = [...pageText].map((ch) => normalizeArabic(ch)).join("");
+  return [...scan.matchAll(/(?<!\d)\d{10}(?!\d)/g)].some((m) => /^[12]/.test(m[0]));
+}
+
 /** One item per teacher found, per page. A page that names nobody comes back as an unmatched item so
  *  the person uploading can place it by hand instead of it silently disappearing. */
 export function parseInquiryPages(pages: string[], teachers: TeacherName[]): ParsedInquiry[] {
@@ -233,6 +245,12 @@ export function parseInquiryPages(pages: string[], teachers: TeacherName[]): Par
           minutes: extractMinutes(text),
         });
       });
+      return;
+    }
+
+    // The page prints a national ID that is nobody's on the list (رائد's own, a guest...): don't guess a teacher by name
+    if (printsOtherNationalId(pageText)) {
+      out.push({ teacherId: null, teacherName: null, page, pageOnly: false, text: pageText.trim().slice(0, 1500), minutes: extractMinutes(pageText) });
       return;
     }
 
@@ -325,10 +343,10 @@ export function evaluateDelay(minutes: number | null, justification: string | nu
  *  whether it came out readable. Text with stray symbols (a font whose letters don't map back) or long runs of
  *  letters with no spaces is not worth showing -- the original page is better. */
 export function displayText(raw: string): { text: string; readable: boolean } {
-  // text that came out in visual order is put back in reading order first
-  const letters = [...raw].filter((c) => /[؀-ۿﭐ-﷿ﹰ-﻿]/.test(c));
-  const mostlyShaped = letters.length > 0 && letters.filter(isShaped).length / letters.length >= 0.5;
-  const text = (mostlyShaped ? fixVisualArabic(raw) : raw).normalize("NFKC").replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F]/g, "");
+  // text that came out in visual order is put back in reading order first -- but only when that really reads better
+  const mostlyShaped = isVisualOrder(raw);
+  const chosen = mostlyShaped && readingScore(fixVisualArabic(raw)) > readingScore(raw) ? fixVisualArabic(raw) : raw;
+  const text = chosen.normalize("NFKC").replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F]/g, "");
   // anything outside Arabic, Latin letters, digits, spaces and everyday punctuation is a sign of broken text
   const stray = /[^؀-ۿݐ-ݿA-Za-z0-9\s.,:;!?()\-–—/«»"'،؛؟%+=_‎‏☐☑☒✓✗•●■□]/.test(text);
   // a form exported in visual order always has a few run-together words (labels and values), which is normal there
@@ -338,6 +356,33 @@ export function displayText(raw: string): { text: string; readable: boolean } {
 
 const SHAPED = /[\uFB50-\uFDFF\uFE70-\uFEFF]/;
 const isShaped = (ch: string) => SHAPED.test(ch);
+
+/** Words that appear on these school forms and in everyday Arabic. A text in the right reading order contains many of
+ *  them; the same text reversed contains almost none -- which is how the two are told apart. */
+const COMMON_WORDS = new Set(
+  [
+    "\u0645\u0646", "\u0641\u064A", "\u0639\u0644\u0649", "\u0625\u0644\u0649", "\u0639\u0646", "\u0623\u0646", "\u0625\u0646", "\u0647\u0630\u0627", "\u0630\u0644\u0643", "\u0627\u0644\u0644\u0647", "\u0627\u0644\u0633\u0644\u0627\u0645", "\u0639\u0644\u064A\u0643\u0645", "\u0648\u0631\u062D\u0645\u0629", "\u0648\u0628\u0631\u0643\u0627\u062A\u0647", "\u0648\u0628\u0639\u062F",
+    "\u0627\u0644\u0645\u0643\u0631\u0645", "\u0645\u062F\u064A\u0631", "\u0645\u062F\u0631\u0633\u0629", "\u0648\u0632\u0627\u0631\u0629", "\u0627\u0644\u062A\u0639\u0644\u064A\u0645", "\u0627\u0644\u0645\u0645\u0644\u0643\u0629", "\u0627\u0644\u0639\u0631\u0628\u064A\u0629", "\u0627\u0644\u0633\u0639\u0648\u062F\u064A\u0629", "\u0627\u0644\u0625\u062F\u0627\u0631\u0629", "\u0627\u0644\u0639\u0627\u0645\u0629", "\u0627\u0644\u062B\u0627\u0646\u0648\u064A\u0629",
+    "\u0627\u0644\u0631\u0642\u0645", "\u0627\u0644\u062A\u0627\u0631\u064A\u062E", "\u0627\u0644\u0645\u0631\u0641\u0642\u0627\u062A", "\u0627\u0644\u0633\u062C\u0644", "\u0627\u0644\u0645\u062F\u0646\u064A", "\u0627\u0644\u0627\u0633\u0645", "\u0627\u0644\u0648\u0638\u064A\u0641\u0629", "\u0627\u0644\u0645\u0639\u0644\u0645", "\u0645\u0639\u0644\u0645", "\u062A\u0623\u062E\u0631", "\u0627\u0644\u062A\u0623\u062E\u0631", "\u063A\u064A\u0627\u0628",
+    "\u0627\u0644\u063A\u064A\u0627\u0628", "\u0645\u0633\u0627\u0621\u0644\u0629", "\u0627\u0644\u0625\u0641\u0627\u062F\u0629", "\u0627\u0644\u062A\u0648\u0642\u064A\u0639", "\u0627\u0644\u0645\u0628\u0627\u0634\u0631", "\u0637\u0644\u0628", "\u0627\u0644\u0641\u062A\u0631\u0629", "\u0623\u0633\u0628\u0627\u0628", "\u0639\u0630\u0631\u0643\u0645", "\u062E\u0644\u0627\u0644", "\u0623\u0633\u0628\u0648\u0639", "\u062F\u0642\u064A\u0642\u0629",
+    "\u062F\u0642\u0627\u0626\u0642", "\u0631\u0642\u0645", "\u0627\u0644\u062C\u0648\u0627\u0644", "\u0627\u0644\u0645\u0633\u0645\u0649", "\u0627\u0644\u0648\u0638\u064A\u0641\u064A", "\u0627\u0644\u0645\u0643\u0631\u0645\u0629", "\u0645\u0643\u0629", "\u0648\u0641\u0642\u0647", "\u0627\u0644\u0631\u0628\u0627\u0639\u064A", "\u0627\u0644\u0623\u064A\u0627\u0645", "\u0623\u064A\u0627\u0645", "\u0639\u062F\u062F", "\u0645\u062F\u0629",
+  ].map((w) => normalizeArabic(w))
+);
+
+/** How many words of the text are common Arabic words -- higher means closer to the right reading order. */
+function readingScore(text: string): number {
+  return text
+    .normalize("NFKC")
+    .split(/[\s:/.,()\-]+/)
+    .filter((w) => COMMON_WORDS.has(normalizeArabic(w))).length;
+}
+
+/** True when most of the Arabic letters in the text are presentation-form glyphs -- the sign of a PDF export in
+ *  visual order. */
+export function isVisualOrder(text: string): boolean {
+  const letters = [...text].filter((c) => /[؀-ۿﭐ-﷿ﹰ-﻿]/.test(c));
+  return letters.length > 0 && letters.filter(isShaped).length / letters.length >= 0.5;
+}
 
 /** Some PDFs (the school's report exports) hand back Arabic in visual order: words in reverse order and the
  *  letters of connected words reversed, as presentation-form glyphs. Reading it back means undoing that per

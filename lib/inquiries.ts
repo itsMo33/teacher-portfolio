@@ -181,15 +181,32 @@ export interface SendItem {
   minutes: number | null;
 }
 
+/** The bytes of an uploaded PDF (no text extraction -- sending only needs to cut pages out of it). */
+async function downloadPdf(path: string): Promise<Uint8Array> {
+  const { data, error } = await supabaseAdmin.storage.from(PORTFOLIO_BUCKET).download(path);
+  if (error || !data) throw new Error("تعذّر قراءة الملف المرفوع");
+  return new Uint8Array(await data.arrayBuffer());
+}
+
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const SEND_CONCURRENCY = 5;
+
 /** Creates the inquiries from what the uploader confirmed: one row per teacher, with their own page cut out
- *  when the page is theirs alone. For delay inquiries the system's suggestion is worked out here. */
-export async function createInquiries(opts: { kind: InquiryKind; sourcePath: string; uploadedBy: string; items: SendItem[] }) {
-  const { bytes } = await readPdfPages(opts.sourcePath);
-  const source = await PDFDocument.load(bytes);
-  const batchId = randomUUID();
+ *  when the page is theirs alone. For delay inquiries the system's suggestion is worked out here. A big file is
+ *  sent in several calls that share one `batchId` (made by the first call), so each call stays well inside the
+ *  server's time limit and the whole upload still counts as one batch. */
+export async function createInquiries(opts: {
+  kind: InquiryKind;
+  sourcePath: string;
+  uploadedBy: string;
+  items: SendItem[];
+  batchId?: string;
+}) {
+  const source = await PDFDocument.load(await downloadPdf(opts.sourcePath));
+  const batchId = opts.batchId && UUID_RE.test(opts.batchId) ? opts.batchId : randomUUID();
   let created = 0;
 
-  for (const item of opts.items) {
+  const createOne = async (item: SendItem) => {
     const id = randomUUID();
     let teacherFilePath: string | null = null;
     if (item.pageOnly && item.page >= 1 && item.page <= source.getPageCount()) {
@@ -218,7 +235,17 @@ export async function createInquiries(opts: { kind: InquiryKind; sourcePath: str
       system_decision: evaluation.decision,
       system_note: evaluation.note,
     });
-    if (!error) created++;
+    if (error) {
+      // no row, so the cut page would be orphaned -- take it back out
+      if (teacherFilePath) await supabaseAdmin.storage.from(PORTFOLIO_BUCKET).remove([teacherFilePath]).catch(() => {});
+      return;
+    }
+    created++;
+  };
+
+  // a few at a time: the uploads to storage overlap while the pages are being cut
+  for (let i = 0; i < opts.items.length; i += SEND_CONCURRENCY) {
+    await Promise.all(opts.items.slice(i, i + SEND_CONCURRENCY).map(createOne));
   }
   return { created, batchId };
 }
@@ -277,3 +304,19 @@ export async function deleteInquiry(id: string): Promise<boolean> {
   }
   return true;
 }
+
+/** Deletes many inquiries at once (a whole upload): a handful of queries instead of a few per inquiry, so a big
+ *  batch stays well inside the server's time limit. The uploaded PDF is kept, as with a single delete. */
+export async function deleteInquiries(ids: string[]): Promise<number> {
+  if (ids.length === 0) return 0;
+  const { data: rows } = await supabaseAdmin.from("inquiries").select("teacher_file_path").in("id", ids);
+  const { error } = await supabaseAdmin.from("inquiries").delete().in("id", ids);
+  if (error) throw error;
+
+  const paths = (rows ?? []).map((r) => r.teacher_file_path as string | null).filter((p): p is string => !!p);
+  for (let i = 0; i < paths.length; i += 100) {
+    await supabaseAdmin.storage.from(PORTFOLIO_BUCKET).remove(paths.slice(i, i + 100)).catch(() => {});
+  }
+  return ids.length;
+}
+
