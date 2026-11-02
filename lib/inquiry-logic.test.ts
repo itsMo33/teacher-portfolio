@@ -99,3 +99,35 @@ describe("displayText", () => {
     expect(displayText("تأخر٥دقائقعنالطابورالصباحيهذاالملفتجريبي").readable).toBe(false);
   });
 });
+
+describe("parseInquiryPages by national ID", () => {
+  const withIds = [
+    { id: "t1", name: "عبدالرحيم محمد القرني", nationalId: "1000000001" },
+    { id: "t2", name: "احمد يحيى الزهراني", nationalId: "1000000002" },
+  ];
+
+  it("matches a page by the ID printed on it even when the letters are unreadable", () => {
+    const items = parseInquiryPages(["ﺓﺩﺎﻔﺘﺳﻻﺍ ﻢﺳﺍ ﻞﺠﺴﻟﺍ1000000001 ﺔﻟءﺎﺴﻣ"], withIds);
+    expect(items).toEqual([expect.objectContaining({ teacherId: "t1", pageOnly: true })]);
+  });
+
+  it("gives each page to its own teacher, one item per page", () => {
+    const items = parseInquiryPages(["ﺍﺳﻢ 1000000001 ﺍﺳﻢ 1000000001", "رقم 1000000002"], withIds);
+    expect(items.map((i) => [i.teacherId, i.page])).toEqual([["t1", 1], ["t2", 2]]);
+  });
+
+  it("cuts a page that lists several people at each ID", () => {
+    const items = parseInquiryPages(["1000000001 تأخر 4 دقائق 1000000002 تأخر 9 دقائق"], withIds);
+    expect(items.map((i) => [i.teacherId, i.pageOnly, i.minutes])).toEqual([["t1", false, 4], ["t2", false, 9]]);
+  });
+
+  it("collapses a name printed several times on one page into one item", () => {
+    const items = parseInquiryPages(["المكرم عبدالرحيم محمد القرني نفيدكم بأن عبدالرحيم محمد القرني تأخر 3 دقائق"], teachers);
+    expect(items).toHaveLength(1);
+    expect(items[0].teacherId).toBe("t1");
+  });
+
+  it("falls back to names when no ID is printed", () => {
+    expect(parseInquiryPages(["المعلم احمد يحيى الزهراني"], withIds)[0].teacherId).toBe("t2");
+  });
+});

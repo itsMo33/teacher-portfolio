@@ -158,10 +158,12 @@ export async function parseUploadedPdf(
 ): Promise<{ items: ParsedInquiry[]; teachers: { id: string; name: string }[]; pageCount: number }> {
   const [{ pages }, { data: teachers }] = await Promise.all([
     readPdfPages(path),
-    supabaseAdmin.from("users").select("id, name").eq("role", "teacher").is("deleted_at", null).order("name"),
+    supabaseAdmin.from("users").select("id, name, national_id").eq("role", "teacher").is("deleted_at", null).order("name"),
   ]);
-  const list = (teachers ?? []) as { id: string; name: string }[];
-  return { items: parseInquiryPages(pages, list), teachers: list, pageCount: pages.length };
+  const rows = (teachers ?? []) as { id: string; name: string; national_id: string | null }[];
+  // national IDs are used for matching here only -- the list sent back to the browser carries names alone
+  const items = parseInquiryPages(pages, rows.map((t) => ({ id: t.id, name: t.name, nationalId: t.national_id })));
+  return { items, teachers: rows.map((t) => ({ id: t.id, name: t.name })), pageCount: pages.length };
 }
 
 export interface SendItem {

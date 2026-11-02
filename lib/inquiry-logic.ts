@@ -29,6 +29,8 @@ const stripAl = (w: string) => (w.startsWith("ال") && w.length > 3 ? w.slice(2
 export interface TeacherName {
   id: string;
   name: string;
+  /** The teacher's national ID (السجل المدني) -- when the PDF prints it, it is the surest way to tell who a page is about. */
+  nationalId?: string | null;
 }
 
 export interface ParsedInquiry {
@@ -165,6 +167,49 @@ function findCompactHits(text: string, teachers: TeacherName[]): CharHit[] {
   return best.sort((x, y) => x.at - y.at);
 }
 
+/** Keeps only the first hit of each teacher: a page can name the same person several times (in the header, in
+ *  the greeting, in the body), and that is still one inquiry. */
+function firstHitPerTeacher<T extends { teacher: TeacherName }>(hits: T[]): T[] {
+  const seen = new Set<string>();
+  return hits.filter((h) => (seen.has(h.teacher.id) ? false : (seen.add(h.teacher.id), true)));
+}
+
+interface IdHit {
+  teacher: TeacherName;
+  /** Index into the original page text where the ID starts. */
+  at: number;
+}
+
+/** 10-digit national IDs printed on the page that belong to a known teacher. Reports exported from the school's
+ *  systems print the person's ID (السجل المدني) on every page, and digits survive every PDF text quirk that
+ *  mangles Arabic letters, so this is checked before any name matching. An ID that came out reversed counts too. */
+function findIdHits(pageText: string, teachers: TeacherName[]): IdHit[] {
+  const byId = new Map<string, TeacherName>();
+  for (const t of teachers) {
+    const id = (t.nationalId ?? "").replace(/\D/g, "");
+    if (id.length === 10) byId.set(id, t);
+  }
+  if (byId.size === 0) return [];
+
+  // the page as normalised characters (digits made ASCII), remembering where each one came from in the original
+  let scan = "";
+  const origin: number[] = [];
+  for (let i = 0; i < pageText.length; i++) {
+    for (const ch of normalizeArabic(pageText[i])) {
+      scan += ch;
+      origin.push(i);
+    }
+  }
+
+  const hits: IdHit[] = [];
+  for (const m of scan.matchAll(/(?<!\d)\d{10}(?!\d)/g)) {
+    const digits = m[0];
+    const teacher = byId.get(digits) ?? byId.get([...digits].reverse().join(""));
+    if (teacher) hits.push({ teacher, at: origin[m.index ?? 0] ?? 0 });
+  }
+  return firstHitPerTeacher(hits);
+}
+
 /** One item per teacher found, per page. A page that names nobody comes back as an unmatched item so
  *  the person uploading can place it by hand instead of it silently disappearing. */
 export function parseInquiryPages(pages: string[], teachers: TeacherName[]): ParsedInquiry[] {
@@ -173,7 +218,25 @@ export function parseInquiryPages(pages: string[], teachers: TeacherName[]): Par
     const page = index + 1;
     const words = pageText.split(/\s+/).filter(Boolean);
     if (words.length === 0) return;
-    const hits = findHits(words, teachers);
+    const idHits = findIdHits(pageText, teachers);
+    if (idHits.length > 0) {
+      idHits.forEach((hit, k) => {
+        const end = k + 1 < idHits.length ? idHits[k + 1].at : pageText.length;
+        // a page about one person is passed on whole; a page listing several is cut at each ID
+        const text = idHits.length === 1 ? pageText.trim() : pageText.slice(hit.at, end).trim();
+        out.push({
+          teacherId: hit.teacher.id,
+          teacherName: hit.teacher.name,
+          page,
+          pageOnly: idHits.length === 1,
+          text: text.slice(0, 1500),
+          minutes: extractMinutes(text),
+        });
+      });
+      return;
+    }
+
+    const hits = firstHitPerTeacher(findHits(words, teachers));
 
     if (hits.length > 0) {
       hits.forEach((hit, k) => {
@@ -192,7 +255,7 @@ export function parseInquiryPages(pages: string[], teachers: TeacherName[]): Par
     }
 
     // no luck with whole words (spaces lost / reversed text): match on the run of letters instead
-    const charHits = findCompactHits(pageText, teachers);
+    const charHits = firstHitPerTeacher(findCompactHits(pageText, teachers));
     if (charHits.length > 0) {
       charHits.forEach((hit, k) => {
         const end = k + 1 < charHits.length ? charHits[k + 1].at : pageText.length;
