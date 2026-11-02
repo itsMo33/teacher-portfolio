@@ -1,7 +1,9 @@
 import "server-only";
 import { supabaseAdmin } from "@/lib/supabase/server";
 import { matchShortName, OFFICIAL_LOAD, RESERVE_TEACHER_NAMES } from "@/lib/substitute-data";
-import { weekStartOf } from "@/lib/teacher-performance";
+import { schoolWeekDays, weekStartOf } from "@/lib/teacher-performance";
+import { getTrackedPeople } from "@/lib/performance-people";
+import { riyadhToday } from "@/lib/class-time-flags";
 
 const DAY_KEYS = ["احد", "اثنين", "ثلاثاء", "اربعاء", "خميس"] as const;
 
@@ -93,4 +95,28 @@ export async function getWeekSubstitutions(weekStart: string): Promise<WeekSubst
       absentTeacher: r.absent_teacher as string,
       substitute: r.substitute as string,
     }));
+}
+
+/** A teacher put down as absent in the waiting table is absent for that whole day, so any mark already recorded for them
+ *  that day in متابعة أداء المعلمين (late, absent from the lineup, ...) is taken off -- it would be unfair to count a teacher
+ *  who wasn't at school. Runs over the current school week, since waiting-table assignments belong to the week they were
+ *  made in. Returns how many marks were removed. */
+export async function clearMarksForWaitingAbsentees(): Promise<number> {
+  const days = schoolWeekDays(weekStartOf(riyadhToday()));
+  const { data: people } = await getTrackedPeople();
+  const absences = await getWaitingAbsences(days, people);
+
+  let removed = 0;
+  for (const [date, byTeacher] of absences) {
+    const ids = [...byTeacher.keys()];
+    if (ids.length === 0) continue;
+    const { data } = await supabaseAdmin
+      .from("teacher_performance_records")
+      .delete()
+      .eq("record_date", date)
+      .in("teacher_id", ids)
+      .select("id");
+    removed += data?.length ?? 0;
+  }
+  return removed;
 }
