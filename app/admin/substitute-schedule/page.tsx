@@ -30,6 +30,21 @@ async function fetchAssignments(all = false): Promise<SubstituteAssignment[]> {
   return assignments;
 }
 
+// printed slips are plain blocks (no flex / overflow containers, which break pagination): two to a page, each kept whole
+const PRINT_SLIP_CSS = `
+@media print {
+  .waiting-print .slip { margin-bottom: 14mm; break-inside: avoid; page-break-inside: avoid; }
+  .waiting-print .sheet { break-inside: avoid; page-break-inside: avoid; }
+  .waiting-print .sheet + .sheet { break-before: page; page-break-before: always; }
+  .waiting-print .slip-header { display: flex; justify-content: space-between; gap: 16px; margin-bottom: 8px; font-size: 13px; }
+  .waiting-print .slip-header p { margin: 2px 0; }
+  .waiting-print .slip-header-side { text-align: left; white-space: nowrap; }
+  .waiting-print table { border-collapse: collapse; width: 100%; }
+  .waiting-print th, .waiting-print td { border: 1px solid #000; padding: 6px 8px; text-align: right; font-size: 12px; }
+  .waiting-print tr { break-inside: avoid; }
+}
+`;
+
 function candidateInfoLabel(c: Candidate): string {
   if (!TEACHER_BY_NAME[c.name]) {
     return `انتظار ${c.subCount} هذا الأسبوع`;
@@ -64,47 +79,6 @@ function buildSlipHtml(group: AbsenceGroup, dateStr: string): string {
       <tbody>${rows}</tbody>
     </table>
   </div>`;
-}
-
-function buildPrintHtml(assignments: SubstituteAssignment[], day: DayKey | null): string {
-  const scoped = day ? assignments.filter((a) => a.day === day) : assignments;
-  const groups = buildAbsenceGroups(scoped);
-  const dateStr = new Date().toLocaleDateString("ar-SA", { year: "numeric", month: "long", day: "numeric" });
-  const slips = groups.map((g) => buildSlipHtml(g, dateStr)).join("");
-
-  return `<!doctype html>
-<html dir="rtl" lang="ar">
-<head>
-<meta charset="utf-8">
-<title>سجل إسناد الانتظار</title>
-<style>
-  body { font-family: Tahoma, Arial, sans-serif; padding: 24px; color: #000; }
-  h1 { font-size: 20px; margin-bottom: 16px; }
-  /* two slips to a page, each kept whole: a slip is never split across pages */
-  .slip { margin-bottom: 18px; page-break-inside: avoid; break-inside: avoid; }
-  .slip:nth-of-type(2n) { page-break-after: always; break-after: page; }
-  .slip-header { display: flex; justify-content: space-between; gap: 16px; margin-bottom: 8px; font-size: 13px; }
-  .slip-header p { margin: 2px 0; }
-  .slip-header-side { text-align: left; white-space: nowrap; }
-  table { border-collapse: collapse; width: 100%; }
-  th, td { border: 1px solid #000; padding: 6px 8px; text-align: right; font-size: 12px; }
-  thead { display: table-header-group; }
-  tr { page-break-inside: avoid; }
-</style>
-</head>
-<body>
-  <h1>${SCHOOL_NAME} — سجل إسناد الانتظار</h1>
-  ${slips}
-  <script>
-    window.onload = function () {
-      try { window.print(); } catch (e) {}
-    };
-    window.onafterprint = function () {
-      try { window.close(); } catch (e) {}
-    };
-  </script>
-</body>
-</html>`;
 }
 
 export default function SubstituteSchedulePage() {
@@ -222,14 +196,6 @@ export default function SubstituteSchedulePage() {
     } catch {
       // ignore
     }
-    try {
-      const html = buildPrintHtml(assignments, selectedDay);
-      const blob = new Blob([html], { type: "text/html" });
-      const url = URL.createObjectURL(blob);
-      window.open(url, "_blank");
-    } catch {
-      // ignore
-    }
     setShowPrintToast(true);
     if (toastTimeoutRef.current) clearTimeout(toastTimeoutRef.current);
     toastTimeoutRef.current = setTimeout(() => setShowPrintToast(false), 12000);
@@ -274,13 +240,21 @@ export default function SubstituteSchedulePage() {
   const groups = useMemo(() => buildAbsenceGroups(assignments), [assignments]);
   // the groups that actually get printed (all of them, or just the chosen day) -- they are paired two to a page
   const printedGroups = useMemo(() => groups.filter((g) => !selectedDay || g.day === selectedDay), [groups, selectedDay]);
+  const printSlipsHtml = useMemo(() => {
+    const dateStr = new Date().toLocaleDateString("ar-SA", { year: "numeric", month: "long", day: "numeric" });
+    const slips = printedGroups.map((g) => buildSlipHtml(g, dateStr));
+    const sheets: string[] = [];
+    for (let i = 0; i < slips.length; i += 2) sheets.push(`<div class="sheet">${slips.slice(i, i + 2).join("")}</div>`);
+    return sheets.join("");
+  }, [printedGroups]);
   const printDateStr = useMemo(
     () => new Date().toLocaleDateString("ar-SA", { year: "numeric", month: "long", day: "numeric" }),
     []
   );
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-6 print:block">
+      <style>{PRINT_SLIP_CSS}</style>
       <div className="print-only">
         <h1 className="text-lg font-bold">{SCHOOL_NAME} — سجل إسناد الانتظار{selectedDay ? ` — يوم ${selectedDay}` : ""}</h1>
         <p>
@@ -288,6 +262,8 @@ export default function SubstituteSchedulePage() {
           الإسنادات: {selectedDay ? assignments.filter((a) => a.day === selectedDay).length : assignments.length}
         </p>
       </div>
+
+      <div className="print-only waiting-print" dangerouslySetInnerHTML={{ __html: printSlipsHtml }} />
 
       <div className="no-print flex flex-col gap-6">
         <div>
@@ -438,7 +414,7 @@ export default function SubstituteSchedulePage() {
         )}
       </div>
 
-      <div className="flex flex-col gap-3">
+      <div className="flex flex-col gap-3 print:block">
         <div className="no-print flex items-center justify-between flex-wrap gap-2">
           <h3 className="font-bold text-slate-800 dark:text-slate-100">سجل إسناد الانتظار لهذا الأسبوع</h3>
           <div className="flex items-center gap-2">
@@ -493,10 +469,7 @@ export default function SubstituteSchedulePage() {
           groups.map((group) => (
             <div
               key={`${group.day}-${group.absentTeacher}`}
-              // printed two to a page: each table stays whole, and a new page starts after every second one
-              className={`rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4 print:break-inside-avoid print:p-2 ${
-                printedGroups.indexOf(group) % 2 === 1 ? "print:break-after-page" : ""
-              } ${selectedDay && group.day !== selectedDay ? "no-print" : ""}`}
+              className="no-print rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4"
             >
               <div className="flex flex-wrap items-start justify-between gap-2 mb-3 text-sm">
                 <div>

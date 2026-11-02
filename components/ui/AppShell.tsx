@@ -32,7 +32,7 @@ export function AppShell({
   const isOnAdminSide = pathname.startsWith("/admin");
 
   return (
-    <div className="flex min-h-screen flex-col bg-slate-50 dark:bg-slate-950 overflow-x-hidden">
+    <div className="flex min-h-screen flex-col bg-slate-50 dark:bg-slate-950 overflow-x-hidden print:block print:overflow-visible">
       <div className="no-print h-1.5 w-full shrink-0 bg-gradient-to-l from-[var(--brand-primary)] to-[var(--brand-accent)]" />
       {demoViewOnly && (
         <div className="no-print flex flex-wrap items-center justify-between gap-2 bg-amber-100 dark:bg-amber-900/40 px-4 py-2 text-sm text-amber-800 dark:text-amber-200">
@@ -71,7 +71,7 @@ export function AppShell({
         <SignOutButton />
       </header>
 
-      <div className="relative flex flex-1">
+      <div className="relative flex flex-1 print:block">
         {menuOpen && (
           <div
             className="fixed inset-0 z-30 bg-black/40 md:hidden"
