@@ -5,7 +5,6 @@ export type InquiryKind = "delay" | "absence" | "other";
 export type InquiryDecision = "accepted" | "rejected";
 
 /** More than this many minutes late is rejected (3 or fewer is accepted). */
-export const MAX_ACCEPTED_DELAY_MINUTES = 3;
 
 const ARABIC_INDIC = "٠١٢٣٤٥٦٧٨٩";
 const PERSIAN_INDIC = "۰۱۲۳۴۵۶۷۸۹";
@@ -301,50 +300,6 @@ export function parseInquiryPages(pages: string[], teachers: TeacherName[]): Par
     out.push({ teacherId: null, teacherName: null, page, pageOnly: false, text: pageText.trim().slice(0, 1200), minutes: extractMinutes(pageText) });
   });
   return out;
-}
-
-/** The excuses رائد wants to hear about: a teacher who was late by more than the limit and still wrote one
- *  of these. Matched loosely on the normalised text, covering the usual spellings and phrasings. */
-const EXCUSE_PATTERNS: { label: string; pattern: RegExp }[] = [
-  { label: "أبناء", pattern: /(ابناء|ابنائي|ابني|ابنتي|بنتي|اولادي|ولدي|اطفالي|اطفال|عيالي|توصيل.{0,12}(?:ولد|بنت|ابن))/ },
-  { label: "ازدحام", pattern: /(ازدحام|زحام|زحمه|زحمة)/ },
-  { label: "مرض", pattern: /(مرض|مريض|مرضي|وعكه|ظرف صحي|ظروف صحيه|اعراض|مستشفي|مستوصف|عياده|صداع|حمي|زكام|تعب)/ },
-  { label: "عطل", pattern: /(عطل|تعطل|عطلان|خربت|خرب|بنشر|بنشير|بطاريه)/ },
-  { label: "عرقلة سير", pattern: /(عرق[لة]?[هة]? ?(?:ال)?سير|عرقله|حادث|حوادث|ازمه ?(?:سير|مروري)|اغلاق (?:ال)?طريق|سير بطيء|سير بطي)/ },
-];
-
-export function detectExcuses(justification: string): string[] {
-  const t = normalizeArabic(justification);
-  return EXCUSE_PATTERNS.filter((e) => e.pattern.test(t)).map((e) => e.label);
-}
-
-export interface DelayEvaluation {
-  /** What the system suggests; null when the delay in minutes isn't known. */
-  decision: InquiryDecision | null;
-  /** A line for رائد explaining the suggestion -- never shown to the teacher. */
-  note: string | null;
-}
-
-/** The rule: more than 3 minutes late is rejected, 3 or fewer is accepted. When it is rejected and the teacher
- *  also gave one of the usual excuses, the note says so ("he wrote this and I rejected it"). */
-export function evaluateDelay(minutes: number | null, justification: string | null): DelayEvaluation {
-  if (minutes === null) return { decision: null, note: "لم يُعرف مقدار التأخر من الملف -- بدون اقتراح" };
-  if (minutes <= MAX_ACCEPTED_DELAY_MINUTES) {
-    return { decision: "accepted", note: `تأخر ${minutes} دقيقة -- ضمن الحد المقبول` };
-  }
-  const excuses = justification ? detectExcuses(justification) : [];
-  if (excuses.length > 0) {
-    return {
-      decision: "rejected",
-      note: `تأخر ${minutes} دقيقة وكتب تبريراً من نوع (${excuses.join("، ")}) -- رُفضت المسائلة تلقائياً`,
-    };
-  }
-  return {
-    decision: "rejected",
-    note: justification
-      ? `تأخر ${minutes} دقيقة -- رُفضت المسائلة تلقائياً`
-      : `تأخر ${minutes} دقيقة ولم يكتب تبريراً -- رُفضت المسائلة تلقائياً`,
-  };
 }
 
 /** The extracted PDF text made fit to show: Arabic presentation forms folded back to plain letters, and a check for

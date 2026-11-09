@@ -14,8 +14,6 @@ export interface ReviewInquiry {
   textReadable: boolean;
   teacherOpenedAt: string | null;
   justification: string | null;
-  systemDecision: "accepted" | "rejected" | null;
-  systemNote: string | null;
   decision: "accepted" | "rejected" | null;
   decisionNote: string | null;
 }
@@ -82,7 +80,6 @@ function Row({ item }: { item: ReviewInquiry }) {
 
   const isDelay = item.kind === "delay";
   const daysLeft = inquiryDaysLeft(item.createdAt);
-  const opposite = item.systemDecision === "accepted" ? "rejected" : "accepted";
 
   return (
     <li className="flex flex-col gap-2 rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-3 text-sm">
@@ -137,12 +134,6 @@ function Row({ item }: { item: ReviewInquiry }) {
         <p className="rounded-lg bg-slate-50 dark:bg-slate-800/50 p-2 text-slate-700 dark:text-slate-200">«{item.justification}»</p>
       )}
 
-      {isDelay && item.systemNote && (
-        <p className="text-xs text-slate-600 dark:text-slate-300">
-          <strong>اقتراح النظام:</strong> {item.systemDecision ? DECISION_LABEL[item.systemDecision] : "بدون اقتراح"} -- {item.systemNote}
-        </p>
-      )}
-
       {item.decision && item.decisionNote && <p className="text-xs text-slate-500">ملاحظتك: {item.decisionNote}</p>}
 
       <div className="flex flex-wrap items-center gap-3 text-xs">
@@ -174,45 +165,22 @@ function Row({ item }: { item: ReviewInquiry }) {
             className="rounded-lg border border-slate-300 dark:border-slate-700 bg-transparent px-3 py-1.5 text-xs text-slate-900 dark:text-slate-50 focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]"
           />
           <div className="flex flex-wrap gap-2">
-            {isDelay && item.systemDecision ? (
-              <>
-                <button
-                  type="button"
-                  disabled={busy}
-                  onClick={() => send("PUT", item.systemDecision!)}
-                  className="rounded-lg bg-green-600 hover:bg-green-700 text-white text-xs px-3 py-1.5 disabled:opacity-50"
-                >
-                  اعتماد ({DECISION_LABEL[item.systemDecision]})
-                </button>
-                <button
-                  type="button"
-                  disabled={busy}
-                  onClick={() => send("PUT", opposite)}
-                  className="rounded-lg border border-amber-400 text-amber-700 dark:text-amber-300 text-xs px-3 py-1.5 disabled:opacity-50"
-                >
-                  تغيير إلى {DECISION_LABEL[opposite]}
-                </button>
-              </>
-            ) : (
-              <>
-                <button
-                  type="button"
-                  disabled={busy}
-                  onClick={() => send("PUT", "accepted")}
-                  className="rounded-lg bg-green-600 hover:bg-green-700 text-white text-xs px-3 py-1.5 disabled:opacity-50"
-                >
-                  قبول
-                </button>
-                <button
-                  type="button"
-                  disabled={busy}
-                  onClick={() => send("PUT", "rejected")}
-                  className="rounded-lg bg-red-600 hover:bg-red-700 text-white text-xs px-3 py-1.5 disabled:opacity-50"
-                >
-                  رفض
-                </button>
-              </>
-            )}
+            <button
+              type="button"
+              disabled={busy}
+              onClick={() => send("PUT", "accepted")}
+              className="rounded-lg bg-green-600 hover:bg-green-700 text-white text-xs px-3 py-1.5 disabled:opacity-50"
+            >
+              قبول
+            </button>
+            <button
+              type="button"
+              disabled={busy}
+              onClick={() => send("PUT", "rejected")}
+              className="rounded-lg bg-red-600 hover:bg-red-700 text-white text-xs px-3 py-1.5 disabled:opacity-50"
+            >
+              رفض
+            </button>
           </div>
         </div>
       ) : (

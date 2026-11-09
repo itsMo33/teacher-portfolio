@@ -7,16 +7,14 @@ import { displayText, type InquiryKind } from "@/lib/inquiry-logic";
 import { InquiryUploader } from "@/components/inquiries/InquiryUploader";
 import { InquiryReviewList } from "@/components/inquiries/InquiryReviewList";
 import { OfficerSentList } from "@/components/inquiries/OfficerSentList";
-import { AccountabilityFiles } from "@/components/admin/AccountabilityFiles";
 
-type Tab = "all" | "delay" | "absence" | "other" | "files";
+type Tab = "all" | "delay" | "absence" | "other";
 
 const TITLES: Record<Tab, string> = {
   all: "الكل",
   delay: "مسائلات تأخير (حضوري)",
   absence: "مسائلات الغياب",
   other: "المسائلات الأخرى",
-  files: "ملفات المسائلات",
 };
 
 /** Every kind of مسائلة in one place, chosen with ?kind=: all of them together, the late-arrival ones, the absence
@@ -28,11 +26,11 @@ export default async function InquiriesPage({ searchParams }: { searchParams: Pr
   if (role !== "officer" && role !== "reviewer") redirect("/admin");
 
   const { kind: kindParam } = await searchParams;
-  const tabs: Tab[] = role === "reviewer" ? ["all", "delay", "absence", "other", "files"] : ["delay", "absence", "other"];
+  const tabs: Tab[] = role === "reviewer" ? ["all", "delay", "absence", "other"] : ["delay", "absence", "other"];
   const tab: Tab = tabs.includes(kindParam as Tab) ? (kindParam as Tab) : tabs[0];
   const sendKinds: InquiryKind[] = tab === "delay" || tab === "absence" || tab === "other" ? [tab] : tab === "all" ? ["delay", "absence", "other"] : [];
 
-  const inquiries = tab === "files" ? [] : await listInquiries();
+  const inquiries = await listInquiries();
   const shown = tab === "all" ? inquiries : inquiries.filter((i) => i.kind === tab);
 
   // what the uploading account sent itself, grouped by upload (for its delete buttons)
@@ -79,10 +77,7 @@ export default async function InquiriesPage({ searchParams }: { searchParams: Pr
         </div>
       </div>
 
-      {tab === "files" ? (
-        <AccountabilityFiles />
-      ) : (
-        <>
+      <>
           {!session!.user.demoViewOnly &&
             (sendKinds.length === 1 ? (
               <InquiryUploader kind={sendKinds[0]} />
@@ -98,8 +93,7 @@ export default async function InquiriesPage({ searchParams }: { searchParams: Pr
             ))}
 
           {role === "officer" && <OfficerSentList batches={sentBatches} />}
-          {
-            <>
+          <>
               <InquirySummary counts={countInquiries(shown)} />
               {teacherRows.length > 0 && (
                 <div className="overflow-x-auto rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900">
@@ -139,16 +133,12 @@ export default async function InquiriesPage({ searchParams }: { searchParams: Pr
                   textReadable: displayText(i.extractedText).readable,
                   teacherOpenedAt: i.teacherOpenedAt,
                   justification: i.justification,
-                  systemDecision: i.systemDecision,
-                  systemNote: i.systemNote,
                   decision: i.decision,
                   decisionNote: i.decisionNote,
                 }))}
               />
-            </>
-          }
-        </>
-      )}
+          </>
+      </>
     </div>
   );
 }

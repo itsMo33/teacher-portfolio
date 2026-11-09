@@ -1,37 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { detectExcuses, displayText, evaluateDelay, extractMinutes, extractPeriod, inquiryDaysLeft, parseInquiryPages } from "./inquiry-logic";
+import { displayText, extractMinutes, extractPeriod, inquiryDaysLeft, parseInquiryPages } from "./inquiry-logic";
 
 const teachers = [
   { id: "t1", name: "عبدالرحيم محمد القرني" },
   { id: "t2", name: "احمد يحيى الزهراني" },
   { id: "t3", name: "احمد عبدالله البراك" },
 ];
-
-describe("evaluateDelay", () => {
-  it("accepts 3 minutes or less and rejects more", () => {
-    expect(evaluateDelay(3, null).decision).toBe("accepted");
-    expect(evaluateDelay(2, "زحمة").decision).toBe("accepted");
-    expect(evaluateDelay(4, null).decision).toBe("rejected");
-  });
-
-  it("tells رائد when a late teacher gave one of the usual excuses", () => {
-    expect(evaluateDelay(10, "تأخرت بسبب توصيل أبنائي للمدرسة").note).toContain("أبناء");
-    expect(evaluateDelay(10, "كان في ازدحام شديد").note).toContain("ازدحام");
-    expect(evaluateDelay(7, "كنت مريض").note).toContain("مرض");
-    expect(evaluateDelay(7, "تعطلت سيارتي").note).toContain("عطل");
-    expect(evaluateDelay(7, "عرقة سير على الطريق").note).toContain("عرقلة سير");
-  });
-
-  it("gives no suggestion when the delay is unknown", () => {
-    expect(evaluateDelay(null, "مرض").decision).toBeNull();
-  });
-});
-
-describe("detectExcuses", () => {
-  it("finds nothing in an unrelated sentence", () => {
-    expect(detectExcuses("نسيت المنبه")).toEqual([]);
-  });
-});
 
 describe("extractMinutes", () => {
   it("reads Arabic and Western digits", () => {

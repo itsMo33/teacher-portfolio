@@ -4,7 +4,7 @@ import { getDocumentProxy, extractText } from "unpdf";
 import { PDFDocument } from "pdf-lib";
 import { supabaseAdmin } from "@/lib/supabase/server";
 import { getSignedUrl, PORTFOLIO_BUCKET } from "@/lib/supabase/storage";
-import { displayText, evaluateDelay, parseInquiryPages, type InquiryDecision, type InquiryKind, type ParsedInquiry } from "@/lib/inquiry-logic";
+import { displayText, parseInquiryPages, type InquiryDecision, type InquiryKind, type ParsedInquiry } from "@/lib/inquiry-logic";
 
 export const INQUIRY_OFFICER_CATEGORY = "inquiries_officer";
 
@@ -36,8 +36,6 @@ export interface Inquiry {
   teacherOpenedAt: string | null;
   justification: string | null;
   justifiedAt: string | null;
-  systemDecision: InquiryDecision | null;
-  systemNote: string | null;
   decision: InquiryDecision | null;
   decisionNote: string | null;
   decidedAt: string | null;
@@ -48,7 +46,7 @@ export interface Inquiry {
 }
 
 const SELECT =
-  "id, kind, teacher_id, batch_id, uploaded_by, created_at, delay_minutes, extracted_text, teacher_file_path, teacher_opened_at, justification, justified_at, system_decision, system_note, decision, decision_note, decided_at, decided_by, teacher:users!inquiries_teacher_id_fkey(name)";
+  "id, kind, teacher_id, batch_id, uploaded_by, created_at, delay_minutes, extracted_text, teacher_file_path, teacher_opened_at, justification, justified_at, decision, decision_note, decided_at, decided_by, teacher:users!inquiries_teacher_id_fkey(name)";
 
 interface Row {
   id: string;
@@ -63,8 +61,6 @@ interface Row {
   teacher_opened_at: string | null;
   justification: string | null;
   justified_at: string | null;
-  system_decision: InquiryDecision | null;
-  system_note: string | null;
   decision: InquiryDecision | null;
   decision_note: string | null;
   decided_at: string | null;
@@ -85,8 +81,6 @@ function toInquiry(r: Row): Inquiry {
     teacherOpenedAt: r.teacher_opened_at,
     justification: r.justification,
     justifiedAt: r.justified_at,
-    systemDecision: r.system_decision,
-    systemNote: r.system_note,
     decision: r.decision,
     decisionNote: r.decision_note,
     decidedAt: r.decided_at,
@@ -228,7 +222,6 @@ export async function createInquiries(opts: {
       if (!error) teacherFilePath = path;
     }
 
-    const evaluation = opts.kind === "delay" ? evaluateDelay(item.minutes, null) : { decision: null, note: null };
     const { error } = await supabaseAdmin.from("inquiries").insert({
       id,
       kind: opts.kind,
@@ -240,8 +233,6 @@ export async function createInquiries(opts: {
       extracted_text: item.text,
       delay_minutes: opts.kind === "delay" ? item.minutes : null,
       uploaded_by: opts.uploadedBy,
-      system_decision: evaluation.decision,
-      system_note: evaluation.note,
     });
     if (error) {
       // no row, so the cut page would be orphaned -- take it back out
@@ -260,14 +251,12 @@ export async function createInquiries(opts: {
 
 /** Re-runs the delay rule once the teacher's justification is in, so رائد sees the excuse noted. */
 export async function applyJustification(inquiry: Inquiry, justification: string) {
-  const evaluation = inquiry.kind === "delay" ? evaluateDelay(inquiry.delayMinutes, justification) : { decision: null, note: null };
   const now = new Date().toISOString();
   const { error } = await supabaseAdmin
     .from("inquiries")
     .update({
       justification,
       justified_at: now,
-      ...(inquiry.kind === "delay" ? { system_decision: evaluation.decision, system_note: evaluation.note } : {}),
     })
     .eq("id", inquiry.id)
     .is("decided_at", null);

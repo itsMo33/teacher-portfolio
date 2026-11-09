@@ -237,7 +237,7 @@ export function InquiryUploader({ kind }: { kind: InquiryKind }) {
 
           {missingMinutes > 0 && (
             <p className="text-xs text-amber-700 dark:text-amber-300">
-              {missingMinutes} بند بدون دقائق تأخر -- ينرسل لرائد بدون اقتراح، أو اكتب الدقائق.
+              {missingMinutes} بند بدون دقائق تأخر -- اكتب الدقائق إن عرفتها.
             </p>
           )}
 
