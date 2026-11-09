@@ -66,7 +66,7 @@ export async function deleteFile(bucket: string, path: string) {
   if (error) throw error;
 }
 
-export async function getSignedUrl(bucket: string, path: string, expiresInSeconds = 300) {
+export async function getSignedUrl(bucket: string, path: string, expiresInSeconds = 60 * 60 * 12) {
   const { data, error } = await supabaseAdmin.storage
     .from(bucket)
     .createSignedUrl(path, expiresInSeconds);

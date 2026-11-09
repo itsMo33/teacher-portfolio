@@ -51,7 +51,7 @@ export interface WeeklyReview {
 }
 
 const DAY_MS = 24 * 60 * 60 * 1000;
-const SIGNED_URL_TTL_SECONDS = 60 * 60;
+const SIGNED_URL_TTL_SECONDS = 60 * 60 * 12;
 
 function guessMimeType(fileName: string): string {
   const ext = fileName.split(".").pop()?.toLowerCase();

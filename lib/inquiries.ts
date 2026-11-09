@@ -142,12 +142,12 @@ export function toTeacherView(i: Inquiry): TeacherInquiryView {
 /** A short-lived link to the page cut out for this teacher alone (never the whole PDF, which names everyone). */
 export async function getTeacherFileUrl(inquiryId: string): Promise<string | null> {
   const { data } = await supabaseAdmin.from("inquiries").select("teacher_file_path").eq("id", inquiryId).maybeSingle();
-  return data?.teacher_file_path ? getSignedUrl(PORTFOLIO_BUCKET, data.teacher_file_path as string, 600) : null;
+  return data?.teacher_file_path ? getSignedUrl(PORTFOLIO_BUCKET, data.teacher_file_path as string) : null;
 }
 
 export async function getSourceUrl(inquiryId: string): Promise<string | null> {
   const { data } = await supabaseAdmin.from("inquiries").select("source_path").eq("id", inquiryId).maybeSingle();
-  return data?.source_path ? getSignedUrl(PORTFOLIO_BUCKET, data.source_path as string, 600) : null;
+  return data?.source_path ? getSignedUrl(PORTFOLIO_BUCKET, data.source_path as string) : null;
 }
 
 export async function readPdfPages(path: string): Promise<{ pages: string[]; bytes: Uint8Array }> {
