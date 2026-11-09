@@ -115,6 +115,7 @@ export const PORTFOLIO_SECTIONS: PortfolioSection[] = [
     subsections: [
       { key: "visits", labelAr: "زيارات", note: "زيارتان كحد أدنى", requiredCount: 2, showPercent: true },
       { key: "meetings", labelAr: "اجتماعات", note: "ثلاث اجتماعات كحد أدنى", requiredCount: 3, showPercent: true },
+      { key: "self_evaluation", labelAr: "التقويم الذاتي" },
     ],
     teacherWritable: true,
     accentColor: "#0d9488",
