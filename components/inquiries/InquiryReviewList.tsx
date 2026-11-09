@@ -2,10 +2,11 @@
 
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import { INQUIRY_KIND_LABEL, inquiryDaysLeft, type InquiryKind } from "@/lib/inquiry-logic";
 
 export interface ReviewInquiry {
   id: string;
-  kind: "delay" | "other";
+  kind: InquiryKind;
   teacherName: string;
   createdAt: string;
   delayMinutes: number | null;
@@ -80,6 +81,7 @@ function Row({ item }: { item: ReviewInquiry }) {
   }
 
   const isDelay = item.kind === "delay";
+  const daysLeft = inquiryDaysLeft(item.createdAt);
   const opposite = item.systemDecision === "accepted" ? "rejected" : "accepted";
 
   return (
@@ -88,7 +90,8 @@ function Row({ item }: { item: ReviewInquiry }) {
         <div>
           <p className="font-bold text-slate-900 dark:text-slate-50">{item.teacherName}</p>
           <p className="text-xs text-slate-500">
-            {isDelay ? `مسائلة تأخير${item.delayMinutes !== null ? ` -- ${item.delayMinutes} دقيقة` : ""}` : "مسائلة أخرى"} -- أُرسلت {day(item.createdAt)}
+            {INQUIRY_KIND_LABEL[item.kind]}
+            {isDelay && item.delayMinutes !== null ? ` -- ${item.delayMinutes} دقيقة` : ""} -- أُرسلت {day(item.createdAt)}
           </p>
         </div>
         <div className="flex flex-wrap gap-1.5 text-xs">
@@ -110,6 +113,12 @@ function Row({ item }: { item: ReviewInquiry }) {
           >
             {item.justification ? "برّر" : "لم يبرر"}
           </span>
+          {!item.decision && !item.justification && daysLeft <= 0 && (
+            <span className="rounded-full px-2 py-0.5 bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300">تجاوز مهلة الأسبوع</span>
+          )}
+          {!item.decision && !item.justification && daysLeft > 0 && daysLeft <= 2 && (
+            <span className="rounded-full px-2 py-0.5 bg-orange-100 text-orange-700 dark:bg-orange-900/40 dark:text-orange-300">باقي {daysLeft} يوم</span>
+          )}
           {item.decision && (
             <span
               className={`rounded-full px-2 py-0.5 ${
@@ -140,6 +149,9 @@ function Row({ item }: { item: ReviewInquiry }) {
         <button type="button" onClick={() => setOpen((v) => !v)} className="text-[var(--brand-primary)] hover:underline">
           {open ? "إخفاء نص المسائلة" : "نص المسائلة"}
         </button>
+        <a href={`/inquiries/${item.id}/print`} target="_blank" rel="noopener noreferrer" className="text-slate-600 dark:text-slate-300 hover:underline">
+          النموذج المكتمل (طباعة)
+        </a>
         <button type="button" onClick={openFile} className="text-slate-600 dark:text-slate-300 hover:underline">
           فتح ملف PDF
         </button>
@@ -215,7 +227,7 @@ function Row({ item }: { item: ReviewInquiry }) {
   );
 }
 
-export function InquiryReviewList({ inquiries, kind }: { inquiries: ReviewInquiry[]; kind: "delay" | "other" | "all" }) {
+export function InquiryReviewList({ inquiries, kind }: { inquiries: ReviewInquiry[]; kind: InquiryKind | "all" }) {
   const [filter, setFilter] = useState<Filter>("all");
   const ofKind = useMemo(() => (kind === "all" ? inquiries : inquiries.filter((i) => i.kind === kind)), [inquiries, kind]);
   const shown = useMemo(() => ofKind.filter((i) => matches(i, filter)), [ofKind, filter]);

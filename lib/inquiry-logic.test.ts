@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { detectExcuses, displayText, evaluateDelay, extractMinutes, parseInquiryPages } from "./inquiry-logic";
+import { detectExcuses, displayText, evaluateDelay, extractMinutes, extractPeriod, inquiryDaysLeft, parseInquiryPages } from "./inquiry-logic";
 
 const teachers = [
   { id: "t1", name: "عبدالرحيم محمد القرني" },
@@ -176,5 +176,19 @@ describe("extractMinutes on the lateness form", () => {
 describe("extractMinutes with nothing late", () => {
   it("treats zero minutes as unknown, not as on time", () => {
     expect(extractMinutes("تأخركم عدد 1 مرة وبإجمالي دقائق 0 حسب التفصيل أدناه")).toBeNull();
+  });
+});
+
+describe("inquiry deadline and period", () => {
+  it("counts the days left of the one-week answer window", () => {
+    const sent = "2026-11-02T08:00:00Z";
+    expect(inquiryDaysLeft(sent, new Date("2026-11-02T09:00:00Z").getTime())).toBe(7);
+    expect(inquiryDaysLeft(sent, new Date("2026-11-08T08:00:00Z").getTime())).toBe(1);
+    expect(inquiryDaysLeft(sent, new Date("2026-11-10T08:00:00Z").getTime())).toBeLessThanOrEqual(0);
+  });
+
+  it("reads the period the form covers", () => {
+    expect(extractPeriod("إنه خلال الفترة من 02-11-2026 إلى 05-11-2026 اتضح ما يلي")).toEqual({ from: "02-11-2026", to: "05-11-2026" });
+    expect(extractPeriod("بدون فترة")).toBeNull();
   });
 });

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth/auth-options";
 import { deleteInquiry, getInquiry, getInquiryRole } from "@/lib/inquiries";
 import { logActivity } from "@/lib/audit";
+import { INQUIRY_KIND_LABEL } from "@/lib/inquiry-logic";
 
 /** رائد (or the manager) deletes an inquiry for good -- e.g. one sent by mistake. The teacher stops seeing it. */
 export async function DELETE(_req: Request, { params }: { params: Promise<{ id: string }> }) {
@@ -28,7 +29,7 @@ export async function DELETE(_req: Request, { params }: { params: Promise<{ id: 
     action: "delete_inquiry",
     targetTeacherId: inquiry.teacherId,
     targetTeacherName: inquiry.teacherName,
-    details: inquiry.kind === "delay" ? "حذف مسائلة تأخير" : "حذف مسائلة",
+    details: `حذف ${INQUIRY_KIND_LABEL[inquiry.kind]}`,
   });
   return NextResponse.json({ success: true });
 }

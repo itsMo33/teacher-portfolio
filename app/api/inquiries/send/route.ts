@@ -3,6 +3,7 @@ import { auth } from "@/lib/auth/auth-options";
 import { supabaseAdmin } from "@/lib/supabase/server";
 import { createInquiries, getInquiryRole, type SendItem } from "@/lib/inquiries";
 import { logActivity } from "@/lib/audit";
+import { INQUIRY_KIND_LABEL, type InquiryKind } from "@/lib/inquiry-logic";
 
 export const maxDuration = 60;
 
@@ -14,7 +15,7 @@ export async function POST(req: NextRequest) {
   if (inquiryRole !== "officer" && inquiryRole !== "reviewer") return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
   const { kind, path, items, batchId: batchIdInput } = await req.json();
-  if (kind !== "delay" && kind !== "other") return NextResponse.json({ error: "Invalid kind" }, { status: 400 });
+  if (kind !== "delay" && kind !== "absence" && kind !== "other") return NextResponse.json({ error: "Invalid kind" }, { status: 400 });
   if (typeof path !== "string" || !path.startsWith("inquiries/uploads/") || path.includes("..")) {
     return NextResponse.json({ error: "Invalid path" }, { status: 400 });
   }
@@ -51,7 +52,7 @@ export async function POST(req: NextRequest) {
       actorId: session.user.id,
       actorName: session.user.name ?? "",
       action: "send_inquiries",
-      details: `${kind === "delay" ? "مسائلات تأخير" : "مسائلات أخرى"}: ${created} معلم`,
+      details: `${INQUIRY_KIND_LABEL[kind as InquiryKind]}: ${created} معلم`,
     });
     return NextResponse.json({ created, batchId });
   } catch (err) {

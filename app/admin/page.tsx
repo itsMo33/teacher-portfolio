@@ -50,6 +50,7 @@ async function RestrictedDashboard({
       <div className="grid max-w-2xl grid-cols-1 gap-4 sm:grid-cols-2">
         {[
           { href: "/admin/inquiries?kind=delay", label: "مسائلات تأخير (حضوري)", description: "ارفع ملف PDF وأرسل كل معلم مسائلته", accentColor: "#dc2626" },
+          { href: "/admin/inquiries?kind=absence", label: "مسائلات الغياب", description: "ارفع ملف PDF واختر المعلمين اللي ترسل لهم", accentColor: "#ea580c" },
           { href: "/admin/inquiries?kind=other", label: "المسائلات الأخرى", description: "ارفع ملف PDF وأرسله للمعلمين لتقييم رائد", accentColor: "#7c3aed" },
         ].map((card) => (
           <Link

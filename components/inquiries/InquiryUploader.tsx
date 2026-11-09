@@ -2,11 +2,13 @@
 
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { displayText } from "@/lib/inquiry-logic";
+import { displayText, type InquiryKind } from "@/lib/inquiry-logic";
 
 interface PreviewItem {
   teacherId: string | null;
   teacherName: string | null;
+  /** Ticked = goes out with the send; the uploader unticks the teachers who should not get it. */
+  selected?: boolean;
   page: number;
   pageOnly: boolean;
   text: string;
@@ -26,7 +28,7 @@ const INPUT_CLASS =
 
 /** Upload the PDF, check which teacher each part was matched to, then send. Nothing reaches a teacher until the
  *  uploader confirms the matches here. */
-export function InquiryUploader({ kind }: { kind: "delay" | "other" }) {
+export function InquiryUploader({ kind }: { kind: InquiryKind }) {
   const router = useRouter();
   const inputRef = useRef<HTMLInputElement>(null);
   const [path, setPath] = useState<string | null>(null);
@@ -70,7 +72,7 @@ export function InquiryUploader({ kind }: { kind: "delay" | "other" }) {
       if (!parseRes.ok) throw new Error(data.error ?? "تعذّرت قراءة الملف");
 
       setPath(uploadedPath);
-      setItems(data.items);
+      setItems((data.items as PreviewItem[]).map((it) => ({ ...it, selected: !!it.teacherId })));
       setTeachers(data.teachers);
     } catch (e) {
       setError(e instanceof Error ? e.message : "تعذّر رفع الملف");
@@ -85,12 +87,20 @@ export function InquiryUploader({ kind }: { kind: "delay" | "other" }) {
     setItems((prev) => prev.map((it, i) => (i === index ? { ...it, ...patch } : it)));
   }
 
-  const ready = items.filter((i) => i.teacherId);
+  const [search, setSearch] = useState("");
+  const ready = items.filter((i) => i.teacherId && i.selected);
+  const matchedCount = items.filter((i) => i.teacherId).length;
+  const q = search.trim();
+  const visible = items.map((item, index) => ({ item, index })).filter(({ item }) => !q || (item.teacherName ?? "").includes(q));
+
+  function setSelected(indexes: number[], value: boolean) {
+    setItems((prev) => prev.map((it, i) => (indexes.includes(i) && it.teacherId ? { ...it, selected: value } : it)));
+  }
   const missingMinutes = isDelay ? ready.filter((i) => i.minutes === null).length : 0;
 
   async function handleSend() {
-    if (ready.length === 0) return setError("اختر معلماً واحداً على الأقل");
-    if (!confirm(`إرسال ${ready.length} مسائلة للمعلمين؟`)) return;
+    if (ready.length === 0) return setError("حدد معلماً واحداً على الأقل");
+    if (!confirm(`إرسال ${ready.length} مسائلة للمعلمين المحددين؟`)) return;
     setBusy(true);
     setError("");
     // A big file goes out in small groups (each call has a time limit); they all share one batch id so the whole upload
@@ -127,7 +137,7 @@ export function InquiryUploader({ kind }: { kind: "delay" | "other" }) {
   return (
     <div className="flex flex-col gap-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4">
       <div>
-        <h3 className="font-bold text-slate-900 dark:text-slate-50">{isDelay ? "مسائلات تأخير (حضوري)" : "المسائلات الأخرى"}</h3>
+        <h3 className="font-bold text-slate-900 dark:text-slate-50">{kind === "delay" ? "مسائلات تأخير (حضوري)" : kind === "absence" ? "مسائلات الغياب" : "المسائلات الأخرى"}</h3>
         <p className="text-sm text-slate-500 mt-1">
           ارفع ملف PDF فيه المعلمين، وأقرأ منه كل معلم وأرسله لحسابه. تراجع التطابق قبل الإرسال.
         </p>
@@ -154,10 +164,25 @@ export function InquiryUploader({ kind }: { kind: "delay" | "other" }) {
       {items.length > 0 && (
         <div className="flex flex-col gap-2">
           <p className="text-sm text-slate-600 dark:text-slate-300">
-            وُجد {items.length} بند في الملف. تأكد من اسم المعلم{isDelay ? " ومقدار التأخر" : ""} في كل بند، وغيّره إذا كان خطأ. البند بدون معلم ما ينرسل.
+            وُجد {items.length} بند في الملف. تأكد من اسم المعلم{isDelay ? " ومقدار التأخر" : ""} في كل بند، وغيّره إذا كان خطأ. البند بدون معلم أو غير محدد ما ينرسل.
           </p>
+          <div className="flex flex-wrap items-center gap-2 text-xs">
+            <input
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="بحث باسم المعلم"
+              className={`${INPUT_CLASS} w-44`}
+            />
+            <button type="button" onClick={() => setSelected(visible.map((v) => v.index), true)} className="rounded-lg border border-slate-300 dark:border-slate-700 px-2.5 py-1.5 text-slate-600 dark:text-slate-300">
+              تحديد الكل
+            </button>
+            <button type="button" onClick={() => setSelected(visible.map((v) => v.index), false)} className="rounded-lg border border-slate-300 dark:border-slate-700 px-2.5 py-1.5 text-slate-600 dark:text-slate-300">
+              إلغاء التحديد
+            </button>
+            <span className="text-slate-500">المحدد للإرسال: {ready.length} من {matchedCount}</span>
+          </div>
           <ul className="flex flex-col gap-2">
-            {items.map((item, i) => (
+            {visible.map(({ item, index: i }) => (
               <li
                 key={`${item.page}-${i}`}
                 className={`flex flex-col gap-2 rounded-lg border p-3 text-sm ${
@@ -165,12 +190,20 @@ export function InquiryUploader({ kind }: { kind: "delay" | "other" }) {
                 }`}
               >
                 <div className="flex flex-wrap items-center gap-2">
+                  <input
+                    type="checkbox"
+                    checked={!!item.selected && !!item.teacherId}
+                    disabled={!item.teacherId}
+                    onChange={(e) => update(i, { selected: e.target.checked })}
+                    aria-label="إرسال لهذا المعلم"
+                    className="h-4 w-4"
+                  />
                   <span className="text-xs text-slate-400">صفحة {item.page}</span>
                   <select
                     value={item.teacherId ?? ""}
                     onChange={(e) => {
                       const t = teachers.find((x) => x.id === e.target.value);
-                      update(i, { teacherId: t?.id ?? null, teacherName: t?.name ?? null });
+                      update(i, { teacherId: t?.id ?? null, teacherName: t?.name ?? null, selected: !!t });
                     }}
                     className={`${INPUT_CLASS} min-w-[12rem]`}
                   >

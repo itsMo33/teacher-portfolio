@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import type { TeacherInquiryView } from "@/lib/inquiries";
+import { INQUIRY_KIND_LABEL, inquiryDaysLeft } from "@/lib/inquiry-logic";
 
 function day(iso: string) {
   return new Date(iso).toLocaleDateString("ar-SA", { day: "numeric", month: "long" });
@@ -61,7 +62,7 @@ function Card({ item }: { item: TeacherInquiryView }) {
     <li className="flex flex-col gap-2 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4 text-sm">
       <button type="button" onClick={toggle} className="flex flex-wrap items-center justify-between gap-2 text-right">
         <span className="font-semibold text-slate-900 dark:text-slate-50">
-          {isDelay ? "مسائلة تأخير" : "مسائلة"} -- {day(item.createdAt)}
+          {INQUIRY_KIND_LABEL[item.kind]} -- {day(item.createdAt)}
         </span>
         <span className={`rounded-full px-2 py-0.5 text-xs ${status.tone}`}>{status.label}</span>
       </button>
@@ -77,6 +78,12 @@ function Card({ item }: { item: TeacherInquiryView }) {
             <button type="button" onClick={viewFile} className="self-start text-xs text-[var(--brand-primary)] hover:underline">
               فتح ملف المسائلة
             </button>
+          )}
+
+          {!decided && !item.justifiedAt && (
+            <p className={`text-xs ${inquiryDaysLeft(item.createdAt) <= 0 ? "text-red-600 dark:text-red-400" : "text-slate-500"}`}>
+              {inquiryDaysLeft(item.createdAt) <= 0 ? "انتهت مهلة الأسبوع للرد -- بادر بالرد الآن" : `المهلة للرد: باقي ${inquiryDaysLeft(item.createdAt)} يوم`}
+            </p>
           )}
 
           {decided && item.decisionNote && <p className="text-xs text-slate-500">ملاحظة الإدارة: {item.decisionNote}</p>}
@@ -104,6 +111,11 @@ function Card({ item }: { item: TeacherInquiryView }) {
                 </button>
               </div>
             </div>
+          )}
+          {decided && (
+            <a href={`/inquiries/${item.id}/print`} target="_blank" rel="noopener noreferrer" className="self-start text-xs text-[var(--brand-primary)] hover:underline">
+              النموذج المكتمل (طباعة)
+            </a>
           )}
           {decided && item.justification && <p className="text-xs text-slate-500">تبريرك: {item.justification}</p>}
         </div>

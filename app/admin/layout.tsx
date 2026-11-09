@@ -58,6 +58,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
         ...(restrictedCategory === "inquiries_officer"
           ? [
               { href: "/admin/inquiries?kind=delay", label: "مسائلات تأخير (حضوري)" },
+              { href: "/admin/inquiries?kind=absence", label: "مسائلات الغياب" },
               { href: "/admin/inquiries?kind=other", label: "المسائلات الأخرى" },
             ]
           : []),

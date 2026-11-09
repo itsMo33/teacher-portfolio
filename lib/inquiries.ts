@@ -19,6 +19,11 @@ export function getInquiryRole(user: { role: string; restrictedCategory?: string
   return null;
 }
 
+/** Both the uploading account (محمد) and the reviewers (رائد, the manager) can decide an inquiry. */
+export function canDecideInquiry(role: InquiryRole | null): boolean {
+  return role === "officer" || role === "reviewer";
+}
+
 export interface Inquiry {
   id: string;
   kind: InquiryKind;
@@ -36,13 +41,14 @@ export interface Inquiry {
   decision: InquiryDecision | null;
   decisionNote: string | null;
   decidedAt: string | null;
+  decidedBy: string | null;
   /** Which upload it came from, and who sent it -- the uploader can delete what they sent. */
   batchId: string;
   uploadedBy: string | null;
 }
 
 const SELECT =
-  "id, kind, teacher_id, batch_id, uploaded_by, created_at, delay_minutes, extracted_text, teacher_file_path, teacher_opened_at, justification, justified_at, system_decision, system_note, decision, decision_note, decided_at, teacher:users!inquiries_teacher_id_fkey(name)";
+  "id, kind, teacher_id, batch_id, uploaded_by, created_at, delay_minutes, extracted_text, teacher_file_path, teacher_opened_at, justification, justified_at, system_decision, system_note, decision, decision_note, decided_at, decided_by, teacher:users!inquiries_teacher_id_fkey(name)";
 
 interface Row {
   id: string;
@@ -62,6 +68,7 @@ interface Row {
   decision: InquiryDecision | null;
   decision_note: string | null;
   decided_at: string | null;
+  decided_by: string | null;
   teacher: { name: string } | { name: string }[] | null;
 }
 
@@ -83,6 +90,7 @@ function toInquiry(r: Row): Inquiry {
     decision: r.decision,
     decisionNote: r.decision_note,
     decidedAt: r.decided_at,
+    decidedBy: r.decided_by,
     batchId: r.batch_id,
     uploadedBy: r.uploaded_by,
   };

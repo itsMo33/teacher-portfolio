@@ -493,3 +493,7 @@ create table if not exists weekly_plan_marks (
   primary key (teacher_id, week_start)
 );
 alter table weekly_plan_marks enable row level security;
+
+-- مسائلة الغياب: a third kind of inquiry (no automatic rule -- the teacher answers, then محمد or رائد decides).
+alter table inquiries drop constraint if exists inquiries_kind_check;
+alter table inquiries add constraint inquiries_kind_check check (kind in ('delay', 'absence', 'other'));

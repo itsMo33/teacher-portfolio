@@ -1,16 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth/auth-options";
 import { supabaseAdmin } from "@/lib/supabase/server";
-import { getInquiry, getInquiryRole } from "@/lib/inquiries";
+import { canDecideInquiry, getInquiry, getInquiryRole } from "@/lib/inquiries";
 import { logActivity } from "@/lib/audit";
+import { INQUIRY_KIND_LABEL } from "@/lib/inquiry-logic";
 
-/** رائد (or the manager) decides an inquiry: accept or reject. Only then does the teacher see the result. For a
+/** محمد (the uploading account), رائد or the manager decides an inquiry: accept or reject. Only then does the teacher see the result. For a
  *  delay inquiry he usually just confirms the system's suggestion; he can also change it. */
 export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const session = await auth();
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  if (getInquiryRole(session.user) !== "reviewer") return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  if (!canDecideInquiry(getInquiryRole(session.user))) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
   const { decision, note } = await req.json();
   if (decision !== "accepted" && decision !== "rejected") return NextResponse.json({ error: "Invalid decision" }, { status: 400 });
@@ -36,7 +37,7 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
     action: "decide_inquiry",
     targetTeacherId: inquiry.teacherId,
     targetTeacherName: inquiry.teacherName,
-    details: `${inquiry.kind === "delay" ? "مسائلة تأخير" : "مسائلة"}: ${decision === "accepted" ? "مقبولة" : "مرفوضة"}`,
+    details: `${INQUIRY_KIND_LABEL[inquiry.kind]}: ${decision === "accepted" ? "مقبولة" : "مرفوضة"}`,
   });
   return NextResponse.json({ success: true });
 }
@@ -46,7 +47,7 @@ export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ 
   const { id } = await params;
   const session = await auth();
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  if (getInquiryRole(session.user) !== "reviewer") return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  if (!canDecideInquiry(getInquiryRole(session.user))) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
   const { error } = await supabaseAdmin
     .from("inquiries")

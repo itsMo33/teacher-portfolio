@@ -1,7 +1,7 @@
 /** The pure part of the مسائلات workflow (no database, no PDF reading): turning a PDF's text into one
  *  item per teacher, and the silent decision rule for the delay inquiries. Kept apart so it can be tested. */
 
-export type InquiryKind = "delay" | "other";
+export type InquiryKind = "delay" | "absence" | "other";
 export type InquiryDecision = "accepted" | "rejected";
 
 /** More than this many minutes late is rejected (3 or fewer is accepted). */
@@ -417,4 +417,25 @@ export function fixVisualArabic(raw: string): string {
     .split("\n")
     .map((line) => line.split(/\s+/).filter(Boolean).reverse().map(fixToken).join(" "))
     .join("\n");
+}
+
+export const INQUIRY_KIND_LABEL: Record<InquiryKind, string> = {
+  delay: "مسائلة تأخير",
+  absence: "مسائلة غياب",
+  other: "مسائلة",
+};
+
+/** The form gives the teacher a week to answer. */
+export const INQUIRY_DEADLINE_DAYS = 7;
+
+/** Whole days left to answer (negative once the week is over), counted from when the inquiry was sent. */
+export function inquiryDaysLeft(createdAtIso: string, now: number = Date.now()): number {
+  const due = new Date(createdAtIso).getTime() + INQUIRY_DEADLINE_DAYS * 24 * 60 * 60 * 1000;
+  return Math.ceil((due - now) / (24 * 60 * 60 * 1000));
+}
+
+/** The period the form covers ("خلال الفترة من 02-11-2026 إلى 02-11-2026"), if the text has it. */
+export function extractPeriod(text: string): { from: string; to: string } | null {
+  const m = text.match(/الفترة\s*من\s*(\d{2}-\d{2}-\d{4})\s*إلى\s*(\d{2}-\d{2}-\d{4})/);
+  return m ? { from: m[1], to: m[2] } : null;
 }

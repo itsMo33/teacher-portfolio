@@ -3,33 +3,34 @@ import { redirect } from "next/navigation";
 import { auth } from "@/lib/auth/auth-options";
 import { countInquiries, getInquiryRole, listInquiries } from "@/lib/inquiries";
 import { InquirySummary } from "@/components/inquiries/InquirySummary";
-import { displayText } from "@/lib/inquiry-logic";
+import { displayText, type InquiryKind } from "@/lib/inquiry-logic";
 import { InquiryUploader } from "@/components/inquiries/InquiryUploader";
 import { InquiryReviewList } from "@/components/inquiries/InquiryReviewList";
 import { OfficerSentList } from "@/components/inquiries/OfficerSentList";
 import { AccountabilityFiles } from "@/components/admin/AccountabilityFiles";
 
-type Tab = "all" | "delay" | "other" | "files";
+type Tab = "all" | "delay" | "absence" | "other" | "files";
 
 const TITLES: Record<Tab, string> = {
   all: "الكل",
   delay: "مسائلات تأخير (حضوري)",
+  absence: "مسائلات الغياب",
   other: "المسائلات الأخرى",
   files: "ملفات المسائلات",
 };
 
-/** Every kind of مسائلة in one place, chosen with ?kind=: all of them together, the late-arrival ones, the other
- *  ones, and the older uploaded-file ones. The uploading account (محمد الخميس) only sends the two PDF kinds out and
- *  sees what he sent; رائد and the manager follow every inquiry, decide them and can upload too. */
+/** Every kind of مسائلة in one place, chosen with ?kind=: all of them together, the late-arrival ones, the absence
+ *  ones, the other ones, and the older uploaded-file ones. The uploading account (محمد الخميس) sends the PDF kinds
+ *  out, follows what he sent and decides inquiries together with رائد and the manager, who also upload. */
 export default async function InquiriesPage({ searchParams }: { searchParams: Promise<{ kind?: string }> }) {
   const session = await auth();
   const role = session ? getInquiryRole(session.user) : null;
   if (role !== "officer" && role !== "reviewer") redirect("/admin");
 
   const { kind: kindParam } = await searchParams;
-  const tabs: Tab[] = role === "reviewer" ? ["all", "delay", "other", "files"] : ["delay", "other"];
+  const tabs: Tab[] = role === "reviewer" ? ["all", "delay", "absence", "other", "files"] : ["delay", "absence", "other"];
   const tab: Tab = tabs.includes(kindParam as Tab) ? (kindParam as Tab) : tabs[0];
-  const sendKinds: ("delay" | "other")[] = tab === "delay" || tab === "other" ? [tab] : tab === "all" ? ["delay", "other"] : [];
+  const sendKinds: InquiryKind[] = tab === "delay" || tab === "absence" || tab === "other" ? [tab] : tab === "all" ? ["delay", "absence", "other"] : [];
 
   const inquiries = tab === "files" ? [] : await listInquiries();
   const shown = tab === "all" ? inquiries : inquiries.filter((i) => i.kind === tab);
@@ -96,9 +97,8 @@ export default async function InquiriesPage({ searchParams }: { searchParams: Pr
               </details>
             ))}
 
-          {role === "officer" ? (
-            <OfficerSentList batches={sentBatches} />
-          ) : (
+          {role === "officer" && <OfficerSentList batches={sentBatches} />}
+          {
             <>
               <InquirySummary counts={countInquiries(shown)} />
               {teacherRows.length > 0 && (
@@ -128,7 +128,7 @@ export default async function InquiriesPage({ searchParams }: { searchParams: Pr
                 </div>
               )}
               <InquiryReviewList
-                kind={tab === "all" ? "all" : tab === "delay" ? "delay" : "other"}
+                kind={tab === "all" ? "all" : tab}
                 inquiries={inquiries.map((i) => ({
                   id: i.id,
                   kind: i.kind,
@@ -146,7 +146,7 @@ export default async function InquiriesPage({ searchParams }: { searchParams: Pr
                 }))}
               />
             </>
-          )}
+          }
         </>
       )}
     </div>
