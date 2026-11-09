@@ -13,6 +13,8 @@ const securityHeaders = [
 ];
 
 const nextConfig: NextConfig = {
+  // the fonts the finished inquiry forms are written with are read from disk at run time
+  outputFileTracingIncludes: { "/api/inquiries/**": ["./lib/fonts/**"] },
   async headers() {
     return [
       {

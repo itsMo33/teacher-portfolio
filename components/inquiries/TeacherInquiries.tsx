@@ -113,7 +113,7 @@ function Card({ item }: { item: TeacherInquiryView }) {
             </div>
           )}
           {decided && (
-            <a href={`/inquiries/${item.id}/print`} target="_blank" rel="noopener noreferrer" className="self-start text-xs text-[var(--brand-primary)] hover:underline">
+            <a href={item.kind === "other" ? `/inquiries/${item.id}/print` : `/api/inquiries/${item.id}/form`} target="_blank" rel="noopener noreferrer" className="self-start text-xs text-[var(--brand-primary)] hover:underline">
               النموذج المكتمل (طباعة)
             </a>
           )}
