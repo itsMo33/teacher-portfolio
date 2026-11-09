@@ -22,6 +22,8 @@ export interface Subsection {
   requiredCount?: number;
   /** Whether to show a numeric percentage badge for this subsection. When false, shows an encouraging message / trophy instead. */
   showPercent?: boolean;
+  /** A place to upload that is not required: it is left out of the completion slots, so adding it does not change anyone's نسبة الإنجاز. */
+  optional?: boolean;
 }
 
 export interface PortfolioSection {
@@ -115,7 +117,7 @@ export const PORTFOLIO_SECTIONS: PortfolioSection[] = [
     subsections: [
       { key: "visits", labelAr: "زيارات", note: "زيارتان كحد أدنى", requiredCount: 2, showPercent: true },
       { key: "meetings", labelAr: "اجتماعات", note: "ثلاث اجتماعات كحد أدنى", requiredCount: 3, showPercent: true },
-      { key: "self_evaluation", labelAr: "التقويم الذاتي" },
+      { key: "self_evaluation", labelAr: "التقويم الذاتي", optional: true },
     ],
     teacherWritable: true,
     accentColor: "#0d9488",
@@ -207,7 +209,7 @@ export function isValidCategory(category: string, subcategory?: string | null): 
 export const TEACHER_SLOTS: { section: SectionKey; subsection?: string; labelAr: string; requiredCount: number }[] =
   PORTFOLIO_SECTIONS.filter((s) => s.key !== "schedule").flatMap((s) =>
     s.hasSubsections
-      ? s.subsections!.map((sub) => ({
+      ? s.subsections!.filter((sub) => !sub.optional).map((sub) => ({
           section: s.key,
           subsection: sub.key,
           labelAr: `${s.labelAr} - ${sub.labelAr}`,
