@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth/auth-options";
 import { supabaseAdmin } from "@/lib/supabase/server";
 import { logActivity } from "@/lib/audit";
+import { getSection, ownerCanWrite } from "@/lib/portfolio-sections";
 
 export async function DELETE(req: NextRequest) {
   const session = await auth();
@@ -25,7 +26,10 @@ export async function DELETE(req: NextRequest) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
 
-  const isOwner = session.user.role === "teacher" && session.user.id === attachment.teacher_id;
+  const ownSection = getSection(attachment.category);
+  const isOwner =
+    session.user.id === attachment.teacher_id &&
+    (session.user.role === "teacher" || (session.user.role === "staff" && !!ownSection && ownerCanWrite("staff", ownSection)));
   const isAdmin = session.user.role === "agent" || session.user.role === "manager";
   if (!isOwner && !isAdmin) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });

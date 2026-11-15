@@ -21,6 +21,7 @@ export default async function TeacherPortfolioSectionPage({
   if (section.key === "schedule") redirect("/teacher/schedule");
 
   const session = await auth();
+  if (section.staffOnly && session!.user.role !== "staff") notFound();
   const teacherId = session!.user.id;
   const readOnly = !!session!.user.demoViewOnly;
 

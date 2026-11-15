@@ -30,7 +30,7 @@ export default async function TeacherPrintReportPage({
     .is("deleted_at", null)
     .maybeSingle();
 
-  const sections = PORTFOLIO_SECTIONS.filter((s) => s.key !== "schedule");
+  const sections = PORTFOLIO_SECTIONS.filter((s) => s.key !== "schedule" && !s.staffOnly);
 
   const [slotCounts, professionalLicenseExempt] = await Promise.all([
     getSlotCounts(teacherId),

@@ -39,7 +39,7 @@ export function ProgressGrid({
 }) {
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-      {PORTFOLIO_SECTIONS.map((section, index) => {
+      {PORTFOLIO_SECTIONS.filter((s) => !s.staffOnly).map((section, index) => {
         const isSchedule = section.key === "schedule";
         const total = isSchedule
           ? 0

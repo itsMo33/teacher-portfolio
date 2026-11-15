@@ -22,7 +22,7 @@ export async function POST(req: NextRequest) {
   if (!Array.isArray(items) || items.length === 0) return NextResponse.json({ error: "ما فيه معلمين للإرسال" }, { status: 400 });
 
   const clean: SendItem[] = [];
-  const { data: teachers } = await supabaseAdmin.from("users").select("id").eq("role", "teacher").is("deleted_at", null);
+  const { data: teachers } = await supabaseAdmin.from("users").select("id").in("role", ["teacher", "staff"]).not("national_id", "like", "staff-%").is("deleted_at", null);
   const teacherIds = new Set((teachers ?? []).map((t) => t.id as string));
   for (const i of items) {
     if (typeof i?.teacherId !== "string" || !teacherIds.has(i.teacherId)) continue;

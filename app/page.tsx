@@ -8,6 +8,10 @@ export default async function Home() {
     redirect("/login");
   }
 
+  if (session.user.role === "staff") {
+    redirect("/teacher/portfolio/general_files");
+  }
+
   if (session.user.role === "teacher") {
     redirect("/teacher");
   }

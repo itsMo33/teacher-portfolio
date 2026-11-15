@@ -1,12 +1,12 @@
 import { auth } from "@/lib/auth/auth-options";
 import { AppShell, type NavItem } from "@/components/ui/AppShell";
-import { PORTFOLIO_SECTIONS } from "@/lib/portfolio-sections";
+import { PORTFOLIO_SECTIONS, TEACHER_SECTIONS } from "@/lib/portfolio-sections";
 import { inquiryAttention, listInquiries, toTeacherView } from "@/lib/inquiries";
 
 function buildNavItems(canBuildSchedule?: boolean, canTrackClassTime?: boolean, inquiryCount = 0): NavItem[] {
   return [
     { href: "/teacher", label: "لوحة التحكم" },
-    ...PORTFOLIO_SECTIONS.filter((s) => s.key !== "schedule").map((s) => ({
+    ...TEACHER_SECTIONS.filter((s) => s.key !== "schedule").map((s) => ({
       href: `/teacher/portfolio/${s.key}`,
       // the مسائلات section shows how many inquiries need the teacher's attention
       label: s.key === "accountability" && inquiryCount > 0 ? `${s.labelAr} (${inquiryCount})` : s.labelAr,
@@ -27,10 +27,20 @@ function buildNavItems(canBuildSchedule?: boolean, canTrackClassTime?: boolean, 
   ];
 }
 
+/** A staff account (إداري, محضر مختبر) sees only its general files and the inquiries sent to it. */
+function buildStaffNavItems(inquiryCount: number): NavItem[] {
+  const accountability = PORTFOLIO_SECTIONS.find((s) => s.key === "accountability")!;
+  return [
+    { href: "/teacher/portfolio/general_files", label: "ملفات عامة" },
+    { href: "/teacher/portfolio/accountability", label: inquiryCount > 0 ? `${accountability.labelAr} (${inquiryCount})` : accountability.labelAr },
+    { href: "/teacher/settings", label: "الإعدادات" },
+  ];
+}
+
 export default async function TeacherLayout({ children }: { children: React.ReactNode }) {
   const session = await auth();
   let inquiryNavCount = 0;
-  if (session?.user?.role === "teacher") {
+  if (session?.user?.role === "teacher" || session?.user?.role === "staff") {
     const attention = inquiryAttention((await listInquiries({ teacherId: session.user.id })).map(toTeacherView));
     inquiryNavCount = attention.toJustify + attention.newResults;
   }
@@ -39,7 +49,7 @@ export default async function TeacherLayout({ children }: { children: React.Reac
     <AppShell
       title="أثر"
       userName={session?.user?.name ?? ""}
-      navItems={buildNavItems(session?.user?.canBuildSchedule, session?.user?.canTrackClassTime, inquiryNavCount)}
+      navItems={session?.user?.role === "staff" ? buildStaffNavItems(inquiryNavCount) : buildNavItems(session?.user?.canBuildSchedule, session?.user?.canTrackClassTime, inquiryNavCount)}
       demoViewOnly={session?.user?.demoViewOnly}
     >
       {children}

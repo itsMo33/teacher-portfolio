@@ -19,6 +19,7 @@ const fullNavItems: NavItem[] = [
   { href: "/admin/school-management", label: "الإنجاز المدرسي" },
   { href: "/admin/weekly-review", label: "متابعة ملفات المعلمين" },
   { href: "/admin/inquiries", label: "المسائلات" },
+  { href: "/admin/staff-files", label: "ملفات عامة (الإداريين)" },
   { href: "/admin/late-minutes", label: "دقائق تأخر المعلمين" },
   { href: "/admin/student-referrals", label: "تحويلات الطلاب" },
   { href: "/admin/activity-log", label: "سجل النشاط" },

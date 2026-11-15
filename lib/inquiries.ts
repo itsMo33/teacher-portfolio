@@ -15,7 +15,7 @@ export type InquiryRole = "officer" | "reviewer" | "teacher";
 export function getInquiryRole(user: { role: string; restrictedCategory?: string | null; demoViewOnly?: boolean }): InquiryRole | null {
   if (user.role === "agent" && user.restrictedCategory === INQUIRY_OFFICER_CATEGORY) return "officer";
   if ((user.role === "agent" || user.role === "manager") && !user.restrictedCategory) return "reviewer";
-  if (user.role === "teacher") return "teacher";
+  if (user.role === "teacher" || user.role === "staff") return "teacher";
   return null;
 }
 
@@ -167,7 +167,7 @@ export async function parseUploadedPdf(
 ): Promise<{ items: ParsedInquiry[]; teachers: { id: string; name: string }[]; pageCount: number }> {
   const [{ pages }, { data: teachers }] = await Promise.all([
     readPdfPages(path),
-    supabaseAdmin.from("users").select("id, name, national_id").eq("role", "teacher").is("deleted_at", null).order("name"),
+    supabaseAdmin.from("users").select("id, name, national_id").in("role", ["teacher", "staff"]).not("national_id", "like", "staff-%").is("deleted_at", null).order("name"),
   ]);
   const rows = (teachers ?? []) as { id: string; name: string; national_id: string | null }[];
   // national IDs are used for matching here only -- the list sent back to the browser carries names alone

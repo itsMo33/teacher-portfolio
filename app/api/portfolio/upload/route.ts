@@ -6,6 +6,8 @@ import { buildPortfolioPath, uploadFile, PORTFOLIO_BUCKET } from "@/lib/supabase
 import {
   isValidCategory,
   getSection,
+  isOwnerRole,
+  ownerCanWrite,
   ACCEPTED_MIME_TYPES,
   ACCEPTED_EXTENSIONS,
   MAX_FILE_SIZE_BYTES,
@@ -27,15 +29,15 @@ function resolveTeacherIdOrError(
   }
 
   const section = getSection(category)!;
-  if (session.user.role === "teacher" && !section.teacherWritable) {
+  if (isOwnerRole(session.user.role) && !ownerCanWrite(session.user.role, section)) {
     return { error: NextResponse.json({ error: "This section is not teacher-writable" }, { status: 403 }) };
   }
 
-  const teacherId = session.user.role === "teacher" ? session.user.id : teacherIdInput;
+  const teacherId = isOwnerRole(session.user.role) ? session.user.id : teacherIdInput;
   if (!teacherId) {
     return { error: NextResponse.json({ error: "Missing teacherId" }, { status: 400 }) };
   }
-  if (session.user.role === "teacher" && teacherId !== session.user.id) {
+  if (isOwnerRole(session.user.role) && teacherId !== session.user.id) {
     return { error: NextResponse.json({ error: "Forbidden" }, { status: 403 }) };
   }
 
@@ -68,7 +70,7 @@ async function finalizeAttachment(
   }
 
   let targetTeacherName: string | undefined =
-    session.user.role === "teacher" ? session.user.name ?? undefined : undefined;
+    isOwnerRole(session.user.role) ? session.user.name ?? undefined : undefined;
   if (!targetTeacherName) {
     const { data: teacher } = await supabaseAdmin.from("users").select("name").eq("id", teacherId).maybeSingle();
     targetTeacherName = teacher?.name ?? undefined;

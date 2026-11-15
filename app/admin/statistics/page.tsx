@@ -6,7 +6,7 @@ export default async function AdminStatisticsPage() {
   const teachers = await getTeachersWithCompletion();
   const total = teachers.length;
 
-  const sections = PORTFOLIO_SECTIONS.filter((s) => s.key !== "schedule");
+  const sections = PORTFOLIO_SECTIONS.filter((s) => s.key !== "schedule" && !s.staffOnly);
 
   const sectionStats: SectionBreakdownItem[] = sections.map((section) => {
     const teacherStatuses = teachers.map((t) => {

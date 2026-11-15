@@ -7,7 +7,7 @@ export async function POST(_req: Request, { params }: { params: Promise<{ id: st
   const { id } = await params;
   const session = await auth();
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  if (session.user.role !== "teacher") return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  if (session.user.role !== "teacher" && session.user.role !== "staff") return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
   await supabaseAdmin
     .from("inquiries")

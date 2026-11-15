@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth/auth-options";
 import { buildPortfolioPath, createUploadSignedUrl, PORTFOLIO_BUCKET } from "@/lib/supabase/storage";
-import { isValidCategory, getSection, ACCEPTED_MIME_TYPES, ACCEPTED_EXTENSIONS, MAX_FILE_SIZE_BYTES } from "@/lib/portfolio-sections";
+import { isValidCategory, getSection, isOwnerRole, ownerCanWrite, ACCEPTED_MIME_TYPES, ACCEPTED_EXTENSIONS, MAX_FILE_SIZE_BYTES } from "@/lib/portfolio-sections";
 
 /**
  * Issues a signed upload URL for a large portfolio file so the browser can upload the bytes
@@ -30,15 +30,15 @@ export async function POST(req: NextRequest) {
 
   const section = getSection(category)!;
 
-  if (session.user.role === "teacher" && !section.teacherWritable) {
+  if (isOwnerRole(session.user.role) && !ownerCanWrite(session.user.role, section)) {
     return NextResponse.json({ error: "This section is not teacher-writable" }, { status: 403 });
   }
 
-  const teacherId = session.user.role === "teacher" ? session.user.id : teacherIdInput;
+  const teacherId = isOwnerRole(session.user.role) ? session.user.id : teacherIdInput;
   if (!teacherId) {
     return NextResponse.json({ error: "Missing teacherId" }, { status: 400 });
   }
-  if (session.user.role === "teacher" && teacherId !== session.user.id) {
+  if (isOwnerRole(session.user.role) && teacherId !== session.user.id) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 

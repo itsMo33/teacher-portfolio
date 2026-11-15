@@ -21,7 +21,7 @@ export default async function ImpactMeasurementPrintPage({ params }: { params: P
   const entry = await getImpactMeasurement(id);
   if (!entry) notFound();
 
-  if (session.user.role === "teacher" && entry.teacherId !== session.user.id) notFound();
+  if ((session.user.role === "teacher" && entry.teacherId !== session.user.id) || session.user.role === "staff") notFound();
 
   const { data: teacher } = await supabaseAdmin.from("users").select("name").eq("id", entry.teacherId).maybeSingle();
 

@@ -11,7 +11,8 @@ export type SectionKey =
   | "achievements"
   | "tasks_assignments"
   | "accountability"
-  | "excuse_request";
+  | "excuse_request"
+  | "general_files";
 
 export interface Subsection {
   key: string;
@@ -40,6 +41,8 @@ export interface PortfolioSection {
   requiredCount?: number;
   /** Whether to show a numeric percentage badge for this section. When false, shows an encouraging message / trophy instead. Only meaningful for sections without subsections -- with subsections, each subsection's own showPercent applies. */
   showPercent?: boolean;
+  /** A section for the staff accounts (إداري, محضر مختبر) only: teachers never see or fill it, and it is not part of anyone's completion. */
+  staffOnly?: boolean;
 }
 
 export const PORTFOLIO_SECTIONS: PortfolioSection[] = [
@@ -178,7 +181,29 @@ export const PORTFOLIO_SECTIONS: PortfolioSection[] = [
     teacherWritable: true,
     accentColor: "#65a30d",
   },
+  {
+    key: "general_files",
+    labelAr: "ملفات عامة",
+    hasSubsections: false,
+    teacherWritable: true,
+    staffOnly: true,
+    accentColor: "#475569",
+  },
 ];
+
+/** The sections a teacher works in (the staff-only ones are not theirs). */
+export const TEACHER_SECTIONS = PORTFOLIO_SECTIONS.filter((s) => !s.staffOnly);
+
+/** The staff accounts (إداري، محضر مختبر) are not teachers: they upload to the staff-only section and answer inquiries. */
+export function isOwnerRole(role: string | undefined): boolean {
+  return role === "teacher" || role === "staff";
+}
+
+/** Whether this kind of owner may upload to / delete in the section (a teacher: any teacher section; staff: staff-only ones). */
+export function ownerCanWrite(role: string | undefined, section: PortfolioSection): boolean {
+  if (!section.teacherWritable) return false;
+  return role === "staff" ? !!section.staffOnly : !section.staffOnly;
+}
 
 /** Some teachers are exempt from the "الرخصة المهنية" requirement (per school/MOE policy) and
  *  shouldn't be counted as missing it in completion percentages or statistics. */
@@ -207,7 +232,7 @@ export function isValidCategory(category: string, subcategory?: string | null): 
 /** Total number of trackable "slots" across all sections (subsections count individually).
  *  The schedule is tracked separately since it is admin-uploaded, not teacher-completed. */
 export const TEACHER_SLOTS: { section: SectionKey; subsection?: string; labelAr: string; requiredCount: number }[] =
-  PORTFOLIO_SECTIONS.filter((s) => s.key !== "schedule").flatMap((s) =>
+  PORTFOLIO_SECTIONS.filter((s) => s.key !== "schedule" && !s.staffOnly).flatMap((s) =>
     s.hasSubsections
       ? s.subsections!.filter((sub) => !sub.optional).map((sub) => ({
           section: s.key,

@@ -42,6 +42,21 @@ export default auth((req) => {
     return NextResponse.json({ error: "هذا حساب عرض فقط -- لا يمكن التعديل" }, { status: 403 });
   }
 
+  // A staff account (إداري, محضر مختبر -- not a teacher, not an admin) gets exactly three pages -- its general files, its
+  // inquiries and its settings -- and the few APIs those pages use. Everything else is shut, because most of the app
+  // treats "not a teacher" as an administrator.
+  if (session && role === "staff" && (isAdminPath || isTeacherPath || isProtectedApi)) {
+    const p = nextUrl.pathname;
+    const allowedApi = p === "/api/portfolio/upload" || p === "/api/portfolio/upload-url" || p === "/api/portfolio/delete" || p.startsWith("/api/inquiries");
+    const allowedPage = p === "/teacher/portfolio/general_files" || p === "/teacher/portfolio/accountability" || p === "/teacher/settings";
+    if (p.startsWith("/api/")) {
+      if (!allowedApi) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    } else if (!allowedPage) {
+      return NextResponse.redirect(new URL("/teacher/portfolio/general_files", nextUrl.origin));
+    }
+    return NextResponse.next();
+  }
+
   // A teacher additionally scoped to one إدارة المدرسة category, or granted the جدول مدرسي
   // builder (e.g. مؤيد), is still a normal teacher everywhere else -- only pull them out of the
   // teacher-only redirect below so they can reach /admin; their own /api/portfolio etc. stay untouched.
