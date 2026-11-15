@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth/auth-options";
 import { supabaseAdmin } from "@/lib/supabase/server";
-import { createInquiries, getInquiryRole, type SendItem } from "@/lib/inquiries";
+import { createInquiries, getInquiryRole, INQUIRY_RECIPIENT_CATEGORIES, type SendItem } from "@/lib/inquiries";
 import { logActivity } from "@/lib/audit";
 import { INQUIRY_KIND_LABEL, type InquiryKind } from "@/lib/inquiry-logic";
 
@@ -22,7 +22,7 @@ export async function POST(req: NextRequest) {
   if (!Array.isArray(items) || items.length === 0) return NextResponse.json({ error: "ما فيه معلمين للإرسال" }, { status: 400 });
 
   const clean: SendItem[] = [];
-  const { data: teachers } = await supabaseAdmin.from("users").select("id").in("role", ["teacher", "staff"]).not("national_id", "like", "staff-%").is("deleted_at", null);
+  const { data: teachers } = await supabaseAdmin.from("users").select("id").or(`role.in.(teacher,staff),restricted_category.in.(${INQUIRY_RECIPIENT_CATEGORIES.join(",")})`).not("national_id", "like", "staff-%").is("deleted_at", null);
   const teacherIds = new Set((teachers ?? []).map((t) => t.id as string));
   for (const i of items) {
     if (typeof i?.teacherId !== "string" || !teacherIds.has(i.teacherId)) continue;

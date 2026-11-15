@@ -63,6 +63,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
               { href: "/admin/inquiries?kind=other", label: "المسائلات الأخرى" },
             ]
           : []),
+        ...(restrictedCategory === "school_labs" ? [{ href: "/admin/my-inquiries", label: "المسائلات" }] : []),
         ...classTimeNav,
         ...(canBuildSchedule ? [{ href: "/admin/schedule-builder", label: "جدول مدرسي" }] : []),
       ]

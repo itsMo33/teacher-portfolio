@@ -105,11 +105,13 @@ export default auth((req) => {
       (inReferralWorkflow && nextUrl.pathname.startsWith("/api/student-referrals")) ||
       (canTrackClassTime && nextUrl.pathname === "/api/teacher-performance") ||
       (restrictedCategory === "teacher_affairs_agent" && nextUrl.pathname === "/api/teachers/files-manifest") ||
-      (restrictedCategory === "inquiries_officer" && nextUrl.pathname.startsWith("/api/inquiries"));
+      (restrictedCategory === "inquiries_officer" && nextUrl.pathname.startsWith("/api/inquiries")) ||
+      (restrictedCategory === "school_labs" && nextUrl.pathname.startsWith("/api/inquiries"));
     const allowedPage =
       nextUrl.pathname === "/admin" ||
       (inReferralWorkflow && nextUrl.pathname.startsWith("/admin/student-referrals")) ||
       (restrictedCategory === "inquiries_officer" && nextUrl.pathname.startsWith("/admin/inquiries")) ||
+      (restrictedCategory === "school_labs" && nextUrl.pathname === "/admin/my-inquiries") ||
       (canTrackClassTime && (nextUrl.pathname === "/admin/class-time" || nextUrl.pathname === "/admin/school-schedule"));
     const lockedDown = isAdminPath || isProtectedApi;
 
