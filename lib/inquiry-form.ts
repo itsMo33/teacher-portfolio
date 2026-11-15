@@ -216,7 +216,7 @@ export async function buildCompletedForm(inquiry: Inquiry): Promise<Uint8Array |
       if (stamp) {
         const sw = 58;
         const sh = (stamp.height / stamp.width) * sw;
-        page.drawImage(stamp, { x: l.at.signCenter - 14 - sw / 2, y: H - l.at.baseline - sh * 0.55, width: sw, height: sh, opacity: 0.85 });
+        page.drawImage(stamp, { x: l.at.signCenter - 14 - sw / 2, y: H - l.at.baseline - sh * 0.35, width: sw, height: sh, opacity: 0.85 });
       }
       const w = 46;
       const h = (image.height / image.width) * w;
