@@ -76,7 +76,7 @@ function Card({ item }: { item: TeacherInquiryView }) {
           )}
           {item.hasTeacherFile && (
             <button type="button" onClick={viewFile} className="self-start text-xs text-[var(--brand-primary)] hover:underline">
-              فتح ملف المسائلة
+              فتح المسائلة الأصلية (PDF)
             </button>
           )}
 
@@ -112,7 +112,7 @@ function Card({ item }: { item: TeacherInquiryView }) {
               </div>
             </div>
           )}
-          {decided && (
+          {(decided || item.justifiedAt) && (
             <a href={item.kind === "other" ? `/inquiries/${item.id}/print` : `/api/inquiries/${item.id}/form`} target="_blank" rel="noopener noreferrer" className="self-start text-xs text-[var(--brand-primary)] hover:underline">
               النموذج المكتمل (طباعة)
             </a>

@@ -14,6 +14,7 @@ import type { Inquiry } from "@/lib/inquiries";
 
 const FONT_PATH = path.join(process.cwd(), "lib", "fonts", "NotoSansArabic-Regular.ttf");
 const SIGNATURE_PATH = "signatures/director.png";
+const STAMP_PATH = "signatures/director_stamp.png";
 const INK = "#0b1f6b";
 const SCALE = 4; // text is drawn as images at 4x so it stays sharp when printed
 
@@ -111,8 +112,8 @@ function drawCheck(page: PDFPage, cx: number, cy: number) {
   page.drawLine({ start: { x: cx - 1, y: H - cy + 3 }, end: { x: cx + 4, y: H - cy - 4 }, thickness: 1.5, color });
 }
 
-async function loadSignature(): Promise<Buffer | null> {
-  const { data } = await supabaseAdmin.storage.from(PORTFOLIO_BUCKET).download(SIGNATURE_PATH);
+async function loadImage(path: string): Promise<Buffer | null> {
+  const { data } = await supabaseAdmin.storage.from(PORTFOLIO_BUCKET).download(path);
   return data ? Buffer.from(await data.arrayBuffer()) : null;
 }
 
@@ -203,13 +204,20 @@ export async function buildCompletedForm(inquiry: Inquiry): Promise<Uint8Array |
     drawCheck(page, t.x, t.y);
   }
 
-  // the director's signature: on the line that issued the inquiry, and -- once it is decided -- on the decision line
-  const signature = await loadSignature();
+  // the director's stamp and signature: on the line that issued the inquiry, and -- once it is decided -- on the decision line
+  const [signature, stampBytes] = await Promise.all([loadImage(SIGNATURE_PATH), loadImage(STAMP_PATH)]);
   if (signature) {
     const image = await doc.embedPng(signature);
+    const stamp = stampBytes ? await doc.embedPng(stampBytes) : null;
     const H = page.getHeight();
     const lines = [{ at: tpl.directorLines[0], date: inquiry.createdAt }, ...(decided ? [{ at: tpl.directorLines[1], date: inquiry.decidedAt! }] : [])];
     for (const l of lines) {
+      // the stamp sits under the signature, a little to the left, as on the paper original
+      if (stamp) {
+        const sw = 58;
+        const sh = (stamp.height / stamp.width) * sw;
+        page.drawImage(stamp, { x: l.at.signCenter - 14 - sw / 2, y: H - l.at.baseline - sh * 0.55, width: sw, height: sh, opacity: 0.85 });
+      }
       const w = 46;
       const h = (image.height / image.width) * w;
       page.drawImage(image, { x: l.at.signCenter - w / 2, y: H - l.at.baseline - h * 0.2, width: w, height: h });

@@ -6,7 +6,7 @@ import { buildCompletedForm, hasFormTemplate } from "@/lib/inquiry-form";
 export const maxDuration = 60;
 
 /** The inquiry as the school's own form, filled in (the teacher's answer, the decision, the director's signature),
- *  ready to print. The reviewers can print any of them; a teacher only their own, once it has been decided. */
+ *  ready to print. The reviewers can print any of them; a teacher only their own, once they have answered it. */
 export async function GET(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const session = await auth();
@@ -15,8 +15,8 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
   const inquiry = await getInquiry(id);
   if (!inquiry) return NextResponse.json({ error: "Not found" }, { status: 404 });
   const role = getInquiryRole(session.user);
-  // the reviewers print any inquiry; the recipient only their own, once it has been decided
-  const mayPrint = role === "reviewer" || role === "officer" || (isRecipientOf(session.user.id, inquiry) && !!inquiry.decidedAt);
+  // the reviewers print any inquiry; the recipient only their own, once they have answered it
+  const mayPrint = role === "reviewer" || role === "officer" || (isRecipientOf(session.user.id, inquiry) && (!!inquiry.decidedAt || !!inquiry.justifiedAt));
   if (!mayPrint) return NextResponse.json({ error: "Not found" }, { status: 404 });
   if (!hasFormTemplate(inquiry.kind)) return NextResponse.json({ error: "no template" }, { status: 404 });
 

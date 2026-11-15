@@ -29,7 +29,7 @@ export default async function InquiryPrintPage({ params }: { params: Promise<{ i
   const inquiry = await getInquiry(id);
   if (!inquiry) notFound();
   const role = getInquiryRole(session.user);
-  if (!(role === "reviewer" || role === "officer" || (isRecipientOf(session.user.id, inquiry) && inquiry.decidedAt))) notFound();
+  if (!(role === "reviewer" || role === "officer" || (isRecipientOf(session.user.id, inquiry) && (inquiry.decidedAt || inquiry.justifiedAt)))) notFound();
 
   const { data: decider } = inquiry.decidedBy
     ? await supabaseAdmin.from("users").select("name").eq("id", inquiry.decidedBy).maybeSingle()
