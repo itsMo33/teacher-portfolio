@@ -37,7 +37,7 @@ export default async function StaffFilesPage() {
     <div className="flex flex-col gap-5 max-w-3xl">
       <div>
         <h2 className="text-xl font-bold text-slate-900 dark:text-slate-50">ملفات عامة -- الإداريون ومحضرو المختبر</h2>
-        <p className="text-sm text-slate-500">الملفات اللي رفعها حسابات الإداريين في قسم "ملفات عامة".</p>
+        <p className="text-sm text-slate-500">الملفات اللي رفعها حسابات الإداريين في قسم «ملفات عامة».</p>
       </div>
       {(staff ?? []).length === 0 && <p className="text-sm text-slate-400">ما فيه حسابات إداريين بعد.</p>}
       {(staff ?? []).map((u) => {
