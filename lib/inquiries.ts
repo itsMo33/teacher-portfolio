@@ -8,10 +8,6 @@ import { displayText, parseInquiryPages, type InquiryDecision, type InquiryKind,
 
 export const INQUIRY_OFFICER_CATEGORY = "inquiries_officer";
 
-/** Restricted agent accounts that also receive and answer inquiries (the lab technician): they are matched in an uploaded
- *  PDF like a teacher and see their own inquiries on /admin/my-inquiries. */
-export const INQUIRY_RECIPIENT_CATEGORIES = ["school_labs"];
-
 export type InquiryRole = "officer" | "reviewer" | "teacher";
 
 /** Who plays which part: the account that uploads the PDFs (a restricted account), the reviewers (رائد and the
@@ -20,13 +16,18 @@ export function getInquiryRole(user: { role: string; restrictedCategory?: string
   if (user.role === "agent" && user.restrictedCategory === INQUIRY_OFFICER_CATEGORY) return "officer";
   if ((user.role === "agent" || user.role === "manager") && !user.restrictedCategory) return "reviewer";
   if (user.role === "teacher" || user.role === "staff") return "teacher";
-  if (user.role === "agent" && user.restrictedCategory && INQUIRY_RECIPIENT_CATEGORIES.includes(user.restrictedCategory)) return "teacher";
   return null;
 }
 
 /** Both the uploading account (محمد) and the reviewers (رائد, the manager) can decide an inquiry. */
 export function canDecideInquiry(role: InquiryRole | null): boolean {
   return role === "officer" || role === "reviewer";
+}
+
+/** Anyone with an account can be sent an inquiry -- a teacher, a staff account, a restricted agent, رائد, the manager --
+ *  and whoever it was sent to can open it, answer it and print it, whatever else their account does. */
+export function isRecipientOf(userId: string, inquiry: { teacherId: string }): boolean {
+  return inquiry.teacherId === userId;
 }
 
 export interface Inquiry {
@@ -172,7 +173,7 @@ export async function parseUploadedPdf(
 ): Promise<{ items: ParsedInquiry[]; teachers: { id: string; name: string }[]; pageCount: number }> {
   const [{ pages }, { data: teachers }] = await Promise.all([
     readPdfPages(path),
-    supabaseAdmin.from("users").select("id, name, national_id").or(`role.in.(teacher,staff),restricted_category.in.(${INQUIRY_RECIPIENT_CATEGORIES.join(",")})`).not("national_id", "like", "staff-%").is("deleted_at", null).order("name"),
+    supabaseAdmin.from("users").select("id, name, national_id").not("national_id", "like", "staff-%").is("deleted_at", null).order("name"),
   ]);
   const rows = (teachers ?? []) as { id: string; name: string; national_id: string | null }[];
   // national IDs are used for matching here only -- the list sent back to the browser carries names alone

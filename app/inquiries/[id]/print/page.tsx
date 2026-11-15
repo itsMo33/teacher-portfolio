@@ -3,7 +3,7 @@ import { auth } from "@/lib/auth/auth-options";
 import { supabaseAdmin } from "@/lib/supabase/server";
 import { SCHOOL_NAME } from "@/lib/school";
 import { PrintButton } from "@/components/admin/PrintButton";
-import { getInquiry, getInquiryRole } from "@/lib/inquiries";
+import { getInquiry, getInquiryRole, isRecipientOf } from "@/lib/inquiries";
 import { displayText, extractPeriod, INQUIRY_KIND_LABEL } from "@/lib/inquiry-logic";
 
 function CheckBox({ checked }: { checked: boolean }) {
@@ -26,10 +26,10 @@ export default async function InquiryPrintPage({ params }: { params: Promise<{ i
   const session = await auth();
   if (!session) redirect("/login");
 
+  const inquiry = await getInquiry(id);
+  if (!inquiry) notFound();
   const role = getInquiryRole(session.user);
-  const inquiry = role ? await getInquiry(id) : null;
-  if (!role || !inquiry) notFound();
-  if (role === "teacher" && (inquiry.teacherId !== session.user.id || !inquiry.decidedAt)) notFound();
+  if (!(role === "reviewer" || role === "officer" || (isRecipientOf(session.user.id, inquiry) && inquiry.decidedAt))) notFound();
 
   const { data: decider } = inquiry.decidedBy
     ? await supabaseAdmin.from("users").select("name").eq("id", inquiry.decidedBy).maybeSingle()

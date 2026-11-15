@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth/auth-options";
-import { getInquiry, getInquiryRole, getSourceUrl, getTeacherFileUrl } from "@/lib/inquiries";
+import { getInquiry, getInquiryRole, getSourceUrl, getTeacherFileUrl, isRecipientOf } from "@/lib/inquiries";
 
 /** A short-lived link to the inquiry's PDF. A teacher gets only the page cut out for them; the reviewers
  *  (?source=1) can open the whole uploaded PDF. */
@@ -14,9 +14,11 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
   if (!inquiry) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
   let url: string | null = null;
-  if (role === "teacher") {
-    if (inquiry.teacherId !== session.user.id) return NextResponse.json({ error: "Not found" }, { status: 404 });
+  if (isRecipientOf(session.user.id, inquiry)) {
+    // the recipient (whatever kind of account) gets only the page cut out for them
     url = await getTeacherFileUrl(id);
+  } else if (role === "teacher") {
+    return NextResponse.json({ error: "Not found" }, { status: 404 });
   } else if (role === "reviewer" || role === "officer") {
     url = req.nextUrl.searchParams.get("source") === "1" ? await getSourceUrl(id) : (await getTeacherFileUrl(id)) ?? (await getSourceUrl(id));
   } else {

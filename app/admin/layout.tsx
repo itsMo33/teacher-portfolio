@@ -3,6 +3,7 @@ import { AppShell, type NavItem } from "@/components/ui/AppShell";
 import { getSchoolManagementCategory } from "@/lib/school-files";
 import { canReview } from "@/lib/weekly-review";
 import { getReferralActor } from "@/lib/student-referrals";
+import { inquiryAttention, listInquiries, toTeacherView } from "@/lib/inquiries";
 
 const fullNavItems: NavItem[] = [
   { href: "/admin", label: "لوحة تحكم" },
@@ -49,7 +50,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
         ]
       : [];
 
-  const navItems: NavItem[] = restrictedCategory
+  const baseNavItems: NavItem[] = restrictedCategory
     ? [
         ...teacherHome,
         { href: "/admin", label: (await getSchoolManagementCategory(restrictedCategory))?.labelAr ?? "لوحة تحكم" },
@@ -63,7 +64,6 @@ export default async function AdminLayout({ children }: { children: React.ReactN
               { href: "/admin/inquiries?kind=other", label: "المسائلات الأخرى" },
             ]
           : []),
-        ...(restrictedCategory === "school_labs" ? [{ href: "/admin/my-inquiries", label: "المسائلات" }] : []),
         ...classTimeNav,
         ...(canBuildSchedule ? [{ href: "/admin/schedule-builder", label: "جدول مدرسي" }] : []),
       ]
@@ -78,6 +78,18 @@ export default async function AdminLayout({ children }: { children: React.ReactN
           if (item.href === "/admin/weekly-review" || item.href === "/admin/inquiries" || item.href === "/admin/late-minutes") return !!session && canReview(session.user);
           return true;
         });
+
+  // Anyone can be sent an inquiry (a restricted agent, رائد, the manager...): once there is one, a link to them appears.
+  let ownInquiryNav: NavItem[] = [];
+  if (session && session.user.role !== "teacher") {
+    const own = (await listInquiries({ teacherId: session.user.id })).map(toTeacherView);
+    if (own.length > 0) {
+      const attention = inquiryAttention(own);
+      const count = attention.toJustify + attention.newResults;
+      ownInquiryNav = [{ href: "/admin/my-inquiries", label: count > 0 ? `مسائلاتي (${count})` : "مسائلاتي" }];
+    }
+  }
+  const navItems: NavItem[] = [...baseNavItems, ...ownInquiryNav];
 
   return (
     <AppShell

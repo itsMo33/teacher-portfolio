@@ -1,13 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth/auth-options";
-import { applyJustification, getInquiry, getInquiryRole } from "@/lib/inquiries";
+import { applyJustification, getInquiry } from "@/lib/inquiries";
 
-/** The recipient (a teacher, a staff account or the lab technician) writes -- or rewrites, until the inquiry is decided -- their justification. */
+/** Whoever the inquiry was sent to (any account) writes -- or rewrites, until the inquiry is decided -- their justification. */
 export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const session = await auth();
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  if (getInquiryRole(session.user) !== "teacher") return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 
   const inquiry = await getInquiry(id);
   if (!inquiry || inquiry.teacherId !== session.user.id) return NextResponse.json({ error: "Not found" }, { status: 404 });

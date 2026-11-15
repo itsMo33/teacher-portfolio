@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth/auth-options";
-import { getInquiry, getInquiryRole } from "@/lib/inquiries";
+import { getInquiry, getInquiryRole, isRecipientOf } from "@/lib/inquiries";
 import { buildCompletedForm, hasFormTemplate } from "@/lib/inquiry-form";
 
 export const maxDuration = 60;
@@ -12,12 +12,12 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
   const session = await auth();
   if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
+  const inquiry = await getInquiry(id);
+  if (!inquiry) return NextResponse.json({ error: "Not found" }, { status: 404 });
   const role = getInquiryRole(session.user);
-  const inquiry = role ? await getInquiry(id) : null;
-  if (!role || !inquiry) return NextResponse.json({ error: "Not found" }, { status: 404 });
-  if (role === "teacher" && (inquiry.teacherId !== session.user.id || !inquiry.decidedAt)) {
-    return NextResponse.json({ error: "Not found" }, { status: 404 });
-  }
+  // the reviewers print any inquiry; the recipient only their own, once it has been decided
+  const mayPrint = role === "reviewer" || role === "officer" || (isRecipientOf(session.user.id, inquiry) && !!inquiry.decidedAt);
+  if (!mayPrint) return NextResponse.json({ error: "Not found" }, { status: 404 });
   if (!hasFormTemplate(inquiry.kind)) return NextResponse.json({ error: "no template" }, { status: 404 });
 
   try {

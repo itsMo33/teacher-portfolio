@@ -1,14 +1,15 @@
 import { redirect } from "next/navigation";
 import { auth } from "@/lib/auth/auth-options";
-import { countInquiries, getInquiryRole, listInquiries, toTeacherView } from "@/lib/inquiries";
+import { countInquiries, listInquiries, toTeacherView } from "@/lib/inquiries";
 import { InquirySummary } from "@/components/inquiries/InquirySummary";
 import { TeacherInquiries } from "@/components/inquiries/TeacherInquiries";
 
-/** The inquiries sent to an account that is not a teacher but still answers them (the lab technician, whose
- *  account is scoped to its own category): the same list and the same answering a teacher has. */
+/** The inquiries sent to an account that is not a teacher (a restricted agent, رائد, the manager): the same list and
+ *  the same answering a teacher has. Teachers and staff accounts have it inside their own portal. */
 export default async function MyInquiriesPage() {
   const session = await auth();
-  if (!session || getInquiryRole(session.user) !== "teacher" || session.user.role === "teacher") redirect("/admin");
+  if (!session) redirect("/login");
+  if (session.user.role === "teacher" || session.user.role === "staff") redirect("/teacher/portfolio/accountability");
 
   const inquiries = (await listInquiries({ teacherId: session.user.id })).map(toTeacherView);
   return (
