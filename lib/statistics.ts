@@ -11,7 +11,7 @@ export function parseRange(value: string | undefined): StatRange {
 }
 
 /** The start of the range as an ISO timestamp, or null for "all". */
-function rangeStart(range: StatRange): string | null {
+export function rangeStart(range: StatRange): string | null {
   if (range === "all") return null;
   const days = range === "week" ? 7 : 30;
   return new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString();
@@ -20,7 +20,7 @@ function rangeStart(range: StatRange): string | null {
 const DAY_MS = 24 * 60 * 60 * 1000;
 
 /** Reads every row of a query that may hold more than the 1000 rows a single request returns. */
-async function fetchAll<T>(page: (from: number, to: number) => PromiseLike<{ data: T[] | null }>): Promise<T[]> {
+export async function fetchAll<T>(page: (from: number, to: number) => PromiseLike<{ data: T[] | null }>): Promise<T[]> {
   const out: T[] = [];
   for (let from = 0; ; from += 1000) {
     const { data } = await page(from, from + 999);
@@ -31,12 +31,12 @@ async function fetchAll<T>(page: (from: number, to: number) => PromiseLike<{ dat
   return out;
 }
 
-async function userNames(): Promise<Map<string, string>> {
+export async function userNames(): Promise<Map<string, string>> {
   const { data } = await supabaseAdmin.from("users").select("id, name");
   return new Map((data ?? []).map((u) => [u.id as string, u.name as string]));
 }
 
-function count<T>(rows: T[], key: (r: T) => string | null | undefined): [string, number][] {
+export function count<T>(rows: T[], key: (r: T) => string | null | undefined): [string, number][] {
   const m = new Map<string, number>();
   for (const r of rows) {
     const k = key(r);
@@ -262,7 +262,7 @@ export interface WaitingStats {
   byPeriod: [string, number][];
 }
 
-const DAY_LABELS: Record<string, string> = { احد: "الأحد", اثنين: "الاثنين", ثلاثاء: "الثلاثاء", اربعاء: "الأربعاء", خميس: "الخميس" };
+export const DAY_LABELS: Record<string, string> = { احد: "الأحد", اثنين: "الاثنين", ثلاثاء: "الثلاثاء", اربعاء: "الأربعاء", خميس: "الخميس" };
 
 export async function getWaitingStats(range: StatRange): Promise<WaitingStats> {
   const since = rangeStart(range);

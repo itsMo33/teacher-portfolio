@@ -15,8 +15,20 @@ import {
   parseRange,
   type StatRange,
 } from "@/lib/statistics";
+import {
+  getAccountStats,
+  getActivityStats,
+  getExcuseStats,
+  getImpactStats,
+  getScheduleStats,
+  getSchoolFilesStats,
+  getWeeklyPlanStats,
+} from "@/lib/statistics-more";
 
-type Tab = "files" | "inquiries" | "referrals" | "performance" | "waiting" | "review";
+type Tab = "files" | "inquiries" | "referrals" | "performance" | "waiting" | "review" | "schedule" | "plan" | "school" | "impact" | "excuse" | "activity" | "accounts";
+
+/** Tabs that are a snapshot of now, so a period makes no sense for them. */
+const NO_RANGE: Tab[] = ["files", "schedule", "plan", "accounts"];
 
 const TABS: { key: Tab; label: string }[] = [
   { key: "files", label: "ملفات المعلمين" },
@@ -25,6 +37,13 @@ const TABS: { key: Tab; label: string }[] = [
   { key: "performance", label: "متابعة الأداء" },
   { key: "waiting", label: "جدول الانتظار" },
   { key: "review", label: "مراجعة الملفات" },
+  { key: "schedule", label: "الجدول المدرسي" },
+  { key: "plan", label: "الخطة الأسبوعية" },
+  { key: "school", label: "إدارة المدرسة" },
+  { key: "impact", label: "قياس الأثر" },
+  { key: "excuse", label: "الاستئذان" },
+  { key: "activity", label: "سجل النشاط" },
+  { key: "accounts", label: "الحسابات" },
 ];
 
 const KIND_LABELS: Record<string, string> = { delay: "تأخير (حضوري)", absence: "غياب", other: "أخرى" };
@@ -59,7 +78,7 @@ export default async function AdminStatisticsPage({ searchParams }: { searchPara
         ))}
       </div>
 
-      {tab !== "files" && (
+      {!NO_RANGE.includes(tab) && (
         <div className="flex flex-wrap items-center gap-2 text-xs">
           <span className="text-slate-500">الفترة:</span>
           {(Object.keys(RANGE_LABELS) as StatRange[]).map((r) => (
@@ -82,6 +101,13 @@ export default async function AdminStatisticsPage({ searchParams }: { searchPara
       {tab === "performance" && <PerformanceStatsView range={range} />}
       {tab === "waiting" && <WaitingStatsView range={range} />}
       {tab === "review" && <ReviewStatsView range={range} />}
+      {tab === "schedule" && <ScheduleStatsView />}
+      {tab === "plan" && <WeeklyPlanStatsView />}
+      {tab === "school" && <SchoolFilesStatsView range={range} />}
+      {tab === "impact" && <ImpactStatsView range={range} />}
+      {tab === "excuse" && <ExcuseStatsView range={range} />}
+      {tab === "activity" && <ActivityStatsView range={range} />}
+      {tab === "accounts" && <AccountStatsView />}
     </div>
   );
 }
@@ -246,6 +272,141 @@ async function ReviewStatsView({ range }: { range: StatRange }) {
       </StatGrid>
       <StatSection title="أكثر المعلمين عندهم ملفات مرجّعة">
         <BarList items={s.revisionByTeacher} />
+      </StatSection>
+    </>
+  );
+}
+
+async function ScheduleStatsView() {
+  const s = await getScheduleStats();
+  return (
+    <>
+      <StatGrid>
+        <StatCard label="معلمون عندهم حصص" value={s.teachers} />
+        <StatCard label="حصص في الأسبوع" value={s.slots} />
+        <StatCard label="الشعب" value={s.sections} />
+        <StatCard label="متوسط نصاب المعلم" value={s.avgLoad} tone="amber" />
+      </StatGrid>
+      <StatSection title="نصاب كل معلم (عدد الحصص في الأسبوع)">
+        <DataTable columns={["المعلم", "الحصص"]} rows={s.byTeacher} />
+      </StatSection>
+      <StatSection title="الحصص حسب المادة">
+        <BarList items={s.bySubject} />
+      </StatSection>
+      <StatSection title="الحصص حسب اليوم">
+        <BarList items={s.byDay} />
+      </StatSection>
+      <StatSection title="الحصص حسب رقم الحصة">
+        <BarList items={s.byPeriod} />
+      </StatSection>
+    </>
+  );
+}
+
+async function WeeklyPlanStatsView() {
+  const s = await getWeeklyPlanStats(6);
+  return (
+    <>
+      <StatSection title="الخطة الأسبوعية لآخر 6 أسابيع" note="الأسبوع يبدأ يوم الأحد؛ المعلمون اللي سلّموا الخطة واللي ما سلّموا">
+        <DataTable columns={["الأسبوع (يبدأ)", "سلّموا", "ما سلّموا"]} rows={s.weeks.map((w) => [w.week, w.uploaded, w.missing])} />
+      </StatSection>
+      <StatSection title="أكثر المعلمين تقصيراً (عدد الأسابيع اللي ما سلّموا فيها من آخر 6)">
+        <BarList items={s.missedMost} empty="الكل سلّم" />
+      </StatSection>
+    </>
+  );
+}
+
+async function SchoolFilesStatsView({ range }: { range: StatRange }) {
+  const s = await getSchoolFilesStats(range);
+  return (
+    <>
+      <StatGrid>
+        <StatCard label="ملفات إدارة المدرسة" value={s.total} />
+      </StatGrid>
+      <StatSection title="حسب القسم">
+        <BarList items={s.byCategory} />
+      </StatSection>
+      <StatSection title="أكثر من رفع">
+        <BarList items={s.byUploader} />
+      </StatSection>
+    </>
+  );
+}
+
+async function ImpactStatsView({ range }: { range: StatRange }) {
+  const s = await getImpactStats(range);
+  return (
+    <>
+      <StatGrid>
+        <StatCard label="قياسات الأثر" value={s.total} />
+        <StatCard label="متوسط التحسن (من الدرجة الكاملة)" value={s.avgImprovementPct === null ? "—" : `${s.avgImprovementPct}%`} tone="green" />
+      </StatGrid>
+      <StatSection title="حسب مستوى التحسن">
+        <BarList items={s.byLevel} />
+      </StatSection>
+      <StatSection title="حسب المادة">
+        <BarList items={s.bySubject} />
+      </StatSection>
+      <StatSection title="أكثر المعلمين قياساً">
+        <BarList items={s.byTeacher} />
+      </StatSection>
+    </>
+  );
+}
+
+async function ExcuseStatsView({ range }: { range: StatRange }) {
+  const s = await getExcuseStats(range);
+  return (
+    <>
+      <StatGrid>
+        <StatCard label="ملفات الاستئذان" value={s.total} />
+      </StatGrid>
+      <StatSection title="حسب النوع">
+        <BarList items={s.bySubsection} />
+      </StatSection>
+      <StatSection title="أكثر المعلمين استئذاناً">
+        <BarList items={s.byTeacher} />
+      </StatSection>
+    </>
+  );
+}
+
+async function ActivityStatsView({ range }: { range: StatRange }) {
+  const s = await getActivityStats(range);
+  return (
+    <>
+      <StatGrid>
+        <StatCard label="عمليات مسجّلة" value={s.total} />
+      </StatGrid>
+      <StatSection title="حسب نوع العملية">
+        <BarList items={s.byAction} />
+      </StatSection>
+      <StatSection title="أكثر الحسابات نشاطاً">
+        <BarList items={s.byActor} />
+      </StatSection>
+      <StatSection title="النشاط في آخر الأيام">
+        <BarList items={s.byDay} />
+      </StatSection>
+    </>
+  );
+}
+
+async function AccountStatsView() {
+  const s = await getAccountStats();
+  return (
+    <>
+      <StatGrid>
+        <StatCard label="كل الحسابات" value={s.total} />
+      </StatGrid>
+      <StatSection title="حسب النوع">
+        <BarList items={s.byRole} />
+      </StatSection>
+      <StatSection title="الحسابات المقيّدة بقسم">
+        <BarList items={s.byCategory} empty="لا توجد" />
+      </StatSection>
+      <StatSection title="الصلاحيات الإضافية">
+        <BarList items={s.flags} />
       </StatSection>
     </>
   );
