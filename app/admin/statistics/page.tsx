@@ -1,20 +1,101 @@
+import Link from "next/link";
+import { redirect } from "next/navigation";
+import { auth } from "@/lib/auth/auth-options";
 import { getTeachersWithCompletion } from "@/lib/teachers-data";
 import { PORTFOLIO_SECTIONS } from "@/lib/portfolio-sections";
 import { SectionBreakdownList, type SectionBreakdownItem } from "@/components/admin/SectionBreakdownList";
+import { BarList, DataTable, StatCard, StatGrid, StatSection } from "@/components/admin/StatBlocks";
+import {
+  RANGE_LABELS,
+  getInquiryStats,
+  getPerformanceStats,
+  getReferralStats,
+  getReviewStats,
+  getWaitingStats,
+  parseRange,
+  type StatRange,
+} from "@/lib/statistics";
 
-export default async function AdminStatisticsPage() {
+type Tab = "files" | "inquiries" | "referrals" | "performance" | "waiting" | "review";
+
+const TABS: { key: Tab; label: string }[] = [
+  { key: "files", label: "ملفات المعلمين" },
+  { key: "inquiries", label: "المسائلات" },
+  { key: "referrals", label: "تحويلات الطلاب" },
+  { key: "performance", label: "متابعة الأداء" },
+  { key: "waiting", label: "جدول الانتظار" },
+  { key: "review", label: "مراجعة الملفات" },
+];
+
+const KIND_LABELS: Record<string, string> = { delay: "تأخير (حضوري)", absence: "غياب", other: "أخرى" };
+
+/** One statistics page for the whole program: a tab per part (files, inquiries, referrals, performance, waiting table,
+ *  file review), each with its own numbers, and -- except for the files tab -- a period to look at. */
+export default async function AdminStatisticsPage({ searchParams }: { searchParams: Promise<{ tab?: string; range?: string }> }) {
+  const session = await auth();
+  if (!session || session.user.role === "teacher" || session.user.role === "staff" || session.user.restrictedCategory) redirect("/admin");
+
+  const { tab: tabParam, range: rangeParam } = await searchParams;
+  const tab: Tab = TABS.some((t) => t.key === tabParam) ? (tabParam as Tab) : "files";
+  const range = parseRange(rangeParam);
+
+  return (
+    <div className="flex flex-col gap-6 max-w-3xl">
+      <h2 className="text-xl font-bold text-slate-900 dark:text-slate-50">الإحصائيات</h2>
+
+      <div className="flex flex-wrap gap-2 text-sm">
+        {TABS.map((t) => (
+          <Link
+            key={t.key}
+            href={`/admin/statistics?tab=${t.key}${range !== "all" ? `&range=${range}` : ""}`}
+            className={`rounded-lg border px-3 py-1.5 transition-colors ${
+              t.key === tab
+                ? "border-[var(--brand-primary)] bg-[var(--brand-primary)] text-white"
+                : "border-slate-300 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800"
+            }`}
+          >
+            {t.label}
+          </Link>
+        ))}
+      </div>
+
+      {tab !== "files" && (
+        <div className="flex flex-wrap items-center gap-2 text-xs">
+          <span className="text-slate-500">الفترة:</span>
+          {(Object.keys(RANGE_LABELS) as StatRange[]).map((r) => (
+            <Link
+              key={r}
+              href={`/admin/statistics?tab=${tab}${r !== "all" ? `&range=${r}` : ""}`}
+              className={`rounded-full border px-3 py-1 ${
+                r === range ? "border-[var(--brand-primary)] bg-[var(--brand-primary)] text-white" : "border-slate-300 dark:border-slate-700 text-slate-600 dark:text-slate-300"
+              }`}
+            >
+              {RANGE_LABELS[r]}
+            </Link>
+          ))}
+        </div>
+      )}
+
+      {tab === "files" && <FilesStats />}
+      {tab === "inquiries" && <InquiriesStats range={range} />}
+      {tab === "referrals" && <ReferralsStats range={range} />}
+      {tab === "performance" && <PerformanceStatsView range={range} />}
+      {tab === "waiting" && <WaitingStatsView range={range} />}
+      {tab === "review" && <ReviewStatsView range={range} />}
+    </div>
+  );
+}
+
+async function FilesStats() {
   const teachers = await getTeachersWithCompletion();
   const total = teachers.length;
-
   const sections = PORTFOLIO_SECTIONS.filter((s) => s.key !== "schedule" && !s.staffOnly);
 
   const sectionStats: SectionBreakdownItem[] = sections.map((section) => {
     const teacherStatuses = teachers.map((t) => {
       const totalCount = section.hasSubsections ? section.subsections!.length : (section.requiredCount ?? 1);
       const doneCount = section.hasSubsections
-        ? section.subsections!.filter(
-            (sub) => (t.slotCounts[`${section.key}:${sub.key}`] ?? 0) >= (sub.requiredCount ?? 1)
-          ).length
+        ? section.subsections!.filter((sub) => (t.slotCounts[`${section.key}:${sub.key}`] ?? 0) >= (sub.requiredCount ?? 1)).length
         : Math.min(t.slotCounts[`${section.key}:`] ?? 0, totalCount);
       return { id: t.id, name: t.name, doneCount, totalCount };
     });
@@ -26,33 +107,146 @@ export default async function AdminStatisticsPage() {
   });
 
   const scheduleCount = teachers.filter((t) => t.hasSchedule).length;
-
   const fullyCompleteCount = teachers.filter((t) => t.completionPercent === 100).length;
+  const average = total ? Math.round(teachers.reduce((s, t) => s + t.completionPercent, 0) / total) : 0;
 
   return (
-    <div className="flex flex-col gap-8 max-w-2xl">
-      <h2 className="text-xl font-bold text-slate-900 dark:text-slate-50">الإحصائيات</h2>
-
-      <div className="grid grid-cols-3 gap-4">
+    <>
+      <StatGrid>
         <StatCard label="عدد المعلمين" value={total} />
-        <StatCard label="أكملوا الملف بالكامل" value={fullyCompleteCount} />
+        <StatCard label="أكملوا الملف بالكامل" value={fullyCompleteCount} tone="green" />
         <StatCard label="رفعوا الجدول" value={scheduleCount} />
-      </div>
-
-      <div className="flex flex-col gap-3">
-        <h3 className="font-bold text-slate-800 dark:text-slate-100">عدد المعلمين اللي رفعوا ملف لكل قسم</h3>
-        <p className="text-xs text-slate-400">اضغط على أي قسم لعرض المعلمين اللي رفعوا (أخضر) والي ما رفعوا (أحمر)</p>
+        <StatCard label="متوسط نسبة الإنجاز" value={`${average}%`} tone="amber" />
+      </StatGrid>
+      <StatSection title="عدد المعلمين اللي رفعوا ملف لكل قسم" note="اضغط على أي قسم لعرض المعلمين اللي رفعوا (أخضر) والي ما رفعوا (أحمر)">
         <SectionBreakdownList sections={sectionStats} total={total} />
-      </div>
-    </div>
+      </StatSection>
+    </>
   );
 }
 
-function StatCard({ label, value }: { label: string; value: string | number }) {
+async function InquiriesStats({ range }: { range: StatRange }) {
+  const s = await getInquiryStats(range);
+  const pct = (n: number) => (s.total ? `${Math.round((n / s.total) * 100)}%` : "0%");
   return (
-    <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4 text-center">
-      <p className="text-2xl font-bold text-[var(--brand-primary)]">{value}</p>
-      <p className="text-xs text-slate-500 mt-1">{label}</p>
-    </div>
+    <>
+      <StatGrid>
+        <StatCard label="كل المسائلات" value={s.total} />
+        <StatCard label="مقبولة" value={s.accepted} tone="green" />
+        <StatCard label="مرفوضة" value={s.rejected} tone="red" />
+        <StatCard label="بانتظار القرار" value={s.pending} tone="amber" />
+        <StatCard label="تجاوزت مهلة الأسبوع بدون رد" value={s.overdue} tone="red" />
+        <StatCard label="عليها مرفقات" value={s.withFiles} tone="slate" />
+        <StatCard label="متوسط أيام الرد" value={s.avgDaysToAnswer ?? "—"} tone="slate" />
+        <StatCard label="متوسط أيام القرار" value={s.avgDaysToDecision ?? "—"} tone="slate" />
+      </StatGrid>
+      <p className="text-xs text-slate-400">
+        نسبة القبول {pct(s.accepted)} · نسبة الرفض {pct(s.rejected)} · بدون قرار {pct(s.pending)}
+      </p>
+      <StatSection title="حسب النوع">
+        <DataTable
+          columns={["النوع", "الكل", "مقبولة", "مرفوضة", "بانتظار القرار"]}
+          rows={s.byKind.map((k) => [KIND_LABELS[k.kind] ?? k.kind, k.total, k.accepted, k.rejected, k.pending])}
+        />
+      </StatSection>
+      <StatSection title="حسب المعلم" note="الأكثر مسائلات أولاً، ومجموع دقائق التأخر لكل واحد">
+        <DataTable
+          columns={["المعلم", "الكل", "مقبولة", "مرفوضة", "بانتظار", "دقائق التأخر"]}
+          rows={s.byTeacher.slice(0, 40).map((t) => [t.name, t.total, t.accepted, t.rejected, t.pending, t.minutes])}
+        />
+      </StatSection>
+      <StatSection title="عدد المسائلات المرسلة بكل يوم">
+        <BarList items={s.byDay.slice(-14)} />
+      </StatSection>
+    </>
+  );
+}
+
+async function ReferralsStats({ range }: { range: StatRange }) {
+  const s = await getReferralStats(range);
+  return (
+    <>
+      <StatGrid>
+        <StatCard label="التحويلات المرسلة" value={s.total} />
+        <StatCard label="متوسط أيام الإنجاز" value={s.avgDaysToComplete ?? "—"} tone="amber" />
+      </StatGrid>
+      <StatSection title="حسب الحالة">
+        <BarList items={s.byStatus} />
+      </StatSection>
+      <StatSection title="وكلاء شؤون الطلاب">
+        <DataTable columns={["الوكيل", "المستلم", "أنهى"]} rows={s.byAgent.map((a) => [a.name, a.total, a.done])} />
+      </StatSection>
+      <StatSection title="الموجهون الطلابيون">
+        <DataTable columns={["الموجه", "المستلم", "أنهى"]} rows={s.byCounselor.map((a) => [a.name, a.total, a.done])} />
+      </StatSection>
+      <StatSection title="أكثر الفصول تحويلاً">
+        <BarList items={s.byClass} />
+      </StatSection>
+      <StatSection title="أكثر الأسباب">
+        <BarList items={s.byReason} />
+      </StatSection>
+      <StatSection title="أكثر المعلمين تحويلاً">
+        <BarList items={s.byTeacher} />
+      </StatSection>
+    </>
+  );
+}
+
+async function PerformanceStatsView({ range }: { range: StatRange }) {
+  const s = await getPerformanceStats(range);
+  return (
+    <>
+      <StatGrid>
+        <StatCard label="مجموع دقائق التأخر" value={s.totalLateMinutes} tone="red" />
+        <StatCard label="غياب مسجّل" value={s.categories.reduce((n, c) => n + c.absent, 0)} tone="red" />
+        <StatCard label="تأخر مسجّل" value={s.categories.reduce((n, c) => n + c.late, 0)} tone="amber" />
+      </StatGrid>
+      <StatSection title="حسب القسم">
+        <DataTable columns={["القسم", "غياب", "تأخر", "دقائق التأخر"]} rows={s.categories.map((c) => [c.label, c.absent, c.late, c.lateMinutes])} />
+      </StatSection>
+      <StatSection title="أكثر المعلمين غياباً وتأخراً">
+        <DataTable columns={["المعلم", "غياب", "تأخر", "دقائق التأخر"]} rows={s.topTeachers.map((t) => [t.name, t.absent, t.late, t.lateMinutes])} />
+      </StatSection>
+    </>
+  );
+}
+
+async function WaitingStatsView({ range }: { range: StatRange }) {
+  const s = await getWaitingStats(range);
+  return (
+    <>
+      <StatGrid>
+        <StatCard label="حصص الانتظار المسندة" value={s.total} />
+      </StatGrid>
+      <StatSection title="أكثر من غطّى حصصاً">
+        <BarList items={s.bySubstitute} />
+      </StatSection>
+      <StatSection title="أكثر المعلمين غياباً (حصصهم اللي انغطت)">
+        <BarList items={s.byAbsent} />
+      </StatSection>
+      <StatSection title="حسب اليوم">
+        <BarList items={s.byDay} />
+      </StatSection>
+      <StatSection title="حسب الحصة">
+        <BarList items={s.byPeriod} />
+      </StatSection>
+    </>
+  );
+}
+
+async function ReviewStatsView({ range }: { range: StatRange }) {
+  const s = await getReviewStats(range);
+  return (
+    <>
+      <StatGrid>
+        <StatCard label="ملفات المعلمين" value={s.files} />
+        <StatCard label="مقبولة" value={s.accepted} tone="green" />
+        <StatCard label="مرجّعة للتعديل" value={s.needsRevision} tone="red" />
+        <StatCard label="لم تُراجع" value={s.notReviewed} tone="amber" />
+      </StatGrid>
+      <StatSection title="أكثر المعلمين عندهم ملفات مرجّعة">
+        <BarList items={s.revisionByTeacher} />
+      </StatSection>
+    </>
   );
 }

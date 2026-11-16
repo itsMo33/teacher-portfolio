@@ -61,6 +61,11 @@ export default async function InquiriesPage({ searchParams }: { searchParams: Pr
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h2 className="text-xl font-bold text-slate-900 dark:text-slate-50">المسائلات{tab !== "all" ? ` -- ${TITLES[tab]}` : ""}</h2>
         <div className="flex flex-wrap gap-2 text-sm">
+          {role === "reviewer" && (
+            <Link href="/admin/statistics?tab=inquiries" className="rounded-lg border border-slate-300 dark:border-slate-700 px-3 py-1.5 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800">
+              الإحصائيات
+            </Link>
+          )}
           {tabs.map((k) => (
             <Link
               key={k}
