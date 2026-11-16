@@ -4,6 +4,7 @@ import { getDocumentProxy, extractText } from "unpdf";
 import { PDFDocument } from "pdf-lib";
 import { supabaseAdmin } from "@/lib/supabase/server";
 import { getSignedUrl, PORTFOLIO_BUCKET } from "@/lib/supabase/storage";
+import { removeFilesOfInquiries } from "@/lib/inquiry-files";
 import { displayText, parseInquiryPages, type InquiryDecision, type InquiryKind, type ParsedInquiry } from "@/lib/inquiry-logic";
 
 export const INQUIRY_OFFICER_CATEGORY = "inquiries_officer";
@@ -299,6 +300,7 @@ export function inquiryAttention(list: TeacherInquiryView[]): { toJustify: numbe
 export async function deleteInquiry(id: string): Promise<boolean> {
   const { data: row } = await supabaseAdmin.from("inquiries").select("teacher_file_path").eq("id", id).maybeSingle();
   if (!row) return false;
+  await removeFilesOfInquiries([id]);
   const { error } = await supabaseAdmin.from("inquiries").delete().eq("id", id);
   if (error) throw error;
 
@@ -313,6 +315,7 @@ export async function deleteInquiry(id: string): Promise<boolean> {
 export async function deleteInquiries(ids: string[]): Promise<number> {
   if (ids.length === 0) return 0;
   const { data: rows } = await supabaseAdmin.from("inquiries").select("teacher_file_path").in("id", ids);
+  await removeFilesOfInquiries(ids);
   const { error } = await supabaseAdmin.from("inquiries").delete().in("id", ids);
   if (error) throw error;
 

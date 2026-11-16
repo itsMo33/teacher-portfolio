@@ -7,6 +7,7 @@ import fontkit from "@pdf-lib/fontkit";
 import { supabaseAdmin } from "@/lib/supabase/server";
 import { PORTFOLIO_BUCKET } from "@/lib/supabase/storage";
 import type { Inquiry } from "@/lib/inquiries";
+import { listInquiryFiles } from "@/lib/inquiry-files";
 
 /** Fills the school's own مساءلة form with what the system holds -- the teacher's answer, the decision and the
  *  director's signature -- by writing onto the very page that was cut out of the school's PDF, so the printed form
@@ -233,5 +234,49 @@ export async function buildCompletedForm(inquiry: Inquiry): Promise<Uint8Array |
     for (let i = 0; i < lines.length; i++) await drawLine(doc, extra, lines[i], { right: 550, baseline: 95 + i * 17, size: 11 });
   }
 
+  await appendAttachments(doc, inquiry.id);
+
   return doc.save();
+}
+
+/** The files the recipient attached follow the form: images and PDFs are put in as pages, anything else (Word) is only
+ *  listed on a last page because it cannot be merged into a PDF. A file that cannot be read is skipped, never fatal. */
+async function appendAttachments(doc: PDFDocument, inquiryId: string): Promise<void> {
+  let files: Awaited<ReturnType<typeof listInquiryFiles>> = [];
+  try {
+    files = await listInquiryFiles(inquiryId);
+  } catch {
+    return;
+  }
+  const notMerged: string[] = [];
+  for (const f of files) {
+    try {
+      const { data } = await supabaseAdmin.storage.from(PORTFOLIO_BUCKET).download(f.filePath);
+      if (!data) continue;
+      const bytes = new Uint8Array(await data.arrayBuffer());
+      const name = f.fileName.toLowerCase();
+      if (f.mimeType === "application/pdf" || name.endsWith(".pdf")) {
+        const src = await PDFDocument.load(bytes);
+        const pages = await doc.copyPages(src, src.getPageIndices());
+        pages.forEach((p) => doc.addPage(p));
+      } else if (f.mimeType.startsWith("image/") || /\.(png|jpe?g)$/.test(name)) {
+        const image = /\.png$/.test(name) || f.mimeType === "image/png" ? await doc.embedPng(bytes) : await doc.embedJpg(bytes);
+        const page = doc.addPage([595, 842]);
+        await drawLine(doc, page, `مرفق: ${f.fileName}`, { right: 560, baseline: 50, size: 11 });
+        const scale = Math.min(515 / image.width, 740 / image.height, 1);
+        const w = image.width * scale;
+        const h = image.height * scale;
+        page.drawImage(image, { x: (595 - w) / 2, y: 842 - 70 - h, width: w, height: h });
+      } else {
+        notMerged.push(f.fileName);
+      }
+    } catch {
+      notMerged.push(f.fileName);
+    }
+  }
+  if (notMerged.length > 0) {
+    const page = doc.addPage([595, 842]);
+    await drawLine(doc, page, "مرفقات أخرى لم تُدمج في هذا الملف (موجودة في حساب المسائلة):", { right: 560, baseline: 60, size: 12 });
+    for (let i = 0; i < notMerged.length; i++) await drawLine(doc, page, notMerged[i], { right: 540, baseline: 95 + i * 20, size: 11 });
+  }
 }

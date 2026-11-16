@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import type { TeacherInquiryView } from "@/lib/inquiries";
 import { INQUIRY_KIND_LABEL, inquiryDaysLeft } from "@/lib/inquiry-logic";
+import { InquiryFilesBox } from "@/components/inquiries/InquiryFilesBox";
 
 function day(iso: string) {
   return new Date(iso).toLocaleDateString("ar-SA", { day: "numeric", month: "long" });
@@ -87,6 +88,8 @@ function Card({ item }: { item: TeacherInquiryView }) {
           )}
 
           {decided && item.decisionNote && <p className="text-xs text-slate-500">ملاحظة الإدارة: {item.decisionNote}</p>}
+
+          <InquiryFilesBox inquiryId={item.id} allowUpload={!decided} />
 
           {!decided && (
             <div className="flex flex-col gap-2">

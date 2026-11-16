@@ -7,6 +7,7 @@ import { displayText, type InquiryKind } from "@/lib/inquiry-logic";
 import { InquiryUploader } from "@/components/inquiries/InquiryUploader";
 import { InquiryReviewList } from "@/components/inquiries/InquiryReviewList";
 import { OfficerSentList } from "@/components/inquiries/OfficerSentList";
+import { countInquiryFiles } from "@/lib/inquiry-files";
 
 type Tab = "all" | "delay" | "absence" | "other";
 
@@ -30,7 +31,7 @@ export default async function InquiriesPage({ searchParams }: { searchParams: Pr
   const tab: Tab = tabs.includes(kindParam as Tab) ? (kindParam as Tab) : tabs[0];
   const sendKinds: InquiryKind[] = tab === "delay" || tab === "absence" || tab === "other" ? [tab] : tab === "all" ? ["delay", "absence", "other"] : [];
 
-  const inquiries = await listInquiries();
+  const [inquiries, fileCounts] = await Promise.all([listInquiries(), countInquiryFiles()]);
   const shown = tab === "all" ? inquiries : inquiries.filter((i) => i.kind === tab);
 
   // what the uploading account sent itself, grouped by upload (for its delete buttons)
@@ -140,6 +141,7 @@ export default async function InquiriesPage({ searchParams }: { searchParams: Pr
                   justification: i.justification,
                   decision: i.decision,
                   decisionNote: i.decisionNote,
+                  fileCount: fileCounts.get(i.id) ?? 0,
                 }))}
               />
           </>

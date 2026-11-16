@@ -497,3 +497,16 @@ alter table weekly_plan_marks enable row level security;
 -- مسائلة الغياب: a third kind of inquiry (no automatic rule -- the teacher answers, then محمد or رائد decides).
 alter table inquiries drop constraint if exists inquiries_kind_check;
 alter table inquiries add constraint inquiries_kind_check check (kind in ('delay', 'absence', 'other'));
+
+-- Files a recipient attaches to their answer to an inquiry (a medical report, a leave slip...). They go with the inquiry.
+create table if not exists inquiry_files (
+  id uuid primary key default gen_random_uuid(),
+  inquiry_id uuid not null references inquiries(id) on delete cascade,
+  file_path text not null,
+  file_name text not null,
+  mime_type text not null default 'application/octet-stream',
+  uploaded_at timestamptz not null default now(),
+  uploaded_by uuid references users(id) on delete set null
+);
+create index if not exists idx_inquiry_files_inquiry on inquiry_files(inquiry_id);
+alter table inquiry_files enable row level security;

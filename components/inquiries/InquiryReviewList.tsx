@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { INQUIRY_KIND_LABEL, inquiryDaysLeft, type InquiryKind } from "@/lib/inquiry-logic";
+import { InquiryFilesBox } from "@/components/inquiries/InquiryFilesBox";
 
 export interface ReviewInquiry {
   id: string;
@@ -16,6 +17,8 @@ export interface ReviewInquiry {
   justification: string | null;
   decision: "accepted" | "rejected" | null;
   decisionNote: string | null;
+  /** How many files the recipient attached to their answer. */
+  fileCount: number;
 }
 
 type Filter = "all" | "awaiting" | "unopened" | "unjustified" | "decided";
@@ -133,6 +136,8 @@ function Row({ item }: { item: ReviewInquiry }) {
       {item.justification && (
         <p className="rounded-lg bg-slate-50 dark:bg-slate-800/50 p-2 text-slate-700 dark:text-slate-200">«{item.justification}»</p>
       )}
+
+      {item.fileCount > 0 && <InquiryFilesBox inquiryId={item.id} allowUpload={false} />}
 
       {item.decision && item.decisionNote && <p className="text-xs text-slate-500">ملاحظتك: {item.decisionNote}</p>}
 
