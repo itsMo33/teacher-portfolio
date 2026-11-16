@@ -9,12 +9,12 @@ import {
   RANGE_LABELS,
   getInquiryStats,
   getPerformanceStats,
-  getReferralStats,
   getReviewStats,
   getWaitingStats,
   parseRange,
   type StatRange,
 } from "@/lib/statistics";
+import { getReferralStats } from "@/lib/statistics-referrals";
 import {
   getAccountStats,
   getActivityStats,
@@ -190,29 +190,78 @@ async function InquiriesStats({ range }: { range: StatRange }) {
 
 async function ReferralsStats({ range }: { range: StatRange }) {
   const s = await getReferralStats(range);
+  const days = (v: number | null) => (v === null ? "—" : `${v} يوم`);
   return (
     <>
       <StatGrid>
-        <StatCard label="التحويلات المرسلة" value={s.total} />
-        <StatCard label="متوسط أيام الإنجاز" value={s.avgDaysToComplete ?? "—"} tone="amber" />
+        <StatCard label="تحويلات مرسلة" value={s.sent} />
+        <StatCard label="طلاب تحوّلوا (بدون تكرار)" value={s.uniqueStudents} />
+        <StatCard label="طلاب تحوّلوا أكثر من مرة" value={s.repeatStudents} tone="amber" />
+        <StatCard label="تم الانتهاء منها" value={`${s.completed} (${s.completedPct}%)`} tone="green" />
+        <StatCard label="من المعلمين" value={s.teacherFiled} tone="slate" />
+        <StatCard label="مخالفات سجّلها الوكيل" value={s.agentFiled} tone="slate" />
+        <StatCard label="مسودات لم تُرسل" value={s.drafts} tone="slate" />
+        <StatCard label="متأخرة أكثر من أسبوع" value={s.overdue} tone="red" />
+        <StatCard label="لم يفتحها الوكيل" value={s.notOpenedByAgent} tone="red" />
+        <StatCard label="لم يفتحها الموجه" value={s.notOpenedByCounselor} tone="red" />
+        <StatCard label="ملفات أضافها الوكلاء" value={s.filesByAgent} tone="slate" />
+        <StatCard label="ملفات أضافها الموجهون" value={s.filesByCounselor} tone="slate" />
       </StatGrid>
+      <StatSection title="متوسط الأزمنة" note="من إرسال التحويل حتى كل خطوة">
+        <DataTable
+          columns={["الخطوة", "متوسط الزمن"]}
+          rows={[
+            ["فتح الوكيل للتحويل", days(s.avgDaysToAgentOpen)],
+            ["إنهاء الوكيل لإجراءاته", days(s.avgDaysToAgentFinish)],
+            ["فتح الموجه للتحويل (بعد التحويل له)", days(s.avgDaysToCounselorOpen)],
+            ["الانتهاء الكامل", days(s.avgDaysToComplete)],
+          ]}
+        />
+      </StatSection>
       <StatSection title="حسب الحالة">
         <BarList items={s.byStatus} />
       </StatSection>
-      <StatSection title="وكلاء شؤون الطلاب">
-        <DataTable columns={["الوكيل", "المستلم", "أنهى"]} rows={s.byAgent.map((a) => [a.name, a.total, a.done])} />
+      <StatSection title="وكلاء شؤون الطلاب" note="المستلم من المعلمين، كم فتح، كم أنهى، كم حوّل للموجه، وكم مخالفة سجّل بنفسه">
+        <DataTable
+          columns={["الوكيل", "المستلم", "فتح", "أنهى", "حوّل للموجه", "ما زال عنده", "سجّل بنفسه", "متوسط الإنهاء"]}
+          rows={s.agents.map((a) => [a.name, a.received, a.opened, a.finished, a.forwarded, a.pending, a.filedSelf, days(a.avgDaysToFinish)])}
+        />
       </StatSection>
       <StatSection title="الموجهون الطلابيون">
-        <DataTable columns={["الموجه", "المستلم", "أنهى"]} rows={s.byCounselor.map((a) => [a.name, a.total, a.done])} />
+        <DataTable
+          columns={["الموجه", "المستلم", "فتح", "عالج وأنهى", "ما زال عنده", "متوسط الإنهاء"]}
+          rows={s.counselors.map((c) => [c.name, c.received, c.opened, c.finished, c.pending, days(c.avgDaysToFinish)])}
+        />
       </StatSection>
-      <StatSection title="أكثر الفصول تحويلاً">
-        <BarList items={s.byClass} />
+      <StatSection title="أكثر الطلاب تحويلاً" note="الطالب وكم مرة تحوّل">
+        <DataTable columns={["الطالب", "الفصل", "عدد التحويلات"]} rows={s.topStudents.map((t) => [t.name, t.className, t.count])} />
       </StatSection>
-      <StatSection title="أكثر الأسباب">
-        <BarList items={s.byReason} />
+      <StatSection title="حسب الفصل">
+        <DataTable columns={["الفصل", "تحويلات", "طلاب"]} rows={s.byClass.map((c) => [c.name, c.referrals, c.students])} />
+      </StatSection>
+      <StatSection title="أكثر أسباب تحويل المعلمين">
+        <BarList items={s.reasons} />
+      </StatSection>
+      <StatSection title="أكثر المخالفات المسجّلة من الوكلاء">
+        <BarList items={s.violations} empty="لا توجد مخالفات مسجّلة" />
+      </StatSection>
+      <StatSection title="أكثر المواد تحويلاً">
+        <BarList items={s.bySubject} />
+      </StatSection>
+      <StatSection title="أكثر إجراءات الوكلاء استعمالاً">
+        <BarList items={s.agentProcedures} empty="ما سُجّلت إجراءات" />
+      </StatSection>
+      <StatSection title="أكثر إجراءات الموجهين استعمالاً">
+        <BarList items={s.counselorProcedures} empty="ما سُجّلت إجراءات" />
       </StatSection>
       <StatSection title="أكثر المعلمين تحويلاً">
-        <BarList items={s.byTeacher} />
+        <DataTable columns={["المعلم", "تحويلات", "طلاب"]} rows={s.byTeacher.map((t) => [t.name, t.referrals, t.students])} />
+      </StatSection>
+      <StatSection title="التحويلات حسب الشهر">
+        <BarList items={s.byMonth} />
+      </StatSection>
+      <StatSection title="التحويلات في آخر الأيام">
+        <BarList items={s.byDay} />
       </StatSection>
     </>
   );
