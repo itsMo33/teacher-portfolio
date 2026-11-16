@@ -64,6 +64,28 @@ export function count<T>(rows: T[], key: (r: T) => string | null | undefined): [
   return [...m.entries()].sort((a, b) => b[1] - a[1]);
 }
 
+/** One row per person with a count for each column (a column is a kind, a status, a day...), people with the most first. */
+export interface MatrixRow {
+  name: string;
+  total: number;
+  cells: number[];
+}
+
+export function matrix<T>(rows: T[], personOf: (r: T) => string | null | undefined, columnOf: (r: T) => string | null | undefined, columns: string[]): MatrixRow[] {
+  const per = new Map<string, number[]>();
+  for (const r of rows) {
+    const person = personOf(r);
+    const col = columns.indexOf(columnOf(r) ?? "");
+    if (!person || col === -1) continue;
+    const cells = per.get(person) ?? columns.map(() => 0);
+    cells[col]++;
+    per.set(person, cells);
+  }
+  return [...per.entries()]
+    .map(([name, cells]) => ({ name, total: cells.reduce((a, b) => a + b, 0), cells }))
+    .sort((a, b) => b.total - a.total || a.name.localeCompare(b.name, "ar"));
+}
+
 function avgDays(pairs: [string | null, string | null][]): number | null {
   const diffs = pairs
     .filter((p): p is [string, string] => !!p[0] && !!p[1])
@@ -87,6 +109,8 @@ export interface InquiryStats {
   avgDaysToDecision: number | null;
   byKind: { kind: string; total: number; accepted: number; rejected: number; pending: number }[];
   byTeacher: { name: string; total: number; accepted: number; rejected: number; pending: number; minutes: number }[];
+  /** Per teacher: تأخير / غياب / أخرى. */
+  byTeacherKinds: MatrixRow[];
   byDay: [string, number][];
   /** How the decided absence inquiries ended (the form's three outcomes). */
   absenceOutcomes: [string, number][];
@@ -135,6 +159,7 @@ export async function getInquiryStats(range: StatRange): Promise<InquiryStats> {
       return { kind, total: of.length, accepted: of.filter((r) => state(r) === "accepted").length, rejected: of.filter((r) => state(r) === "rejected").length, pending: of.filter((r) => state(r) === "pending").length };
     }),
     byTeacher: [],
+    byTeacherKinds: matrix(rows, (r) => names.get(r.teacher_id), (r) => r.kind, ["delay", "absence", "other"]),
     absenceOutcomes: await absenceOutcomeCounts(rows),
     byDay: count(rows, (r) => r.created_at.slice(0, 10)).sort((a, b) => a[0].localeCompare(b[0])),
   };
@@ -156,6 +181,8 @@ export async function getInquiryStats(range: StatRange): Promise<InquiryStats> {
 export interface PerformanceStats {
   categories: { key: string; label: string; absent: number; late: number; lateMinutes: number }[];
   topTeachers: { name: string; absent: number; late: number; lateMinutes: number }[];
+  /** Per teacher: غياب in each of the four day-level sections, then غياب and تأخر in الالتزام بزمن الحصة. */
+  byTeacherSections: MatrixRow[];
   totalLateMinutes: number;
 }
 
@@ -203,13 +230,23 @@ export async function getPerformanceStats(range: StatRange): Promise<Performance
     per.set(r.teacher_id, e);
   }
   const topTeachers = [...per.values()].sort((a, b) => b.absent + b.late - (a.absent + a.late)).slice(0, 15);
-  return { categories, topTeachers, totalLateMinutes: categories.reduce((s, c) => s + c.lateMinutes, 0) };
+  const flagged = rows.filter((r) => r.status !== "present");
+  const sectionKey = (r: { category: string; status: string }) => (r.category === "class_time_commitment" ? `class_time|${r.status}` : `${r.category}|absent`);
+  const byTeacherSections = matrix(
+    flagged,
+    (r) => names.get(r.teacher_id),
+    sectionKey,
+    ["morning_lineup|absent", "supervision|absent", "duty|absent", "waiting_period_activation|absent", "class_time|absent", "class_time|late"]
+  );
+  return { categories, topTeachers, byTeacherSections, totalLateMinutes: categories.reduce((s, c) => s + c.lateMinutes, 0) };
 }
 
 // ---- جدول الانتظار ----
 
 export interface WaitingStats {
   total: number;
+  /** Per person: periods covered as the substitute, and periods of theirs that were covered. */
+  byPerson: MatrixRow[];
   bySubstitute: [string, number][];
   byAbsent: [string, number][];
   byDay: [string, number][];
@@ -227,8 +264,13 @@ export async function getWaitingStats(range: StatRange): Promise<WaitingStats> {
     return q.range(from, to);
   });
   const rows = allRows.filter((r) => !ex.names.has(r.absent_teacher) && !ex.names.has(r.substitute) && !isExcludedShortName(r.absent_teacher, ex) && !isExcludedShortName(r.substitute, ex));
+  const people = [
+    ...rows.map((r) => ({ person: r.substitute, role: "covered" })),
+    ...rows.map((r) => ({ person: r.absent_teacher, role: "absent" })),
+  ];
   return {
     total: rows.length,
+    byPerson: matrix(people, (x) => x.person, (x) => x.role, ["covered", "absent"]),
     bySubstitute: count(rows, (r) => r.substitute).slice(0, 15),
     byAbsent: count(rows, (r) => r.absent_teacher).slice(0, 15),
     byDay: count(rows, (r) => DAY_LABELS[r.day] ?? r.day),
@@ -244,6 +286,8 @@ export interface ReviewStats {
   needsRevision: number;
   notReviewed: number;
   revisionByTeacher: [string, number][];
+  /** Per teacher: مقبولة / مرجّعة / لم تُراجع. */
+  byTeacher: MatrixRow[];
 }
 
 export async function getReviewStats(range: StatRange): Promise<ReviewStats> {
@@ -263,6 +307,7 @@ export async function getReviewStats(range: StatRange): Promise<ReviewStats> {
     accepted: rows.filter((r) => r.review_status === "accepted").length,
     needsRevision: rows.filter((r) => r.review_status === "needs_revision").length,
     notReviewed: rows.filter((r) => !r.review_status).length,
+    byTeacher: matrix(rows, (r) => names.get(r.teacher_id), (r) => r.review_status ?? "none", ["accepted", "needs_revision", "none"]),
     revisionByTeacher: count(rows.filter((r) => r.review_status === "needs_revision"), (r) => names.get(r.teacher_id)).slice(0, 15),
   };
 }

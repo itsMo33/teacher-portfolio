@@ -123,6 +123,12 @@ body {
   display: none;
 }
 
+/* keeps backgrounds / chart colours when printing, even if the print dialog's "background graphics" is off */
+.print-exact {
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
+}
+
 @media print {
   .no-print {
     display: none !important;

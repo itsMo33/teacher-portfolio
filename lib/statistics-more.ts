@@ -1,6 +1,6 @@
 import "server-only";
 import { supabaseAdmin } from "@/lib/supabase/server";
-import { DAY_LABELS, STATS_EXCLUDED_NATIONAL_IDS, count, excludedUsers, fetchAll, rangeStart, userNames, without, type StatRange } from "@/lib/statistics";
+import { DAY_LABELS, STATS_EXCLUDED_NATIONAL_IDS, count, excludedUsers, fetchAll, matrix, rangeStart, userNames, without, type MatrixRow, type StatRange } from "@/lib/statistics";
 import { addDays, weekStartOf } from "@/lib/teacher-performance";
 import { getWeeklyPlanStatuses } from "@/lib/weekly-plan";
 
@@ -12,6 +12,8 @@ export interface ScheduleStats {
   sections: number;
   avgLoad: number;
   byTeacher: [string, number][];
+  /** Per teacher: periods on each school day. */
+  byTeacherDays: MatrixRow[];
   bySubject: [string, number][];
   byDay: [string, number][];
   byPeriod: [string, number][];
@@ -35,6 +37,7 @@ export async function getScheduleStats(): Promise<ScheduleStats> {
     sections: sections.count ?? 0,
     avgLoad: teachers ? Math.round((slots.length / teachers) * 10) / 10 : 0,
     byTeacher: count(slots, (s) => names.get(s.teacher_id)),
+    byTeacherDays: matrix(slots, (s) => names.get(s.teacher_id), (s) => s.day, ["احد", "اثنين", "ثلاثاء", "اربعاء", "خميس"]),
     bySubject: count(slots, subjectName).slice(0, 20),
     byDay: count(slots, (s) => DAY_LABELS[s.day] ?? s.day),
     byPeriod: count(slots, (s) => `الحصة ${s.period}`).sort((a, b) => a[0].localeCompare(b[0])),
@@ -47,6 +50,8 @@ export interface WeeklyPlanStats {
   weeks: { week: string; uploaded: number; missing: number }[];
   /** How many of the weeks shown each teacher missed, most first. */
   missedMost: [string, number][];
+  /** Per teacher: weeks handed in / weeks missed (of the weeks shown). */
+  byTeacher: MatrixRow[];
 }
 
 export async function getWeeklyPlanStats(weeksBack = 6): Promise<WeeklyPlanStats> {
@@ -61,7 +66,12 @@ export async function getWeeklyPlanStats(weeksBack = 6): Promise<WeeklyPlanStats
     for (const r of rows) if (r.status === "missing") missed.set(r.name, (missed.get(r.name) ?? 0) + 1);
     return { week, uploaded: rows.filter((r) => r.status === "uploaded").length, missing: rows.filter((r) => r.status === "missing").length };
   });
-  return { weeks, missedMost: [...missed.entries()].sort((a, b) => b[1] - a[1]).slice(0, 20) };
+  const flat = results.flatMap((rows) => rows.filter((r) => r.status !== "na").map((r) => ({ name: r.name, status: r.status })));
+  return {
+    weeks,
+    missedMost: [...missed.entries()].sort((a, b) => b[1] - a[1]).slice(0, 20),
+    byTeacher: matrix(flat, (r) => r.name, (r) => r.status, ["uploaded", "missing"]).sort((a, b) => b.cells[1] - a.cells[1] || a.name.localeCompare(b.name, "ar")),
+  };
 }
 
 // ---- إدارة المدرسة ----
@@ -101,6 +111,8 @@ export interface ImpactStats {
   byLevel: [string, number][];
   bySubject: [string, number][];
   byTeacher: [string, number][];
+  /** Per teacher: كبير / متوسط / بسيط / لم يتحسن. */
+  byTeacherLevels: MatrixRow[];
 }
 
 export async function getImpactStats(range: StatRange): Promise<ImpactStats> {
@@ -122,6 +134,7 @@ export async function getImpactStats(range: StatRange): Promise<ImpactStats> {
     byLevel: count(rows, (r) => r.improvement_level),
     bySubject: count(rows, (r) => r.subject).slice(0, 15),
     byTeacher: count(rows, (r) => names.get(r.teacher_id)).slice(0, 15),
+    byTeacherLevels: matrix(rows, (r) => names.get(r.teacher_id), (r) => r.improvement_level, ["كبير", "متوسط", "بسيط", "لم يتحسن"]),
   };
 }
 
@@ -131,6 +144,8 @@ export interface ExcuseStats {
   total: number;
   bySubsection: [string, number][];
   byTeacher: [string, number][];
+  /** Per teacher: مستشفى / مراكز صحية / أخرى / غير محدد. */
+  byTeacherKinds: MatrixRow[];
 }
 
 const EXCUSE_LABELS: Record<string, string> = {
@@ -155,6 +170,7 @@ export async function getExcuseStats(range: StatRange): Promise<ExcuseStats> {
     total: rows.length,
     bySubsection: count(rows, (r) => EXCUSE_LABELS[r.subcategory ?? ""] ?? r.subcategory ?? "غير محدد"),
     byTeacher: count(rows, (r) => names.get(r.teacher_id)).slice(0, 15),
+    byTeacherKinds: matrix(rows, (r) => names.get(r.teacher_id), (r) => r.subcategory ?? "", ["hospital_appointments", "health_center_appointments", "other", ""]),
   };
 }
 
