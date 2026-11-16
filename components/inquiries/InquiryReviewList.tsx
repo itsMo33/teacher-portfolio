@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { INQUIRY_KIND_LABEL, inquiryDaysLeft, type InquiryKind } from "@/lib/inquiry-logic";
+import { ABSENCE_OPTIONS, INQUIRY_KIND_LABEL, absenceOptionOf, inquiryDaysLeft, type AbsenceOption, type InquiryKind } from "@/lib/inquiry-logic";
 import { InquiryFilesBox } from "@/components/inquiries/InquiryFilesBox";
 
 export interface ReviewInquiry {
@@ -16,6 +16,7 @@ export interface ReviewInquiry {
   teacherOpenedAt: string | null;
   justification: string | null;
   decision: "accepted" | "rejected" | null;
+  decisionOption: AbsenceOption | null;
   decisionNote: string | null;
   /** How many files the recipient attached to their answer. */
   fileCount: number;
@@ -52,13 +53,13 @@ function Row({ item }: { item: ReviewInquiry }) {
   const [error, setError] = useState("");
   const [open, setOpen] = useState(false);
 
-  async function send(method: "PUT" | "DELETE", decision?: "accepted" | "rejected") {
+  async function send(method: "PUT" | "DELETE", decision?: "accepted" | "rejected", option?: AbsenceOption) {
     setBusy(true);
     setError("");
     const res = await fetch(`/api/inquiries/${item.id}/decision`, {
       method,
       headers: { "Content-Type": "application/json" },
-      body: method === "PUT" ? JSON.stringify({ decision, note }) : undefined,
+      body: method === "PUT" ? JSON.stringify({ decision, option, note }) : undefined,
     });
     if (!res.ok) setError((await res.json().catch(() => ({}))).error ?? "تعذّر الحفظ");
     else router.refresh();
@@ -127,7 +128,7 @@ function Row({ item }: { item: ReviewInquiry }) {
                   : "bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300"
               }`}
             >
-              {DECISION_LABEL[item.decision]}
+              {item.kind === "absence" ? ABSENCE_OPTIONS.find((o) => o.key === absenceOptionOf(item.decision, item.decisionOption))?.short : DECISION_LABEL[item.decision]}
             </span>
           )}
         </div>
@@ -169,6 +170,23 @@ function Row({ item }: { item: ReviewInquiry }) {
             placeholder="ملاحظة للمعلم (اختياري)"
             className="rounded-lg border border-slate-300 dark:border-slate-700 bg-transparent px-3 py-1.5 text-xs text-slate-900 dark:text-slate-50 focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]"
           />
+          {item.kind === "absence" ? (
+            <div className="flex flex-col gap-1.5">
+              {ABSENCE_OPTIONS.map((o) => (
+                <button
+                  key={o.key}
+                  type="button"
+                  disabled={busy}
+                  onClick={() => send("PUT", undefined, o.key)}
+                  className={`rounded-lg px-3 py-1.5 text-right text-xs text-white disabled:opacity-50 ${
+                    o.decision === "accepted" ? "bg-green-600 hover:bg-green-700" : "bg-red-600 hover:bg-red-700"
+                  }`}
+                >
+                  {o.label}
+                </button>
+              ))}
+            </div>
+          ) : (
           <div className="flex flex-wrap gap-2">
             <button
               type="button"
@@ -187,6 +205,7 @@ function Row({ item }: { item: ReviewInquiry }) {
               رفض
             </button>
           </div>
+          )}
         </div>
       ) : (
         <div className="border-t border-slate-100 dark:border-slate-800 pt-2">

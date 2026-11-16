@@ -5,6 +5,8 @@ import { getTeachersWithCompletion } from "@/lib/teachers-data";
 import { PORTFOLIO_SECTIONS } from "@/lib/portfolio-sections";
 import { SectionBreakdownList, type SectionBreakdownItem } from "@/components/admin/SectionBreakdownList";
 import { BarList, DataTable, StatCard, StatGrid, StatSection } from "@/components/admin/StatBlocks";
+import { PrintButton } from "@/components/admin/PrintButton";
+import { SCHOOL_NAME } from "@/lib/school";
 import {
   RANGE_LABELS,
   excludedUsers,
@@ -61,9 +63,21 @@ export default async function AdminStatisticsPage({ searchParams }: { searchPara
 
   return (
     <div className="flex flex-col gap-6 max-w-3xl">
-      <h2 className="text-xl font-bold text-slate-900 dark:text-slate-50">الإحصائيات</h2>
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <h2 className="text-xl font-bold text-slate-900 dark:text-slate-50">الإحصائيات</h2>
+        <PrintButton />
+      </div>
 
-      <div className="flex flex-wrap gap-2 text-sm">
+      {/* what the printed page says at the top: which statistics, for which period, and when it was printed */}
+      <div className="print-only text-sm">
+        <p className="font-bold">
+          {SCHOOL_NAME} -- إحصائيات {TABS.find((t) => t.key === tab)?.label}
+          {!NO_RANGE.includes(tab) ? ` -- ${RANGE_LABELS[range]}` : ""}
+        </p>
+        <p className="text-xs">تاريخ الطباعة: {new Date().toLocaleDateString("ar-SA", { timeZone: "Asia/Riyadh", year: "numeric", month: "long", day: "numeric" })}</p>
+      </div>
+
+      <div className="no-print flex flex-wrap gap-2 text-sm">
         {TABS.map((t) => (
           <Link
             key={t.key}
@@ -80,7 +94,7 @@ export default async function AdminStatisticsPage({ searchParams }: { searchPara
       </div>
 
       {!NO_RANGE.includes(tab) && (
-        <div className="flex flex-wrap items-center gap-2 text-xs">
+        <div className="no-print flex flex-wrap items-center gap-2 text-xs">
           <span className="text-slate-500">الفترة:</span>
           {(Object.keys(RANGE_LABELS) as StatRange[]).map((r) => (
             <Link
@@ -176,6 +190,9 @@ async function InquiriesStats({ range }: { range: StatRange }) {
           columns={["النوع", "الكل", "مقبولة", "مرفوضة", "بانتظار القرار"]}
           rows={s.byKind.map((k) => [KIND_LABELS[k.kind] ?? k.kind, k.total, k.accepted, k.rejected, k.pending])}
         />
+      </StatSection>
+      <StatSection title="قرارات مسائلات الغياب" note="إجازة مرضية، تحتسب من رصيده، أو اعتماد الحسم">
+        <BarList items={s.absenceOutcomes} empty="ما تم البت في مسائلة غياب بعد" />
       </StatSection>
       <StatSection title="حسب المعلم" note="الأكثر مسائلات أولاً، ومجموع دقائق التأخر لكل واحد">
         <DataTable

@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import type { TeacherInquiryView } from "@/lib/inquiries";
-import { INQUIRY_KIND_LABEL, inquiryDaysLeft } from "@/lib/inquiry-logic";
+import { ABSENCE_OPTIONS, INQUIRY_KIND_LABEL, absenceOptionOf, inquiryDaysLeft } from "@/lib/inquiry-logic";
 import { InquiryFilesBox } from "@/components/inquiries/InquiryFilesBox";
 
 function day(iso: string) {
@@ -51,9 +51,10 @@ function Card({ item }: { item: TeacherInquiryView }) {
     setBusy(false);
   }
 
+  const absenceOutcome = item.kind === "absence" && decided ? ABSENCE_OPTIONS.find((o) => o.key === absenceOptionOf(item.decision, item.decisionOption)) : undefined;
   const status = decided
     ? item.decision === "accepted"
-      ? { label: "تم قبول المسائلة", tone: "bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300" }
+      ? { label: absenceOutcome ? `تم قبول المسائلة: ${absenceOutcome.short}` : "تم قبول المسائلة", tone: "bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300" }
       : { label: "لم يتم قبول المسائلة", tone: "bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300" }
     : item.justifiedAt
       ? { label: "تم إرسال تبريرك", tone: "bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300" }

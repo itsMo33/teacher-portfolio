@@ -394,3 +394,21 @@ export function extractPeriod(text: string): { from: string; to: string } | null
   const m = text.match(/الفترة\s*من\s*(\d{2}-\d{2}-\d{4})\s*إلى\s*(\d{2}-\d{2}-\d{4})/);
   return m ? { from: m[1], to: m[2] } : null;
 }
+
+/** The three outcomes the school's absence form offers in its "المدير المباشر" box. The first two excuse the absence
+ *  (accepted), the third confirms the deduction (rejected). */
+export type AbsenceOption = "sick_leave" | "from_balance" | "deduct";
+
+export const ABSENCE_OPTIONS: { key: AbsenceOption; label: string; short: string; decision: InquiryDecision }[] = [
+  { key: "sick_leave", label: "تحتسب له إجازة مرضية بعد التأكد من نظامية التقرير", short: "إجازة مرضية", decision: "accepted" },
+  { key: "from_balance", label: "يحتسب غيابه من رصيده للإجازات العادية أو الاضطرارية لقبول عذره إذا كان رصيده يسمح وإلا يحسم عليه", short: "تحتسب من رصيده", decision: "accepted" },
+  { key: "deduct", label: "يعتمد الحسم لعدم قبول عذره", short: "اعتماد الحسم", decision: "rejected" },
+];
+
+/** The option to show for a decided absence inquiry, including the ones decided before the three options existed. */
+export function absenceOptionOf(decision: InquiryDecision | null, option: AbsenceOption | null): AbsenceOption | null {
+  if (option) return option;
+  if (decision === "accepted") return "from_balance";
+  if (decision === "rejected") return "deduct";
+  return null;
+}

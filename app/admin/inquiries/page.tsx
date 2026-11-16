@@ -140,6 +140,7 @@ export default async function InquiriesPage({ searchParams }: { searchParams: Pr
                   teacherOpenedAt: i.teacherOpenedAt,
                   justification: i.justification,
                   decision: i.decision,
+                  decisionOption: i.decisionOption,
                   decisionNote: i.decisionNote,
                   fileCount: fileCounts.get(i.id) ?? 0,
                 }))}

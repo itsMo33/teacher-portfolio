@@ -1,6 +1,6 @@
 import "server-only";
 import { supabaseAdmin } from "@/lib/supabase/server";
-import { INQUIRY_DEADLINE_DAYS } from "@/lib/inquiry-logic";
+import { ABSENCE_OPTIONS, INQUIRY_DEADLINE_DAYS, absenceOptionOf, type AbsenceOption } from "@/lib/inquiry-logic";
 
 export type StatRange = "week" | "month" | "all";
 
@@ -88,6 +88,8 @@ export interface InquiryStats {
   byKind: { kind: string; total: number; accepted: number; rejected: number; pending: number }[];
   byTeacher: { name: string; total: number; accepted: number; rejected: number; pending: number; minutes: number }[];
   byDay: [string, number][];
+  /** How the decided absence inquiries ended (the form's three outcomes). */
+  absenceOutcomes: [string, number][];
 }
 
 export async function getInquiryStats(range: StatRange): Promise<InquiryStats> {
@@ -133,6 +135,7 @@ export async function getInquiryStats(range: StatRange): Promise<InquiryStats> {
       return { kind, total: of.length, accepted: of.filter((r) => state(r) === "accepted").length, rejected: of.filter((r) => state(r) === "rejected").length, pending: of.filter((r) => state(r) === "pending").length };
     }),
     byTeacher: [],
+    absenceOutcomes: await absenceOutcomeCounts(rows),
     byDay: count(rows, (r) => r.created_at.slice(0, 10)).sort((a, b) => a[0].localeCompare(b[0])),
   };
 
@@ -271,4 +274,16 @@ function isExcludedShortName(short: string, ex: StatsExclusion): boolean {
     const parts = norm(full).split(" ");
     return norm(short) === `${parts[0]} ${parts[parts.length - 1]}`;
   });
+}
+
+async function absenceOutcomeCounts(rows: { id: string; kind: string; decision: string | null }[]): Promise<[string, number][]> {
+  const decided = rows.filter((r) => r.kind === "absence" && r.decision);
+  if (decided.length === 0) return [];
+  const options = new Map<string, string | null>();
+  for (let i = 0; i < decided.length; i += 100) {
+    const { data, error } = await supabaseAdmin.from("inquiries").select("id, decision_option").in("id", decided.slice(i, i + 100).map((r) => r.id));
+    if (error) break;
+    for (const r of data ?? []) options.set(r.id as string, (r.decision_option as string | null) ?? null);
+  }
+  return count(decided, (r) => ABSENCE_OPTIONS.find((o) => o.key === absenceOptionOf(r.decision as "accepted" | "rejected", (options.get(r.id) as AbsenceOption | null) ?? null))?.short);
 }

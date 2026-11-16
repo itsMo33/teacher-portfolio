@@ -7,7 +7,7 @@ import fontkit from "@pdf-lib/fontkit";
 import { supabaseAdmin } from "@/lib/supabase/server";
 import { PORTFOLIO_BUCKET } from "@/lib/supabase/storage";
 import type { Inquiry } from "@/lib/inquiries";
-import { displayText } from "@/lib/inquiry-logic";
+import { absenceOptionOf, displayText, type AbsenceOption } from "@/lib/inquiry-logic";
 import { listInquiryFiles } from "@/lib/inquiry-files";
 
 /** Fills the school's own مساءلة form with what the system holds -- the teacher's answer, the decision and the
@@ -107,11 +107,11 @@ function riyadhDate(iso: string): string {
   return `${get("day")}-${get("month")}-${get("year")}`;
 }
 
+/** Marks a box as chosen by filling it in (a tick printed on these small boxes came out hard to read). */
 function drawCheck(page: PDFPage, cx: number, cy: number) {
   const H = page.getHeight();
-  const color = rgb(0.04, 0.12, 0.42);
-  page.drawLine({ start: { x: cx - 3.6, y: H - cy - 0.3 }, end: { x: cx - 1, y: H - cy + 3 }, thickness: 1.5, color });
-  page.drawLine({ start: { x: cx - 1, y: H - cy + 3 }, end: { x: cx + 4, y: H - cy - 4 }, thickness: 1.5, color });
+  const size = 7.2;
+  page.drawRectangle({ x: cx - size / 2, y: H - cy - size / 2, width: size, height: size, color: rgb(0.04, 0.12, 0.42), opacity: 0.9 });
 }
 
 async function loadImage(path: string): Promise<Buffer | null> {
@@ -125,7 +125,7 @@ interface Template {
   justificationWidth: number;
   answerLine: { baseline: number; nameRight: number; signCenter: number; dateRight: number };
   directorLines: readonly [{ baseline: number; signCenter: number; dateRight: number }, { baseline: number; signCenter: number; dateRight: number }];
-  ticks: { accepted: { x: number; y: number }; rejected: { x: number; y: number } };
+  ticks: { accepted: { x: number; y: number }; rejected: { x: number; y: number } } & Partial<Record<AbsenceOption, { x: number; y: number }>>;
 }
 
 /** The same template with everything moved up or down (the school's forms differ by a few points in height). */
@@ -171,8 +171,8 @@ const TEMPLATES: Record<FormTemplateName, Template> = {
       { baseline: 354, signCenter: 258, dateRight: 146 },
       { baseline: 686, signCenter: 258, dateRight: 142 },
     ],
-    // accepted = "تحتسب من رصيده", rejected = "يعتمد الحسم"
-    ticks: { accepted: { x: 542, y: 629.5 }, rejected: { x: 542, y: 650.5 } },
+    // the three boxes of "المدير المباشر": إجازة مرضية / من الرصيد / اعتماد الحسم
+    ticks: { accepted: { x: 542, y: 629.5 }, rejected: { x: 542, y: 650.5 }, sick_leave: { x: 542, y: 608.5 }, from_balance: { x: 542, y: 629.5 }, deduct: { x: 542, y: 650.5 } },
   },
 };
 
@@ -239,7 +239,9 @@ export async function buildCompletedForm(inquiry: Inquiry): Promise<Uint8Array |
   // the decision
   const decided = inquiry.decision !== null && inquiry.decidedAt !== null;
   if (decided) {
-    const t = tpl.ticks[inquiry.decision!];
+    // an absence inquiry ticks the outcome the reviewer chose; the others tick accepted / rejected
+    const option = name === "absence" ? absenceOptionOf(inquiry.decision, inquiry.decisionOption) : null;
+    const t = (option && tpl.ticks[option]) || tpl.ticks[inquiry.decision!];
     drawCheck(page, t.x, t.y);
   }
 

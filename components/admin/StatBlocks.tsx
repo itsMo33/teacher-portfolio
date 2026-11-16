@@ -17,13 +17,13 @@ export function StatCard({ label, value, tone = "brand" }: { label: string; valu
 }
 
 export function StatGrid({ children }: { children: ReactNode }) {
-  return <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">{children}</div>;
+  return <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 break-inside-avoid">{children}</div>;
 }
 
 export function StatSection({ title, note, children }: { title: string; note?: string; children: ReactNode }) {
   return (
     <section className="flex flex-col gap-2">
-      <div>
+      <div className="break-after-avoid">
         <h3 className="font-bold text-slate-800 dark:text-slate-100">{title}</h3>
         {note && <p className="text-xs text-slate-400">{note}</p>}
       </div>

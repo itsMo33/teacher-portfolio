@@ -5,7 +5,7 @@ import { PDFDocument } from "pdf-lib";
 import { supabaseAdmin } from "@/lib/supabase/server";
 import { getSignedUrl, PORTFOLIO_BUCKET } from "@/lib/supabase/storage";
 import { removeFilesOfInquiries } from "@/lib/inquiry-files";
-import { displayText, parseInquiryPages, type InquiryDecision, type InquiryKind, type ParsedInquiry } from "@/lib/inquiry-logic";
+import { displayText, parseInquiryPages, type AbsenceOption, type InquiryDecision, type InquiryKind, type ParsedInquiry } from "@/lib/inquiry-logic";
 
 export const INQUIRY_OFFICER_CATEGORY = "inquiries_officer";
 
@@ -44,6 +44,8 @@ export interface Inquiry {
   justification: string | null;
   justifiedAt: string | null;
   decision: InquiryDecision | null;
+  /** For an absence inquiry: which of the form's three outcomes was chosen. */
+  decisionOption: AbsenceOption | null;
   decisionNote: string | null;
   decidedAt: string | null;
   decidedBy: string | null;
@@ -89,6 +91,7 @@ function toInquiry(r: Row): Inquiry {
     justification: r.justification,
     justifiedAt: r.justified_at,
     decision: r.decision,
+    decisionOption: null,
     decisionNote: r.decision_note,
     decidedAt: r.decided_at,
     decidedBy: r.decided_by,
@@ -97,9 +100,24 @@ function toInquiry(r: Row): Inquiry {
   };
 }
 
+/** Fills in which outcome each decided absence inquiry got. Read apart from the main query so that everything keeps
+ *  working until the decision_option column exists (they simply show the default outcome). */
+async function withDecisionOptions(list: Inquiry[]): Promise<Inquiry[]> {
+  const ids = list.filter((i) => i.kind === "absence" && i.decision).map((i) => i.id);
+  if (ids.length === 0) return list;
+  const options = new Map<string, AbsenceOption | null>();
+  for (let i = 0; i < ids.length; i += 100) {
+    const { data, error } = await supabaseAdmin.from("inquiries").select("id, decision_option").in("id", ids.slice(i, i + 100));
+    if (error) return list;
+    for (const r of data ?? []) options.set(r.id as string, (r.decision_option as AbsenceOption | null) ?? null);
+  }
+  return list.map((i) => (options.has(i.id) ? { ...i, decisionOption: options.get(i.id) ?? null } : i));
+}
+
 export async function getInquiry(id: string): Promise<Inquiry | null> {
   const { data } = await supabaseAdmin.from("inquiries").select(SELECT).eq("id", id).maybeSingle();
-  return data ? toInquiry(data as unknown as Row) : null;
+  if (!data) return null;
+  return (await withDecisionOptions([toInquiry(data as unknown as Row)]))[0];
 }
 
 /** Everything for the reviewers (newest first); only that teacher's own for a teacher. */
@@ -107,7 +125,7 @@ export async function listInquiries(opts: { teacherId?: string } = {}): Promise<
   let query = supabaseAdmin.from("inquiries").select(SELECT).order("created_at", { ascending: false }).limit(2000);
   if (opts.teacherId) query = query.eq("teacher_id", opts.teacherId);
   const { data } = await query;
-  return (data ?? []).map((r) => toInquiry(r as unknown as Row));
+  return withDecisionOptions((data ?? []).map((r) => toInquiry(r as unknown as Row)));
 }
 
 /** What a teacher is allowed to see of their own inquiry: the decision only once رائد has confirmed it, and
@@ -124,6 +142,7 @@ export interface TeacherInquiryView {
   justification: string | null;
   justifiedAt: string | null;
   decision: InquiryDecision | null;
+  decisionOption: AbsenceOption | null;
   decisionNote: string | null;
   /** When رائد decided it -- null until then. */
   decidedAt: string | null;
@@ -143,6 +162,7 @@ export function toTeacherView(i: Inquiry): TeacherInquiryView {
     justification: i.justification,
     justifiedAt: i.justifiedAt,
     decision: decided ? i.decision : null,
+    decisionOption: decided ? i.decisionOption : null,
     decisionNote: decided ? i.decisionNote : null,
     decidedAt: decided ? i.decidedAt : null,
   };

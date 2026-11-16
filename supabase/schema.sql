@@ -510,3 +510,12 @@ create table if not exists inquiry_files (
 );
 create index if not exists idx_inquiry_files_inquiry on inquiry_files(inquiry_id);
 alter table inquiry_files enable row level security;
+
+-- مسائلة الغياب is decided with one of the three outcomes printed on the school's form: sick leave, counted from the
+-- teacher's leave balance, or the deduction. decision stays accepted (first two) / rejected (third); this says which.
+alter table inquiries add column if not exists decision_option text;
+do $$ begin
+  alter table inquiries add constraint inquiries_decision_option_check check (decision_option in ('sick_leave', 'from_balance', 'deduct'));
+exception
+  when duplicate_object then null;
+end $$;
