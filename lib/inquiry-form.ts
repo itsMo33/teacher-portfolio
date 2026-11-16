@@ -7,6 +7,7 @@ import fontkit from "@pdf-lib/fontkit";
 import { supabaseAdmin } from "@/lib/supabase/server";
 import { PORTFOLIO_BUCKET } from "@/lib/supabase/storage";
 import type { Inquiry } from "@/lib/inquiries";
+import { displayText } from "@/lib/inquiry-logic";
 import { listInquiryFiles } from "@/lib/inquiry-files";
 
 /** Fills the school's own مساءلة form with what the system holds -- the teacher's answer, the decision and the
@@ -118,22 +119,50 @@ async function loadImage(path: string): Promise<Buffer | null> {
   return data ? Buffer.from(await data.arrayBuffer()) : null;
 }
 
-/** Where each thing goes on each template (PDF points; y measured from the page's top). */
-const TEMPLATES = {
-  delay: {
-    justificationBaselines: [575, 590, 605],
-    justificationRight: 561,
-    justificationWidth: 520,
-    // "الاسم / التوقيع / التاريخ" line under the teacher's answer
-    answerLine: { baseline: 626, nameRight: 536, signCenter: 302, dateRight: 165 },
-    // the director's lines: [the one that issued the inquiry, the one that decides it]
+interface Template {
+  justificationBaselines: readonly number[];
+  justificationRight: number;
+  justificationWidth: number;
+  answerLine: { baseline: number; nameRight: number; signCenter: number; dateRight: number };
+  directorLines: readonly [{ baseline: number; signCenter: number; dateRight: number }, { baseline: number; signCenter: number; dateRight: number }];
+  ticks: { accepted: { x: number; y: number }; rejected: { x: number; y: number } };
+}
+
+/** The same template with everything moved up or down (the school's forms differ by a few points in height). */
+function shifted(t: Template, dy: number): Template {
+  return {
+    ...t,
+    justificationBaselines: t.justificationBaselines.map((y) => y + dy),
+    answerLine: { ...t.answerLine, baseline: t.answerLine.baseline + dy },
     directorLines: [
-      { baseline: 507, signCenter: 312, dateRight: 165 },
-      { baseline: 727, signCenter: 312, dateRight: 165 },
+      { ...t.directorLines[0], baseline: t.directorLines[0].baseline + dy },
+      { ...t.directorLines[1], baseline: t.directorLines[1].baseline + dy },
     ],
-    ticks: { accepted: { x: 553.3, y: 673 }, rejected: { x: 553.3, y: 693.5 } },
-  },
+    ticks: { accepted: { ...t.ticks.accepted, y: t.ticks.accepted.y + dy }, rejected: { ...t.ticks.rejected, y: t.ticks.rejected.y + dy } },
+  };
+}
+
+/** Where each thing goes on each template (PDF points; y measured from the page's top). */
+const DELAY: Template = {
+  justificationBaselines: [575, 590, 605],
+  justificationRight: 561,
+  justificationWidth: 520,
+  // "الاسم / التوقيع / التاريخ" line under the teacher's answer
+  answerLine: { baseline: 626, nameRight: 536, signCenter: 302, dateRight: 165 },
+  // the director's lines: [the one that issued the inquiry, the one that decides it]
+  directorLines: [
+    { baseline: 507, signCenter: 312, dateRight: 165 },
+    { baseline: 727, signCenter: 312, dateRight: 165 },
+  ],
+  ticks: { accepted: { x: 553.3, y: 673 }, rejected: { x: 553.3, y: 693.5 } },
+};
+
+const TEMPLATES: Record<FormTemplateName, Template> = {
+  delay: DELAY,
+  // مساءلة حضور غير مكتمل: the same form as the delay one, six points higher
+  incomplete: shifted(DELAY, -6),
   absence: {
+
     justificationBaselines: [470, 488, 506],
     justificationRight: 550,
     justificationWidth: 500,
@@ -145,10 +174,18 @@ const TEMPLATES = {
     // accepted = "تحتسب من رصيده", rejected = "يعتمد الحسم"
     ticks: { accepted: { x: 542, y: 629.5 }, rejected: { x: 542, y: 650.5 } },
   },
-} as const;
+};
 
-export function hasFormTemplate(kind: Inquiry["kind"]): boolean {
-  return kind === "delay" || kind === "absence";
+export type FormTemplateName = "delay" | "incomplete" | "absence";
+
+/** Which of the school's forms this inquiry is, read from the title printed on its page (an inquiry uploaded under
+ *  "المسائلات الأخرى" can be any of them); null for anything else (an older file upload, an unknown form). */
+export function formTemplateOf(inquiry: Pick<Inquiry, "kind" | "extractedText">): FormTemplateName | null {
+  const text = displayText(inquiry.extractedText).text;
+  if (/حضور\s*غير\s*مكتمل/.test(text)) return "incomplete";
+  if (/مساءلة\s*عن\s*تأخر|مساءلة\s*تأخر/.test(text) || (inquiry.kind === "delay" && !/مساءلة\s*غياب/.test(text))) return "delay";
+  if (/مساءلة\s*غياب/.test(text) || inquiry.kind === "absence") return "absence";
+  return null;
 }
 
 /** The original page for this inquiry: the teacher's own cut page, or the right page of the uploaded PDF. */
@@ -168,8 +205,9 @@ async function loadOriginalPage(inquiryId: string): Promise<PDFDocument | null> 
 }
 
 export async function buildCompletedForm(inquiry: Inquiry): Promise<Uint8Array | null> {
-  if (!hasFormTemplate(inquiry.kind)) return null;
-  const tpl = TEMPLATES[inquiry.kind as "delay" | "absence"];
+  const name = formTemplateOf(inquiry);
+  if (!name) return null;
+  const tpl = TEMPLATES[name];
   const doc = await loadOriginalPage(inquiry.id);
   if (!doc) return null;
   const page = doc.getPage(0);

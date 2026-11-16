@@ -145,7 +145,7 @@ function Row({ item }: { item: ReviewInquiry }) {
         <button type="button" onClick={() => setOpen((v) => !v)} className="text-[var(--brand-primary)] hover:underline">
           {open ? "إخفاء نص المسائلة" : "نص المسائلة"}
         </button>
-        <a href={item.kind === "other" ? `/inquiries/${item.id}/print` : `/api/inquiries/${item.id}/form`} target="_blank" rel="noopener noreferrer" className="text-slate-600 dark:text-slate-300 hover:underline">
+        <a href={`/api/inquiries/${item.id}/form`} target="_blank" rel="noopener noreferrer" className="text-slate-600 dark:text-slate-300 hover:underline">
           النموذج المكتمل (طباعة)
         </a>
         <button type="button" onClick={openFile} className="text-slate-600 dark:text-slate-300 hover:underline">
