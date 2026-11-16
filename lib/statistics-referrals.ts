@@ -1,6 +1,6 @@
 import "server-only";
 import { supabaseAdmin } from "@/lib/supabase/server";
-import { count, fetchAll, rangeStart, userNames, type StatRange } from "@/lib/statistics";
+import { count, excludedUsers, fetchAll, rangeStart, userNames, without, type StatRange } from "@/lib/statistics";
 import { AGENT_PROCEDURES, COUNSELOR_PROCEDURES } from "@/lib/student-referral-constants";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -94,7 +94,7 @@ export interface ReferralStats {
 
 export async function getReferralStats(range: StatRange): Promise<ReferralStats> {
   const since = rangeStart(range);
-  const [rows, names, files] = await Promise.all([
+  const [allRows, names, files, ex] = await Promise.all([
     fetchAll<Row>((from, to) => {
       let q = supabaseAdmin
         .from("student_referrals")
@@ -107,7 +107,9 @@ export async function getReferralStats(range: StatRange): Promise<ReferralStats>
     }),
     userNames(),
     fetchAll<{ referral_id: string; stage: string }>((from, to) => supabaseAdmin.from("student_referral_files").select("referral_id, stage").order("id").range(from, to)),
+    excludedUsers(),
   ]);
+  const rows = without(allRows, ex.ids, (r) => r.teacher_id);
 
   const inRange = new Set(rows.map((r) => r.id));
   const sentRows = rows.filter((r) => r.status !== "draft");

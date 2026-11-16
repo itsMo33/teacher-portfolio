@@ -19,6 +19,25 @@ export function rangeStart(range: StatRange): string | null {
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
+/** People left out of every statistic: their account, files and records stay exactly as they are -- they just do not
+ *  count in the numbers (احمد الياسين). Matched by national ID. */
+export const STATS_EXCLUDED_NATIONAL_IDS = ["1870007438"];
+
+export interface StatsExclusion {
+  ids: Set<string>;
+  names: Set<string>;
+}
+
+export async function excludedUsers(): Promise<StatsExclusion> {
+  const { data } = await supabaseAdmin.from("users").select("id, name").in("national_id", STATS_EXCLUDED_NATIONAL_IDS);
+  return { ids: new Set((data ?? []).map((u) => u.id as string)), names: new Set((data ?? []).map((u) => u.name as string)) };
+}
+
+/** The rows that are not about an excluded person. */
+export function without<T>(rows: T[], excluded: Set<string>, idOf: (row: T) => string | null | undefined): T[] {
+  return excluded.size === 0 ? rows : rows.filter((r) => !excluded.has(idOf(r) ?? ""));
+}
+
 /** Reads every row of a query that may hold more than the 1000 rows a single request returns. */
 export async function fetchAll<T>(page: (from: number, to: number) => PromiseLike<{ data: T[] | null }>): Promise<T[]> {
   const out: T[] = [];
@@ -73,7 +92,7 @@ export interface InquiryStats {
 
 export async function getInquiryStats(range: StatRange): Promise<InquiryStats> {
   const since = rangeStart(range);
-  const [rows, names] = await Promise.all([
+  const [allRows, names, ex] = await Promise.all([
     fetchAll<{
       id: string;
       kind: string;
@@ -89,7 +108,9 @@ export async function getInquiryStats(range: StatRange): Promise<InquiryStats> {
       return q.range(from, to);
     }),
     userNames(),
+    excludedUsers(),
   ]);
+  const rows = without(allRows, ex.ids, (r) => r.teacher_id);
 
   // inquiries with attached files (the table exists once the attachments feature is switched on)
   let withFilesIds = new Set<string>();
@@ -145,14 +166,16 @@ const PERFORMANCE_LABELS: Record<string, string> = {
 
 export async function getPerformanceStats(range: StatRange): Promise<PerformanceStats> {
   const since = rangeStart(range);
-  const [rows, names] = await Promise.all([
+  const [allRows, names, ex] = await Promise.all([
     fetchAll<{ teacher_id: string; category: string; status: string; late_minutes: number | null }>((from, to) => {
       let q = supabaseAdmin.from("teacher_performance_records").select("teacher_id, category, status, late_minutes").order("record_date");
       if (since) q = q.gte("record_date", since.slice(0, 10));
       return q.range(from, to);
     }),
     userNames(),
+    excludedUsers(),
   ]);
+  const rows = without(allRows, ex.ids, (r) => r.teacher_id);
 
   const categories = Object.keys(PERFORMANCE_LABELS).map((key) => {
     const of = rows.filter((r) => r.category === key);
@@ -194,11 +217,13 @@ export const DAY_LABELS: Record<string, string> = { احد: "الأحد", اثن
 
 export async function getWaitingStats(range: StatRange): Promise<WaitingStats> {
   const since = rangeStart(range);
-  const rows = await fetchAll<{ day: string; period: string; absent_teacher: string; substitute: string }>((from, to) => {
+  const ex = await excludedUsers();
+  const allRows = await fetchAll<{ day: string; period: string; absent_teacher: string; substitute: string }>((from, to) => {
     let q = supabaseAdmin.from("substitute_assignments").select("day, period, absent_teacher, substitute").order("created_at");
     if (since) q = q.gte("created_at", since);
     return q.range(from, to);
   });
+  const rows = allRows.filter((r) => !ex.names.has(r.absent_teacher) && !ex.names.has(r.substitute) && !isExcludedShortName(r.absent_teacher, ex) && !isExcludedShortName(r.substitute, ex));
   return {
     total: rows.length,
     bySubstitute: count(rows, (r) => r.substitute).slice(0, 15),
@@ -220,14 +245,16 @@ export interface ReviewStats {
 
 export async function getReviewStats(range: StatRange): Promise<ReviewStats> {
   const since = rangeStart(range);
-  const [rows, names] = await Promise.all([
+  const [allRows, names, ex] = await Promise.all([
     fetchAll<{ teacher_id: string; review_status: string | null }>((from, to) => {
       let q = supabaseAdmin.from("attachments").select("teacher_id, review_status").is("deleted_at", null).order("uploaded_at");
       if (since) q = q.gte("uploaded_at", since);
       return q.range(from, to);
     }),
     userNames(),
+    excludedUsers(),
   ]);
+  const rows = without(allRows, ex.ids, (r) => r.teacher_id);
   return {
     files: rows.length,
     accepted: rows.filter((r) => r.review_status === "accepted").length,
@@ -235,4 +262,13 @@ export async function getReviewStats(range: StatRange): Promise<ReviewStats> {
     notReviewed: rows.filter((r) => !r.review_status).length,
     revisionByTeacher: count(rows.filter((r) => r.review_status === "needs_revision"), (r) => names.get(r.teacher_id)).slice(0, 15),
   };
+}
+
+/** The waiting table keeps short names ("احمد الياسين"); an excluded person matches when their short name equals it. */
+function isExcludedShortName(short: string, ex: StatsExclusion): boolean {
+  const norm = (x: string) => x.replace(/\s+/g, " ").trim();
+  return [...ex.names].some((full) => {
+    const parts = norm(full).split(" ");
+    return norm(short) === `${parts[0]} ${parts[parts.length - 1]}`;
+  });
 }

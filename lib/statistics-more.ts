@@ -1,6 +1,6 @@
 import "server-only";
 import { supabaseAdmin } from "@/lib/supabase/server";
-import { DAY_LABELS, count, fetchAll, rangeStart, userNames, type StatRange } from "@/lib/statistics";
+import { DAY_LABELS, STATS_EXCLUDED_NATIONAL_IDS, count, excludedUsers, fetchAll, rangeStart, userNames, without, type StatRange } from "@/lib/statistics";
 import { addDays, weekStartOf } from "@/lib/teacher-performance";
 import { getWeeklyPlanStatuses } from "@/lib/weekly-plan";
 
@@ -18,13 +18,15 @@ export interface ScheduleStats {
 }
 
 export async function getScheduleStats(): Promise<ScheduleStats> {
-  const [slots, names, sections] = await Promise.all([
+  const [allSlots, names, sections, ex] = await Promise.all([
     fetchAll<{ teacher_id: string; day: string; period: string; subject: { name_ar: string } | { name_ar: string }[] | null }>((from, to) =>
       supabaseAdmin.from("schedule_slots").select("teacher_id, day, period, subject:subjects(name_ar)").order("id").range(from, to)
     ),
     userNames(),
     supabaseAdmin.from("class_sections").select("id", { count: "exact", head: true }),
+    excludedUsers(),
   ]);
+  const slots = without(allSlots, ex.ids, (r) => r.teacher_id);
   const subjectName = (s: (typeof slots)[number]) => (Array.isArray(s.subject) ? s.subject[0]?.name_ar : s.subject?.name_ar);
   const teachers = new Set(slots.map((s) => s.teacher_id)).size;
   return {
@@ -51,7 +53,8 @@ export async function getWeeklyPlanStats(weeksBack = 6): Promise<WeeklyPlanStats
   const today = new Date(Date.now() + 3 * 60 * 60 * 1000).toISOString().slice(0, 10);
   const current = weekStartOf(today);
   const starts = Array.from({ length: weeksBack }, (_, i) => addDays(current, -7 * i));
-  const results = await Promise.all(starts.map((w) => getWeeklyPlanStatuses(w)));
+  const [raw, ex] = await Promise.all([Promise.all(starts.map((w) => getWeeklyPlanStatuses(w))), excludedUsers()]);
+  const results = raw.map((rows) => without(rows, ex.ids, (r) => r.id));
   const missed = new Map<string, number>();
   const weeks = starts.map((week, i) => {
     const rows = results[i].filter((r) => r.status !== "na");
@@ -71,7 +74,7 @@ export interface SchoolFilesStats {
 
 export async function getSchoolFilesStats(range: StatRange): Promise<SchoolFilesStats> {
   const since = rangeStart(range);
-  const [rows, names, cats] = await Promise.all([
+  const [allRows, names, cats, ex] = await Promise.all([
     fetchAll<{ category: string; uploaded_by: string }>((from, to) => {
       let q = supabaseAdmin.from("school_files").select("category, uploaded_by").is("deleted_at", null).order("uploaded_at");
       if (since) q = q.gte("uploaded_at", since);
@@ -79,7 +82,9 @@ export async function getSchoolFilesStats(range: StatRange): Promise<SchoolFiles
     }),
     userNames(),
     supabaseAdmin.from("school_management_categories").select("key, label_ar"),
+    excludedUsers(),
   ]);
+  const rows = without(allRows, ex.ids, (r) => r.uploaded_by);
   const label = new Map((cats.data ?? []).map((c) => [c.key as string, c.label_ar as string]));
   return {
     total: rows.length,
@@ -100,14 +105,16 @@ export interface ImpactStats {
 
 export async function getImpactStats(range: StatRange): Promise<ImpactStats> {
   const since = rangeStart(range);
-  const [rows, names] = await Promise.all([
+  const [allRows, names, ex] = await Promise.all([
     fetchAll<{ teacher_id: string; subject: string; improvement_level: string; max_score: number; score_before: number; score_after: number }>((from, to) => {
       let q = supabaseAdmin.from("impact_measurements").select("teacher_id, subject, improvement_level, max_score, score_before, score_after").order("created_at");
       if (since) q = q.gte("created_at", since);
       return q.range(from, to);
     }),
     userNames(),
+    excludedUsers(),
   ]);
+  const rows = without(allRows, ex.ids, (r) => r.teacher_id);
   const gains = rows.filter((r) => r.max_score > 0).map((r) => ((r.score_after - r.score_before) / r.max_score) * 100);
   return {
     total: rows.length,
@@ -134,14 +141,16 @@ const EXCUSE_LABELS: Record<string, string> = {
 
 export async function getExcuseStats(range: StatRange): Promise<ExcuseStats> {
   const since = rangeStart(range);
-  const [rows, names] = await Promise.all([
+  const [allRows, names, ex] = await Promise.all([
     fetchAll<{ teacher_id: string; subcategory: string | null }>((from, to) => {
       let q = supabaseAdmin.from("attachments").select("teacher_id, subcategory").eq("category", "excuse_request").is("deleted_at", null).order("uploaded_at");
       if (since) q = q.gte("uploaded_at", since);
       return q.range(from, to);
     }),
     userNames(),
+    excludedUsers(),
   ]);
+  const rows = without(allRows, ex.ids, (r) => r.teacher_id);
   return {
     total: rows.length,
     bySubsection: count(rows, (r) => EXCUSE_LABELS[r.subcategory ?? ""] ?? r.subcategory ?? "غير محدد"),
@@ -160,11 +169,13 @@ export interface ActivityStats {
 
 export async function getActivityStats(range: StatRange): Promise<ActivityStats> {
   const since = rangeStart(range);
-  const rows = await fetchAll<{ action: string; actor_name: string; created_at: string }>((from, to) => {
-    let q = supabaseAdmin.from("activity_log").select("action, actor_name, created_at").order("created_at");
+  const ex = await excludedUsers();
+  const raw = await fetchAll<{ action: string; actor_id: string | null; actor_name: string; created_at: string }>((from, to) => {
+    let q = supabaseAdmin.from("activity_log").select("action, actor_id, actor_name, created_at").order("created_at");
     if (since) q = q.gte("created_at", since);
     return q.range(from, to);
   });
+  const rows = without(raw, ex.ids, (r) => r.actor_id);
   return {
     total: rows.length,
     byAction: count(rows, (r) => r.action).slice(0, 20),
@@ -192,7 +203,8 @@ export async function getAccountStats(): Promise<AccountStats> {
       .from("users")
       .select("role, restricted_category, track_performance, can_build_schedule, can_track_class_time, demo_view_only")
       .is("deleted_at", null)
-      .not("national_id", "like", "9999%"),
+      .not("national_id", "like", "9999%")
+      .not("national_id", "in", `(${STATS_EXCLUDED_NATIONAL_IDS.join(",")})`),
     supabaseAdmin.from("school_management_categories").select("key, label_ar"),
   ]);
   const rows = data ?? [];

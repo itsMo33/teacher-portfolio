@@ -7,6 +7,7 @@ import { SectionBreakdownList, type SectionBreakdownItem } from "@/components/ad
 import { BarList, DataTable, StatCard, StatGrid, StatSection } from "@/components/admin/StatBlocks";
 import {
   RANGE_LABELS,
+  excludedUsers,
   getInquiryStats,
   getPerformanceStats,
   getReviewStats,
@@ -113,7 +114,8 @@ export default async function AdminStatisticsPage({ searchParams }: { searchPara
 }
 
 async function FilesStats() {
-  const teachers = await getTeachersWithCompletion();
+  const [allTeachers, ex] = await Promise.all([getTeachersWithCompletion(), excludedUsers()]);
+  const teachers = allTeachers.filter((t) => !ex.ids.has(t.id));
   const total = teachers.length;
   const sections = PORTFOLIO_SECTIONS.filter((s) => s.key !== "schedule" && !s.staffOnly);
 
