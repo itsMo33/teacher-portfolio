@@ -4,6 +4,7 @@ import { supabaseAdmin } from "@/lib/supabase/server";
 import { SCHOOL_NAME } from "@/lib/school";
 import { PrintButton } from "@/components/admin/PrintButton";
 import { getInquiry, getInquiryRole, isRecipientOf } from "@/lib/inquiries";
+import { listInquiryFilesWithUrls } from "@/lib/inquiry-files";
 import { displayText, extractPeriod, INQUIRY_KIND_LABEL } from "@/lib/inquiry-logic";
 
 function CheckBox({ checked }: { checked: boolean }) {
@@ -35,6 +36,7 @@ export default async function InquiryPrintPage({ params }: { params: Promise<{ i
     ? await supabaseAdmin.from("users").select("name").eq("id", inquiry.decidedBy).maybeSingle()
     : { data: null };
 
+  const attachments = await listInquiryFilesWithUrls(id).catch(() => []);
   const shown = displayText(inquiry.extractedText);
   const period = extractPeriod(shown.text);
   const decided = inquiry.decision !== null && inquiry.decidedAt !== null;
@@ -111,6 +113,25 @@ export default async function InquiryPrintPage({ params }: { params: Promise<{ i
           )}
         </div>
       </section>
+
+      {attachments.length > 0 && (
+        <section className="mb-4">
+          <h2 className="font-bold mb-1">المرفقات</h2>
+          <ul className="list-disc pr-5 text-xs mb-2">
+            {attachments.map((f) => (
+              <li key={f.id}>{f.fileName}</li>
+            ))}
+          </ul>
+          <div className="flex flex-col gap-3">
+            {attachments
+              .filter((f) => f.mimeType.startsWith("image/"))
+              .map((f) => (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img key={f.id} src={f.url} alt={f.fileName} className="max-h-[22cm] max-w-full border border-slate-300 object-contain break-inside-avoid" />
+              ))}
+          </div>
+        </section>
+      )}
 
       <footer className="mt-6 border-t border-slate-300 pt-2 text-[11px] text-slate-500">
         نموذج صادر إلكترونياً من منصة أثر، وقرار الاعتماد مسجّل بحساب المسؤول وتاريخه -- رقم المساءلة: {inquiry.id.slice(0, 8)}

@@ -118,7 +118,7 @@ function Card({ item }: { item: TeacherInquiryView }) {
           )}
           {(decided || item.justifiedAt) && (
             <a href={`/api/inquiries/${item.id}/form`} target="_blank" rel="noopener noreferrer" className="self-start text-xs text-[var(--brand-primary)] hover:underline">
-              النموذج المكتمل (طباعة)
+              طباعة المسائلة مع مرفقاتها
             </a>
           )}
           {decided && item.justification && <p className="text-xs text-slate-500">تبريرك: {item.justification}</p>}

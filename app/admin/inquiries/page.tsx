@@ -8,6 +8,7 @@ import { InquiryUploader } from "@/components/inquiries/InquiryUploader";
 import { InquiryReviewList } from "@/components/inquiries/InquiryReviewList";
 import { OfficerSentList } from "@/components/inquiries/OfficerSentList";
 import { countInquiryFiles } from "@/lib/inquiry-files";
+import { WeeklyPrintButton } from "@/components/inquiries/WeeklyPrintButton";
 
 type Tab = "all" | "delay" | "absence" | "other";
 
@@ -97,6 +98,8 @@ export default async function InquiriesPage({ searchParams }: { searchParams: Pr
                 </div>
               </details>
             ))}
+
+          <WeeklyPrintButton kind={tab} />
 
           {role === "officer" && <OfficerSentList batches={sentBatches} />}
           <>

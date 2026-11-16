@@ -147,7 +147,7 @@ function Row({ item }: { item: ReviewInquiry }) {
           {open ? "إخفاء نص المسائلة" : "نص المسائلة"}
         </button>
         <a href={`/api/inquiries/${item.id}/form`} target="_blank" rel="noopener noreferrer" className="text-slate-600 dark:text-slate-300 hover:underline">
-          النموذج المكتمل (طباعة)
+          طباعة المسائلة مع مرفقاتها
         </a>
         <button type="button" onClick={openFile} className="text-slate-600 dark:text-slate-300 hover:underline">
           فتح ملف PDF
