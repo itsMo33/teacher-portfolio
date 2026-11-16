@@ -156,6 +156,26 @@ body {
     color: #000 !important;
   }
   /* Repeating-header reports that don't want every section boxed like a data table. */
+  /* statistics: each block (title + its chart or table) stays on one page; a block with a long table may run over, but
+     never inside a row, and its title stays with the first rows. Plain blocks, because page breaks inside flex boxes are
+     not reliable. */
+  .stats-root {
+    display: block !important;
+  }
+  .stats-root > * {
+    margin-bottom: 16px;
+  }
+  .stat-section {
+    display: block !important;
+    break-inside: avoid;
+  }
+  .stat-section:has([data-long="true"]) {
+    break-inside: auto;
+  }
+  .stat-section > .stat-head {
+    break-after: avoid;
+    margin-bottom: 6px;
+  }
   .print-plain th,
   .print-plain td {
     border: none !important;

@@ -65,7 +65,7 @@ export default async function AdminStatisticsPage({ searchParams }: { searchPara
   const range = parseRange(rangeParam);
 
   return (
-    <div className="flex flex-col gap-6 max-w-3xl print:max-w-none print-exact">
+    <div className="stats-root flex flex-col gap-6 max-w-3xl print:max-w-none print-exact">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h2 className="text-xl font-bold text-slate-900 dark:text-slate-50">الإحصائيات</h2>
         <PrintButton />

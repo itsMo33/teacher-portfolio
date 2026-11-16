@@ -22,8 +22,8 @@ export function StatGrid({ children }: { children: ReactNode }) {
 
 export function StatSection({ title, note, children }: { title: string; note?: string; children: ReactNode }) {
   return (
-    <section className="flex flex-col gap-2">
-      <div className="break-after-avoid">
+    <section className="stat-section flex flex-col gap-2">
+      <div className="stat-head break-after-avoid">
         <h3 className="font-bold text-slate-800 dark:text-slate-100">{title}</h3>
         {note && <p className="text-xs text-slate-400">{note}</p>}
       </div>
@@ -53,7 +53,10 @@ export function DataTable({ columns, rows, empty = "لا توجد بيانات" 
   if (rows.length === 0) return <p className="text-sm text-slate-400">{empty}</p>;
   // a short table stays whole on one page; a long one may run over, but never inside a row
   return (
-    <div className={`overflow-x-auto rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 ${rows.length <= 18 ? "break-inside-avoid" : ""}`}>
+    <div
+      data-long={rows.length > 18 ? "true" : undefined}
+      className="overflow-x-auto print:overflow-visible rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900"
+    >
       <table className="w-full min-w-[420px] border-collapse text-sm">
         <thead>
           <tr className="border-b border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-300">
@@ -78,6 +81,11 @@ export function DataTable({ columns, rows, empty = "لا توجد بيانات" 
       </table>
     </div>
   );
+}
+
+/** A date label ("2026-11-15" or "2026-11") is shortened to its month and day; any other label is shown whole. */
+function shortLabel(label: string): string {
+  return /^\d{4}-\d{2}/.test(label) ? label.slice(5) : label;
 }
 
 /** Colours for the charts (they are fixed, so a chart prints the same everywhere). */
@@ -144,7 +152,7 @@ export function ColumnChart({ items, color = "#1f7a4d", height = 140 }: { items:
       <div className="mt-1 flex justify-between gap-1.5" dir="ltr">
         {items.map(([label]) => (
           <span key={label} className="min-w-0 flex-1 truncate text-center text-[10px] text-slate-500" title={label}>
-            {label.length > 5 ? label.slice(5) : label}
+            {shortLabel(label)}
           </span>
         ))}
       </div>
@@ -198,7 +206,7 @@ export function StackedColumns({
       <div className="mt-1 flex justify-between gap-2" dir="ltr">
         {rows.map((r) => (
           <span key={r.label} className="min-w-0 flex-1 truncate text-center text-[10px] text-slate-500" title={r.label}>
-            {r.label.slice(5)}
+            {shortLabel(r.label)}
           </span>
         ))}
       </div>
