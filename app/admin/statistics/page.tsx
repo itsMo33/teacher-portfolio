@@ -2,7 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { auth } from "@/lib/auth/auth-options";
 import { getTeachersWithCompletion } from "@/lib/teachers-data";
-import { PORTFOLIO_SECTIONS } from "@/lib/portfolio-sections";
+import { COMPLETION_EXCLUDED_KEYS, PORTFOLIO_SECTIONS, TEACHER_COMPLETION_SLOTS } from "@/lib/portfolio-sections";
 import { SectionBreakdownList, type SectionBreakdownItem } from "@/components/admin/SectionBreakdownList";
 import { BarList, ChartRow, ColumnChart, DataTable, DonutChart, StatCard, StatGrid, StatSection, StackedColumns } from "@/components/admin/StatBlocks";
 import { PrintButton } from "@/components/admin/PrintButton";
@@ -134,7 +134,7 @@ async function FilesStats() {
   const [allTeachers, ex] = await Promise.all([getTeachersWithCompletion(), excludedUsers()]);
   const teachers = allTeachers.filter((t) => !ex.ids.has(t.id));
   const total = teachers.length;
-  const sections = PORTFOLIO_SECTIONS.filter((s) => s.key !== "schedule" && !s.staffOnly);
+  const sections = PORTFOLIO_SECTIONS.filter((s) => s.key !== "schedule" && !s.staffOnly && !COMPLETION_EXCLUDED_KEYS.includes(s.key));
 
   const sectionStats: SectionBreakdownItem[] = sections.map((section) => {
     const teacherStatuses = teachers.map((t) => {
@@ -176,10 +176,10 @@ async function FilesStats() {
           ]}
         />
       </StatSection>
-      <StatSection title="نسبة إنجاز كل معلم" note="الأقل إنجازاً أولاً، مع عدد الخانات اللي عبّاها">
+      <StatSection title="نسبة إنجاز كل معلم" note="الأقل إنجازاً أولاً، مع عدد الخانات اللي عبّاها (بدون المهام والاجتماعات والمسائلات والاستئذان)">
         <DataTable
           columns={["المعلم", "نسبة الإنجاز", "خانات معبّأة"]}
-          rows={[...teachers].sort((a, b) => a.completionPercent - b.completionPercent || a.name.localeCompare(b.name, "ar")).map((t) => [t.name, `${t.completionPercent}%`, t.filledSlots.size])}
+          rows={[...teachers].sort((a, b) => a.completionPercent - b.completionPercent || a.name.localeCompare(b.name, "ar")).map((t) => [t.name, `${t.completionPercent}%`, TEACHER_COMPLETION_SLOTS.filter((slot) => (t.slotCounts[`${slot.section}:${slot.subsection ?? ""}`] ?? 0) > 0).length])}
         />
       </StatSection>
       <StatSection title="عدد المعلمين اللي رفعوا ملف لكل قسم" note="اضغط على أي قسم لعرض المعلمين اللي رفعوا (أخضر) والي ما رفعوا (أحمر)">

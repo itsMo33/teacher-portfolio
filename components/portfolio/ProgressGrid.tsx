@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { PORTFOLIO_SECTIONS } from "@/lib/portfolio-sections";
+import { COMPLETION_EXCLUDED_KEYS, PORTFOLIO_SECTIONS } from "@/lib/portfolio-sections";
 import { TROPHY_BADGE } from "@/lib/motivational-messages";
 
 function NewBadge() {
@@ -47,7 +47,7 @@ export function ProgressGrid({
           ? section.subsections!.reduce((sum, sub) => sum + (slotCounts[`${section.key}:${sub.key}`] ?? 0), 0)
           : slotCounts[`${section.key}:`] ?? 0;
         const requiredCount = section.hasSubsections ? undefined : section.requiredCount ?? 1;
-        const isDone = isSchedule ? hasSchedule : total >= (requiredCount ?? 1);
+        const isDone = isSchedule ? hasSchedule : !COMPLETION_EXCLUDED_KEYS.includes(section.key) && total >= (requiredCount ?? 1);
         const isNew = isSchedule ? !!hasUnviewedSchedule : !!unviewedSectionKeys?.has(section.key);
         const sectionShowPercent = section.hasSubsections
           ? section.subsections!.some((s) => s.showPercent)
@@ -71,8 +71,12 @@ export function ProgressGrid({
             )
           : Math.round((Math.min(total / (requiredCount ?? 1), 1)) * 100);
 
+        // the sections kept out of the completion never show a percentage or a trophy, only how many files there are
+        const excluded = COMPLETION_EXCLUDED_KEYS.includes(section.key);
         let badgeText: string | null;
-        if (isSchedule) {
+        if (excluded) {
+          badgeText = total > 0 ? `${total} ملف` : null;
+        } else if (isSchedule) {
           badgeText = hasSchedule ? scheduleUploadedLabel : "لم يُرفع";
         } else if (!sectionShowPercent) {
           badgeText = (section.hasSubsections ? allSubsectionsDone : isDone) ? TROPHY_BADGE : `${total} ملف`;
@@ -123,7 +127,11 @@ export function ProgressGrid({
                   const subRequired = sub.requiredCount ?? 1;
                   const subPercent = Math.round(Math.min(subCount / subRequired, 1) * 100);
                   const subDone = subCount >= subRequired;
-                  const subText = isExemptLicense
+                  const subText = COMPLETION_EXCLUDED_KEYS.includes(section.key)
+                    ? subCount > 0
+                      ? `${subCount} ملف`
+                      : null
+                    : isExemptLicense
                     ? "معفى"
                     : sub.showPercent
                     ? `${subCount}${subRequired > 1 ? `/${subRequired}` : ""} (${subPercent}%)`

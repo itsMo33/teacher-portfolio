@@ -1,6 +1,7 @@
 import "server-only";
 import { supabaseAdmin } from "@/lib/supabase/server";
 import {
+  COMPLETION_EXCLUDED_KEYS,
   TEACHER_COMPLETION_SLOTS,
   TOTAL_TEACHER_COMPLETION_SLOTS,
   PORTFOLIO_SECTIONS,
@@ -84,7 +85,10 @@ export async function getTeachersWithCompletion(): Promise<TeacherWithCompletion
       t.professional_license_exempt ?? false
     );
     const filledSlots = new Set(Object.keys(slotCounts));
-    const totalFiles = Object.values(slotCounts).reduce((sum, n) => sum + n, 0);
+    // files in the sections kept out of the completion (المهام، الاجتماعات والزيارات، المسائلات، الاستئذان) are not counted either
+    const totalFiles = Object.entries(slotCounts)
+      .filter(([key]) => !(COMPLETION_EXCLUDED_KEYS as string[]).includes(key.split(":")[0]))
+      .reduce((sum, [, n]) => sum + n, 0);
     const slotRatioSum = TEACHER_COMPLETION_SLOTS.reduce((sum, slot) => {
       const count = slotCounts[`${slot.section}:${slot.subsection ?? ""}`] ?? 0;
       return sum + Math.min(count / slot.requiredCount, 1);

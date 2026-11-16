@@ -1,5 +1,5 @@
 import ExcelJS from "exceljs";
-import { TEACHER_SLOTS } from "@/lib/portfolio-sections";
+import { TEACHER_COMPLETION_SLOTS as TEACHER_SLOTS } from "@/lib/portfolio-sections";
 import type { TeacherWithCompletion } from "@/lib/teachers-data";
 
 export function buildCompletionWorkbook(teachers: TeacherWithCompletion[]): ExcelJS.Workbook {
