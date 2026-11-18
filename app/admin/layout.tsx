@@ -1,5 +1,7 @@
 import { auth } from "@/lib/auth/auth-options";
-import { AppShell, type NavItem } from "@/components/ui/AppShell";
+import type { NavItem } from "@/components/ui/AppShell";
+import { AdminShell, type AdminAlert } from "@/components/admin/AdminShell";
+import { getAdminAlerts } from "@/lib/admin-alerts";
 import { getSchoolManagementCategory } from "@/lib/school-files";
 import { canReview } from "@/lib/weekly-review";
 import { getReferralActor } from "@/lib/student-referrals";
@@ -91,14 +93,31 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   }
   const navItems: NavItem[] = [...baseNavItems, ...ownInquiryNav];
 
+  // The full administrator (no scope, no single-tool grant) gets the sections, the search and the alerts bell.
+  const fullAdmin = !!session && !restrictedCategory && !canBuildSchedule && classTimeNav.length === 0 && session.user.role !== "teacher";
+  const reviewer = fullAdmin && !!session && canReview(session.user);
+  const referralViewer = fullAdmin && !!session && getReferralActor(session.user) === "viewer";
+  const counts = fullAdmin ? await getAdminAlerts({ inquiries: reviewer, referrals: referralViewer }) : null;
+  const alerts: AdminAlert[] = counts
+    ? [
+        { label: "مسائلات بانتظار قرارك", count: counts.inquiriesAwaiting, href: "/admin/inquiries?filter=awaiting", tone: "amber" },
+        { label: "مسائلات متأخرة عن الرد", count: counts.inquiriesLate, href: "/admin/inquiries?filter=late", tone: "red" },
+        { label: "مسائلات لم يفتحها المعلم", count: counts.inquiriesUnopened, href: "/admin/inquiries?filter=unopened", tone: "blue" },
+        { label: "تحويلات طلاب لم تُفتح", count: counts.referralsUnopened, href: "/admin/student-referrals", tone: "blue" },
+      ]
+    : [];
+
   return (
-    <AppShell
+    <AdminShell
       title="أثر"
       userName={session?.user?.name ?? ""}
       navItems={navItems}
+      alerts={alerts}
+      bellCount={counts ? counts.inquiriesAwaiting + counts.referralsUnopened : 0}
+      grouped={fullAdmin}
       demoViewOnly={session?.user?.demoViewOnly}
     >
       {children}
-    </AppShell>
+    </AdminShell>
   );
 }

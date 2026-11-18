@@ -21,12 +21,12 @@ const TITLES: Record<Tab, string> = {
 /** Every kind of مسائلة in one place, chosen with ?kind=: all of them together, the late-arrival ones, the absence
  *  ones, the other ones, and the older uploaded-file ones. The uploading account (محمد الخميس) sends the PDF kinds
  *  out, follows what he sent and decides inquiries together with رائد and the manager, who also upload. */
-export default async function InquiriesPage({ searchParams }: { searchParams: Promise<{ kind?: string }> }) {
+export default async function InquiriesPage({ searchParams }: { searchParams: Promise<{ kind?: string; filter?: string }> }) {
   const session = await auth();
   const role = session ? getInquiryRole(session.user) : null;
   if (role !== "officer" && role !== "reviewer") redirect("/admin");
 
-  const { kind: kindParam } = await searchParams;
+  const { kind: kindParam, filter: filterParam } = await searchParams;
   const tabs: Tab[] = role === "reviewer" ? ["all", "delay", "absence", "other"] : ["delay", "absence", "other"];
   const tab: Tab = tabs.includes(kindParam as Tab) ? (kindParam as Tab) : tabs[0];
   const sendKinds: InquiryKind[] = tab === "delay" || tab === "absence" || tab === "other" ? [tab] : tab === "all" ? ["delay", "absence", "other"] : [];
@@ -104,7 +104,8 @@ export default async function InquiriesPage({ searchParams }: { searchParams: Pr
       </div>
 
       <InquiryReviewList
-        key={tab}
+        key={`${tab}-${filterParam ?? ""}`}
+        initialFilter={filterParam}
         kind={tab === "all" ? "all" : tab}
         inquiries={inquiries.map((i) => ({
           id: i.id,
