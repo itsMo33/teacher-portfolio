@@ -1,6 +1,6 @@
 import "server-only";
 import { supabaseAdmin } from "@/lib/supabase/server";
-import { ABSENCE_OPTIONS, INQUIRY_DEADLINE_DAYS, absenceOptionOf, type AbsenceOption } from "@/lib/inquiry-logic";
+import { ABSENCE_OPTIONS, absenceOptionOf, isLateReply, type AbsenceOption } from "@/lib/inquiry-logic";
 
 export type StatRange = "week" | "month" | "all";
 
@@ -150,7 +150,7 @@ export async function getInquiryStats(range: StatRange): Promise<InquiryStats> {
     accepted: rows.filter((r) => state(r) === "accepted").length,
     rejected: rows.filter((r) => state(r) === "rejected").length,
     pending: rows.filter((r) => state(r) === "pending").length,
-    overdue: rows.filter((r) => !r.decision && !r.justified_at && now - new Date(r.created_at).getTime() > INQUIRY_DEADLINE_DAYS * DAY_MS).length,
+    overdue: rows.filter((r) => isLateReply({ createdAt: r.created_at, justifiedAt: r.justified_at, decidedAt: r.decided_at }, now)).length,
     withFiles: rows.filter((r) => withFilesIds.has(r.id)).length,
     avgDaysToAnswer: avgDays(rows.map((r) => [r.created_at, r.justified_at])),
     avgDaysToDecision: avgDays(rows.map((r) => [r.created_at, r.decided_at])),

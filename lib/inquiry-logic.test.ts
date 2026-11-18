@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { displayText, extractMinutes, extractPeriod, inquiryDaysLeft, parseInquiryPages } from "./inquiry-logic";
+import { displayText, extractMinutes, extractPeriod, inquiryDaysLeft, isLateReply, parseInquiryPages } from "./inquiry-logic";
 
 const teachers = [
   { id: "t1", name: "عبدالرحيم محمد القرني" },
@@ -164,5 +164,18 @@ describe("inquiry deadline and period", () => {
   it("reads the period the form covers", () => {
     expect(extractPeriod("إنه خلال الفترة من 02-11-2026 إلى 05-11-2026 اتضح ما يلي")).toEqual({ from: "02-11-2026", to: "05-11-2026" });
     expect(extractPeriod("بدون فترة")).toBeNull();
+  });
+});
+
+describe("isLateReply", () => {
+  const sent = "2026-11-02T08:00:00Z";
+  const at = (iso: string) => new Date(iso).getTime();
+  it("is late only after two days without an answer", () => {
+    expect(isLateReply({ createdAt: sent, justifiedAt: null, decidedAt: null }, at("2026-11-04T07:00:00Z"))).toBe(false);
+    expect(isLateReply({ createdAt: sent, justifiedAt: null, decidedAt: null }, at("2026-11-04T09:00:00Z"))).toBe(true);
+  });
+  it("is not late once answered or decided", () => {
+    expect(isLateReply({ createdAt: sent, justifiedAt: "2026-11-03T08:00:00Z", decidedAt: null }, at("2026-11-10T08:00:00Z"))).toBe(false);
+    expect(isLateReply({ createdAt: sent, justifiedAt: null, decidedAt: "2026-11-03T08:00:00Z" }, at("2026-11-10T08:00:00Z"))).toBe(false);
   });
 });

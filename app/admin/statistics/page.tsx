@@ -199,7 +199,7 @@ async function InquiriesStats({ range }: { range: StatRange }) {
         <StatCard label="مقبولة" value={s.accepted} tone="green" />
         <StatCard label="مرفوضة" value={s.rejected} tone="red" />
         <StatCard label="بانتظار القرار" value={s.pending} tone="amber" />
-        <StatCard label="تجاوزت مهلة الأسبوع بدون رد" value={s.overdue} tone="red" />
+        <StatCard label="متأخرة عن الرد (أكثر من يومين)" value={s.overdue} tone="red" />
         <StatCard label="عليها مرفقات" value={s.withFiles} tone="slate" />
         <StatCard label="متوسط أيام الرد" value={s.avgDaysToAnswer ?? "—"} tone="slate" />
         <StatCard label="متوسط أيام القرار" value={s.avgDaysToDecision ?? "—"} tone="slate" />

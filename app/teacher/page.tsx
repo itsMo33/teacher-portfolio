@@ -87,6 +87,15 @@ export default async function TeacherDashboard() {
           <p className="text-xs text-amber-700 dark:text-amber-300">ارفع النسخة المعدّلة في نفس القسم، ويمكنك حذف القديمة.</p>
         </div>
       )}
+      {inquiryNotice.late > 0 && (
+        <Link
+          href="/teacher/portfolio/accountability"
+          className="mb-4 flex items-center justify-between gap-2 rounded-xl bg-red-600 p-4 text-white transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg"
+        >
+          <span className="font-semibold">متأخر عن الرد: {inquiryNotice.late} مسائلة مضى عليها أكثر من يومين بدون تبرير</span>
+          <span className="text-xs">رد الآن</span>
+        </Link>
+      )}
       {inquiryNotice.toJustify > 0 && (
         <Link
           href="/teacher/portfolio/accountability"

@@ -1,8 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { auth } from "@/lib/auth/auth-options";
-import { countInquiries, getInquiryRole, listInquiries } from "@/lib/inquiries";
-import { InquirySummary } from "@/components/inquiries/InquirySummary";
+import { getInquiryRole, listInquiries } from "@/lib/inquiries";
 import { displayText, type InquiryKind } from "@/lib/inquiry-logic";
 import { InquiryUploader } from "@/components/inquiries/InquiryUploader";
 import { InquiryReviewList } from "@/components/inquiries/InquiryReviewList";
@@ -34,8 +33,7 @@ export default async function InquiriesPage({ searchParams }: { searchParams: Pr
 
   const [inquiries, fileCounts] = await Promise.all([listInquiries(), countInquiryFiles()]);
   const ofTab = tab === "all" ? inquiries : inquiries.filter((i) => i.kind === tab);
-  // the older file inquiries brought over (already decided) have their own place in the list; the totals and the
-  // per-teacher table above it are about the current ones
+  // the older file inquiries brought over (already decided) have their own place in the list (the archive)
   const isLegacy = (i: { extractedText: string }) => i.extractedText.startsWith("مسائلة مرفوعة كملف");
   const shown = ofTab.filter((i) => !isLegacy(i));
 
@@ -51,27 +49,11 @@ export default async function InquiriesPage({ searchParams }: { searchParams: Pr
     return [...map.values()];
   })();
 
-  // per teacher: how many inquiries, how many accepted / rejected / still waiting (for the reviewers)
-  const byTeacher = new Map<string, { name: string; list: typeof inquiries }>();
-  for (const i of shown) {
-    const entry = byTeacher.get(i.teacherId) ?? { name: i.teacherName, list: [] };
-    entry.list.push(i);
-    byTeacher.set(i.teacherId, entry);
-  }
-  const teacherRows = [...byTeacher.values()]
-    .map((e) => ({ name: e.name, counts: countInquiries(e.list) }))
-    .sort((a, b) => b.counts.rejected - a.counts.rejected || b.counts.total - a.counts.total || a.name.localeCompare(b.name, "ar"));
-
   return (
-    <div className="flex flex-col gap-5 max-w-3xl">
+    <div className="flex flex-col gap-4 max-w-3xl">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h2 className="text-xl font-bold text-slate-900 dark:text-slate-50">المسائلات{tab !== "all" ? ` -- ${TITLES[tab]}` : ""}</h2>
         <div className="flex flex-wrap gap-2 text-sm">
-          {role === "reviewer" && (
-            <Link href="/admin/statistics?tab=inquiries" className="rounded-lg border border-slate-300 dark:border-slate-700 px-3 py-1.5 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800">
-              الإحصائيات
-            </Link>
-          )}
           {tabs.map((k) => (
             <Link
               key={k}
@@ -88,74 +70,59 @@ export default async function InquiriesPage({ searchParams }: { searchParams: Pr
         </div>
       </div>
 
-      <>
-          {!session!.user.demoViewOnly &&
-            (sendKinds.length === 1 ? (
-              <InquiryUploader kind={sendKinds[0]} />
-            ) : (
-              <details className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4">
-                <summary className="cursor-pointer text-sm font-medium text-slate-700 dark:text-slate-200">رفع مسائلات جديدة (ملف PDF)</summary>
-                <div className="mt-3 flex flex-col gap-3">
-                  {sendKinds.map((k) => (
-                    <InquiryUploader key={k} kind={k} />
-                  ))}
-                </div>
-              </details>
-            ))}
+      {/* the work tools stay folded away, so the inquiries themselves are what the page shows */}
+      <div className="flex flex-col gap-2">
+        {!session!.user.demoViewOnly && (
+          <details className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-3">
+            <summary className="cursor-pointer text-sm font-medium text-slate-700 dark:text-slate-200">رفع مسائلات جديدة (ملف PDF)</summary>
+            <div className="mt-3 flex flex-col gap-3">
+              {sendKinds.map((k) => (
+                <InquiryUploader key={k} kind={k} />
+              ))}
+            </div>
+          </details>
+        )}
+        <details className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-3">
+          <summary className="cursor-pointer text-sm font-medium text-slate-700 dark:text-slate-200">طباعة مسائلات الأسبوع (مع المرفقات)</summary>
+          <div className="mt-3">
+            <WeeklyPrintButton kind={tab} />
+          </div>
+        </details>
+        {role === "officer" && (
+          <details className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-3">
+            <summary className="cursor-pointer text-sm font-medium text-slate-700 dark:text-slate-200">اللي أرسلته (للحذف)</summary>
+            <div className="mt-3">
+              <OfficerSentList batches={sentBatches} />
+            </div>
+          </details>
+        )}
+        {role === "reviewer" && (
+          <Link href="/admin/statistics?tab=inquiries" className="self-start text-xs text-[var(--brand-primary)] hover:underline">
+            إحصائيات المسائلات (الأعداد والتفاصيل لكل معلم) ←
+          </Link>
+        )}
+      </div>
 
-          <WeeklyPrintButton kind={tab} />
-
-          {role === "officer" && <OfficerSentList batches={sentBatches} />}
-          <>
-              <InquirySummary counts={countInquiries(shown)} />
-              {teacherRows.length > 0 && (
-                <div className="overflow-x-auto rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900">
-                  <table className="w-full min-w-[420px] border-collapse text-sm">
-                    <thead>
-                      <tr className="border-b border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-300">
-                        <th className="p-2 text-right">المعلم</th>
-                        <th className="p-2 text-right">الكل</th>
-                        <th className="p-2 text-right">مقبولة</th>
-                        <th className="p-2 text-right">مرفوضة</th>
-                        <th className="p-2 text-right">بانتظار القرار</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {teacherRows.map((r) => (
-                        <tr key={r.name} className="border-b border-slate-100 dark:border-slate-800/60">
-                          <td className="p-2 font-medium text-slate-900 dark:text-slate-50">{r.name}</td>
-                          <td className="p-2 tabular-nums">{r.counts.total}</td>
-                          <td className="p-2 tabular-nums text-green-700 dark:text-green-400">{r.counts.accepted}</td>
-                          <td className="p-2 tabular-nums text-red-700 dark:text-red-400">{r.counts.rejected}</td>
-                          <td className="p-2 tabular-nums text-amber-700 dark:text-amber-400">{r.counts.pending}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
-              <InquiryReviewList
-                key={tab}
-                kind={tab === "all" ? "all" : tab}
-                inquiries={inquiries.map((i) => ({
-                  id: i.id,
-                  kind: i.kind,
-                  teacherName: i.teacherName,
-                  createdAt: i.createdAt,
-                  delayMinutes: i.delayMinutes,
-                  extractedText: displayText(i.extractedText).text,
-                  textReadable: displayText(i.extractedText).readable,
-                  teacherOpenedAt: i.teacherOpenedAt,
-                  justification: i.justification,
-                  decision: i.decision,
-                  decisionOption: i.decisionOption,
-                  decisionNote: i.decisionNote,
-                  fileCount: fileCounts.get(i.id) ?? 0,
-                  legacy: isLegacy(i),
-                }))}
-              />
-          </>
-      </>
+      <InquiryReviewList
+        key={tab}
+        kind={tab === "all" ? "all" : tab}
+        inquiries={inquiries.map((i) => ({
+          id: i.id,
+          kind: i.kind,
+          teacherName: i.teacherName,
+          createdAt: i.createdAt,
+          delayMinutes: i.delayMinutes,
+          extractedText: displayText(i.extractedText).text,
+          textReadable: displayText(i.extractedText).readable,
+          teacherOpenedAt: i.teacherOpenedAt,
+          justification: i.justification,
+          decision: i.decision,
+          decisionOption: i.decisionOption,
+          decisionNote: i.decisionNote,
+          fileCount: fileCounts.get(i.id) ?? 0,
+          legacy: isLegacy(i),
+        }))}
+      />
     </div>
   );
 }

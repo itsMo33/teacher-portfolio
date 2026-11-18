@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import type { TeacherInquiryView } from "@/lib/inquiries";
-import { ABSENCE_OPTIONS, INQUIRY_KIND_LABEL, absenceOptionOf, inquiryDaysLeft } from "@/lib/inquiry-logic";
+import { ABSENCE_OPTIONS, INQUIRY_KIND_LABEL, LATE_REPLY_DAYS, absenceOptionOf, isLateReply } from "@/lib/inquiry-logic";
 import { InquiryFilesBox } from "@/components/inquiries/InquiryFilesBox";
 
 function day(iso: string) {
@@ -52,6 +52,7 @@ function Card({ item }: { item: TeacherInquiryView }) {
   }
 
   const absenceOutcome = item.kind === "absence" && decided ? ABSENCE_OPTIONS.find((o) => o.key === absenceOptionOf(item.decision, item.decisionOption)) : undefined;
+  const late = isLateReply({ createdAt: item.createdAt, justifiedAt: item.justifiedAt, decidedAt: item.decidedAt });
   const status = decided
     ? item.decision === "accepted"
       ? { label: absenceOutcome ? `تم قبول المسائلة: ${absenceOutcome.short}` : "تم قبول المسائلة", tone: "bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300" }
@@ -66,7 +67,10 @@ function Card({ item }: { item: TeacherInquiryView }) {
         <span className="font-semibold text-slate-900 dark:text-slate-50">
           {INQUIRY_KIND_LABEL[item.kind]} -- {day(item.createdAt)}
         </span>
-        <span className={`rounded-full px-2 py-0.5 text-xs ${status.tone}`}>{status.label}</span>
+        <span className="flex flex-wrap items-center gap-1.5">
+          {late && <span className="rounded-full bg-red-600 px-2 py-0.5 text-xs font-medium text-white">متأخر عن الرد</span>}
+          <span className={`rounded-full px-2 py-0.5 text-xs ${status.tone}`}>{status.label}</span>
+        </span>
       </button>
 
       {open && (
@@ -83,8 +87,8 @@ function Card({ item }: { item: TeacherInquiryView }) {
           )}
 
           {!decided && !item.justifiedAt && (
-            <p className={`text-xs ${inquiryDaysLeft(item.createdAt) <= 0 ? "text-red-600 dark:text-red-400" : "text-slate-500"}`}>
-              {inquiryDaysLeft(item.createdAt) <= 0 ? "انتهت مهلة الأسبوع للرد -- بادر بالرد الآن" : `المهلة للرد: باقي ${inquiryDaysLeft(item.createdAt)} يوم`}
+            <p className={`text-xs ${late ? "font-semibold text-red-600 dark:text-red-400" : "text-slate-500"}`}>
+              {late ? `متأخر عن الرد: مضى أكثر من ${LATE_REPLY_DAYS === 2 ? "يومين" : `${LATE_REPLY_DAYS} أيام`} على وصول المسائلة -- بادر بالرد الآن` : "المطلوب الرد خلال يومين من وصول المسائلة"}
             </p>
           )}
 

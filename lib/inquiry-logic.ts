@@ -412,3 +412,12 @@ export function absenceOptionOf(decision: InquiryDecision | null, option: Absenc
   if (decision === "rejected") return "deduct";
   return null;
 }
+
+/** A recipient who has not answered two days after the inquiry reached them is late with the reply. */
+export const LATE_REPLY_DAYS = 2;
+
+/** True for an inquiry still open (no decision) that nobody has answered, more than two days after it was sent. */
+export function isLateReply(inquiry: { createdAt: string; justifiedAt: string | null; decidedAt: string | null }, now: number = Date.now()): boolean {
+  if (inquiry.decidedAt || inquiry.justifiedAt) return false;
+  return now - new Date(inquiry.createdAt).getTime() > LATE_REPLY_DAYS * 24 * 60 * 60 * 1000;
+}
