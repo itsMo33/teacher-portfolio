@@ -197,7 +197,7 @@ async function InquiriesStats({ range }: { range: StatRange }) {
       <StatGrid>
         <StatCard label="كل المسائلات" value={s.total} />
         <StatCard label="مقبولة" value={s.accepted} tone="green" />
-        <StatCard label="مرفوضة" value={s.rejected} tone="red" />
+        <StatCard label="غير مقبولة" value={s.rejected} tone="red" />
         <StatCard label="بانتظار القرار" value={s.pending} tone="amber" />
         <StatCard label="متأخرة عن الرد (أكثر من يومين)" value={s.overdue} tone="red" />
         <StatCard label="عليها مرفقات" value={s.withFiles} tone="slate" />
@@ -206,7 +206,7 @@ async function InquiriesStats({ range }: { range: StatRange }) {
       </StatGrid>
       <ChartRow>
       <StatSection title="حالة المسائلات">
-        <DonutChart title="مسائلة" colors={["#1f7a4d", "#c0392b", "#e0a100"]} items={[["مقبولة", s.accepted], ["مرفوضة", s.rejected], ["بانتظار القرار", s.pending]]} />
+        <DonutChart title="مسائلة" colors={["#1f7a4d", "#c0392b", "#e0a100"]} items={[["مقبولة", s.accepted], ["غير مقبولة", s.rejected], ["بانتظار القرار", s.pending]]} />
       </StatSection>
       <StatSection title="المسائلات حسب النوع">
         <DonutChart title="مسائلة" items={s.byKind.map((k) => [KIND_LABELS[k.kind] ?? k.kind, k.total] as [string, number])} />
@@ -216,11 +216,11 @@ async function InquiriesStats({ range }: { range: StatRange }) {
         <ColumnChart items={s.byDay.slice(-14)} />
       </StatSection>
       <p className="text-xs text-slate-400">
-        نسبة القبول {pct(s.accepted)} · نسبة الرفض {pct(s.rejected)} · بدون قرار {pct(s.pending)}
+        نسبة القبول {pct(s.accepted)} · نسبة غير المقبولة {pct(s.rejected)} · بدون قرار {pct(s.pending)}
       </p>
       <StatSection title="حسب النوع">
         <DataTable
-          columns={["النوع", "الكل", "مقبولة", "مرفوضة", "بانتظار القرار"]}
+          columns={["النوع", "الكل", "مقبولة", "غير مقبولة", "بانتظار القرار"]}
           rows={s.byKind.map((k) => [KIND_LABELS[k.kind] ?? k.kind, k.total, k.accepted, k.rejected, k.pending])}
         />
       </StatSection>
@@ -229,7 +229,7 @@ async function InquiriesStats({ range }: { range: StatRange }) {
       </StatSection>
       <StatSection title="حسب المعلم" note="الأكثر مسائلات أولاً، ومجموع دقائق التأخر لكل واحد">
         <DataTable
-          columns={["المعلم", "الكل", "مقبولة", "مرفوضة", "بانتظار", "دقائق التأخر"]}
+          columns={["المعلم", "الكل", "مقبولة", "غير مقبولة", "بانتظار", "دقائق التأخر"]}
           rows={s.byTeacher.slice(0, 40).map((t) => [t.name, t.total, t.accepted, t.rejected, t.pending, t.minutes])}
         />
       </StatSection>

@@ -51,7 +51,7 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
     action: "decide_inquiry",
     targetTeacherId: inquiry.teacherId,
     targetTeacherName: inquiry.teacherName,
-    details: `${INQUIRY_KIND_LABEL[inquiry.kind]}: ${option ? option.short : decision === "accepted" ? "مقبولة" : "مرفوضة"}`,
+    details: `${INQUIRY_KIND_LABEL[inquiry.kind]}: ${option ? option.short : decision === "accepted" ? "مقبولة" : "غير مقبولة"}`,
   });
   return NextResponse.json({ success: true });
 }

@@ -40,7 +40,7 @@ const FILTERS: { key: Filter; label: string }[] = [
 /** How many show at first; the rest come with "عرض المزيد". */
 const PAGE_SIZE = 30;
 
-const DECISION_LABEL = { accepted: "مقبولة", rejected: "مرفوضة" } as const;
+const DECISION_LABEL = { accepted: "مقبولة", rejected: "غير مقبولة" } as const;
 
 function day(iso: string) {
   return new Date(iso).toLocaleDateString("ar-SA", { day: "numeric", month: "long" });
@@ -220,7 +220,7 @@ function Row({ item }: { item: ReviewInquiry }) {
               onClick={() => send("PUT", "rejected")}
               className="rounded-lg bg-red-600 hover:bg-red-700 text-white text-xs px-3 py-1.5 disabled:opacity-50"
             >
-              رفض
+              غير مقبول
             </button>
           </div>
           )}
@@ -240,7 +240,7 @@ function Row({ item }: { item: ReviewInquiry }) {
 const CARDS: { filter: Filter; label: string; tone: string }[] = [
   { filter: "all", label: "الكل", tone: "bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-200" },
   { filter: "accepted", label: "مقبولة", tone: "bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300" },
-  { filter: "rejected", label: "مرفوضة", tone: "bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300" },
+  { filter: "rejected", label: "غير مقبولة", tone: "bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300" },
   { filter: "awaiting", label: "بانتظار القرار", tone: "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300" },
 ];
 
