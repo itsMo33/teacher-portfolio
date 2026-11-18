@@ -43,17 +43,12 @@ export default async function TeacherDashboard() {
       100
   );
 
-  const neededNow = filesNeedingRevision.length + inquiryNotice.late + inquiryNotice.toJustify + inquiryNotice.newResults + classTimeFlags.length;
-
   return (
     <div>
       <div className="surface mb-6 flex items-center justify-between gap-4 p-5">
         <div className="min-w-0">
           <p className="text-sm text-slate-500 dark:text-slate-400">مرحبًا بك</p>
           <h2 className="truncate text-2xl font-bold tracking-tight text-slate-900 dark:text-slate-50">المعلم {session!.user.name}</h2>
-          <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
-            {neededNow === 0 ? "ما عندك شيء مطلوب الآن ✓" : `عندك ${neededNow} ${neededNow === 1 ? "شيء مطلوب" : "أشياء مطلوبة"} الآن`}
-          </p>
         </div>
         <div className="relative grid h-20 w-20 shrink-0 place-items-center" role="img" aria-label={`نسبة الإنجاز ${completionPercent}%`}>
           <svg viewBox="0 0 36 36" className="h-20 w-20 -rotate-90">
