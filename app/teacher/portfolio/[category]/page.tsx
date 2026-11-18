@@ -9,6 +9,7 @@ import { ImpactMeasurementSection } from "@/components/portfolio/ImpactMeasureme
 import { countInquiries, listInquiries, toTeacherView } from "@/lib/inquiries";
 import { InquirySummary } from "@/components/inquiries/InquirySummary";
 import { TeacherInquiries } from "@/components/inquiries/TeacherInquiries";
+import { getExemptDates } from "@/lib/inquiry-exempt";
 
 export default async function TeacherPortfolioSectionPage({
   params,
@@ -27,6 +28,8 @@ export default async function TeacherPortfolioSectionPage({
 
   // مسائلات: the inquiries sent to this teacher (a teacher sees a result only once رائد has decided it)
   const inquiries = section.key === "accountability" ? (await listInquiries({ teacherId })).map(toTeacherView) : [];
+
+  const exemptDates = section.key === "accountability" ? (await getExemptDates([{ id: teacherId, name: session!.user.name ?? "" }])).get(teacherId) ?? [] : [];
 
   const subsections = section.hasSubsections ? section.subsections! : [{ key: "", labelAr: "" }];
 
@@ -67,7 +70,7 @@ export default async function TeacherPortfolioSectionPage({
       {section.key === "accountability" && (
         <div className="flex flex-col gap-3">
           <InquirySummary counts={countInquiries(inquiries)} />
-          <TeacherInquiries inquiries={inquiries} />
+          <TeacherInquiries inquiries={inquiries} exemptDates={exemptDates} />
         </div>
       )}
 

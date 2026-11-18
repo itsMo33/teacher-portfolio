@@ -269,7 +269,7 @@ export function AdminShell({
           {[
             { href: "/admin", label: "الرئيسية", icon: "home" as IconName, badge: 0 },
             { href: "/admin/teachers", label: "المعلمون", icon: "users" as IconName, badge: 0 },
-            { href: "/admin/inquiries", label: "المسائلات", icon: "scale" as IconName, badge: alerts.find((a) => a.href.includes("filter=awaiting"))?.count ?? 0 },
+            { href: "/admin/inquiries", label: "المسائلات", icon: "scale" as IconName, badge: (alerts.find((a) => a.href.includes("filter=admin&") || a.href.endsWith("filter=admin"))?.count ?? 0) + (alerts.find((a) => a.href.includes("filter=teacher_late"))?.count ?? 0) },
           ].map((t) => {
             const on = t.href === "/admin" ? pathname === "/admin" : pathname.startsWith(t.href);
             return (

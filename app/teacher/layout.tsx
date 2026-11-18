@@ -2,6 +2,7 @@ import { auth } from "@/lib/auth/auth-options";
 import { AppShell, type NavItem } from "@/components/ui/AppShell";
 import { PORTFOLIO_SECTIONS, TEACHER_SECTIONS } from "@/lib/portfolio-sections";
 import { inquiryAttention, listInquiries, toTeacherView } from "@/lib/inquiries";
+import { getExemptDates } from "@/lib/inquiry-exempt";
 
 function buildNavItems(canBuildSchedule?: boolean, canTrackClassTime?: boolean, inquiryCount = 0): NavItem[] {
   return [
@@ -41,7 +42,8 @@ export default async function TeacherLayout({ children }: { children: React.Reac
   const session = await auth();
   let inquiryNavCount = 0;
   if (session?.user?.role === "teacher" || session?.user?.role === "staff") {
-    const attention = inquiryAttention((await listInquiries({ teacherId: session.user.id })).map(toTeacherView));
+    const ownExempt = (await getExemptDates([{ id: session.user.id, name: session.user.name ?? "" }])).get(session.user.id) ?? [];
+    const attention = inquiryAttention((await listInquiries({ teacherId: session.user.id })).map(toTeacherView), ownExempt);
     inquiryNavCount = attention.toJustify + attention.newResults;
   }
 

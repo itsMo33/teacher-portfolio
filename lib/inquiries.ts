@@ -306,11 +306,11 @@ export function countInquiries(list: { decision: InquiryDecision | null }[]): In
 
 /** What needs a teacher's attention: inquiries still waiting for their justification, and results decided in the
  *  last 7 days. Used for the dashboard notice and the count on the menu. */
-export function inquiryAttention(list: TeacherInquiryView[]): { toJustify: number; newResults: number; late: number } {
+export function inquiryAttention(list: TeacherInquiryView[], exempt: readonly string[] = []): { toJustify: number; newResults: number; late: number } {
   const weekAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
   return {
     toJustify: list.filter((i) => !i.decision && !i.justifiedAt).length,
-    late: list.filter((i) => isLateReply({ createdAt: i.createdAt, justifiedAt: i.justifiedAt, decidedAt: i.decidedAt })).length,
+    late: list.filter((i) => isLateReply({ createdAt: i.createdAt, justifiedAt: i.justifiedAt, decidedAt: i.decidedAt }, Date.now(), exempt)).length,
     newResults: list.filter((i) => i.decision !== null && i.decidedAt && new Date(i.decidedAt).getTime() >= weekAgo).length,
   };
 }

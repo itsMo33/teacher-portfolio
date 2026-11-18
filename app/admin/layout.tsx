@@ -2,6 +2,7 @@ import { auth } from "@/lib/auth/auth-options";
 import type { NavItem } from "@/components/ui/AppShell";
 import { AdminShell, type AdminAlert } from "@/components/admin/AdminShell";
 import { getAdminAlerts } from "@/lib/admin-alerts";
+import { getExemptDates } from "@/lib/inquiry-exempt";
 import { getSchoolManagementCategory } from "@/lib/school-files";
 import { canReview } from "@/lib/weekly-review";
 import { getReferralActor } from "@/lib/student-referrals";
@@ -86,7 +87,8 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   if (session && session.user.role !== "teacher") {
     const own = (await listInquiries({ teacherId: session.user.id })).map(toTeacherView);
     if (own.length > 0) {
-      const attention = inquiryAttention(own);
+      const ownExempt = (await getExemptDates([{ id: session.user.id, name: session.user.name ?? "" }])).get(session.user.id) ?? [];
+      const attention = inquiryAttention(own, ownExempt);
       const count = attention.toJustify + attention.newResults;
       ownInquiryNav = [{ href: "/admin/my-inquiries", label: count > 0 ? `مسائلاتي (${count})` : "مسائلاتي" }];
     }
@@ -100,9 +102,10 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   const counts = fullAdmin ? await getAdminAlerts({ inquiries: reviewer, referrals: referralViewer }) : null;
   const alerts: AdminAlert[] = counts
     ? [
-        { label: "مسائلات بانتظار قرارك", count: counts.inquiriesAwaiting, href: "/admin/inquiries?filter=awaiting", tone: "amber" },
-        { label: "مسائلات متأخرة عن الرد", count: counts.inquiriesLate, href: "/admin/inquiries?filter=late", tone: "red" },
-        { label: "مسائلات لم يفتحها المعلم", count: counts.inquiriesUnopened, href: "/admin/inquiries?filter=unopened", tone: "blue" },
+        { label: "تنتظر قرارك (ردّ عليها المعلم)", count: counts.inquiriesAdmin, href: "/admin/inquiries?filter=admin", tone: "amber" },
+        { label: "متأخرة عن القرار (تقصير إدارة)", count: counts.inquiriesAdminLate, href: "/admin/inquiries?filter=admin_late", tone: "red" },
+        { label: "جاهزة للبت (انقضت مهلة المعلم بدون رد)", count: counts.inquiriesReady, href: "/admin/inquiries?filter=teacher_late", tone: "red" },
+        { label: "عند المعلمين (في مهلتهم)", count: counts.inquiriesWithTeachers, href: "/admin/inquiries?filter=with_teacher", tone: "blue" },
         { label: "تحويلات طلاب لم تُفتح", count: counts.referralsUnopened, href: "/admin/student-referrals", tone: "blue" },
       ]
     : [];
@@ -113,7 +116,8 @@ export default async function AdminLayout({ children }: { children: React.ReactN
       userName={session?.user?.name ?? ""}
       navItems={navItems}
       alerts={alerts}
-      bellCount={counts ? counts.inquiriesAwaiting + counts.referralsUnopened : 0}
+      // what the administration can act on now (the ones with teachers, still inside their time, are not on it)
+      bellCount={counts ? counts.inquiriesAdmin + counts.inquiriesReady + counts.referralsUnopened : 0}
       grouped={fullAdmin}
       demoViewOnly={session?.user?.demoViewOnly}
     >

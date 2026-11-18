@@ -199,7 +199,7 @@ async function InquiriesStats({ range }: { range: StatRange }) {
         <StatCard label="مقبولة" value={s.accepted} tone="green" />
         <StatCard label="غير مقبولة" value={s.rejected} tone="red" />
         <StatCard label="بانتظار القرار" value={s.pending} tone="amber" />
-        <StatCard label="متأخرة عن الرد (أكثر من يومين)" value={s.overdue} tone="red" />
+        <StatCard label="متأخرة عن الرد (تقصير معلم)" value={s.overdue} tone="red" />
         <StatCard label="عليها مرفقات" value={s.withFiles} tone="slate" />
         <StatCard label="متوسط أيام الرد" value={s.avgDaysToAnswer ?? "—"} tone="slate" />
         <StatCard label="متوسط أيام القرار" value={s.avgDaysToDecision ?? "—"} tone="slate" />
@@ -232,6 +232,18 @@ async function InquiriesStats({ range }: { range: StatRange }) {
           columns={["المعلم", "الكل", "مقبولة", "غير مقبولة", "بانتظار", "دقائق التأخر"]}
           rows={s.byTeacher.slice(0, 40).map((t) => [t.name, t.total, t.accepted, t.rejected, t.pending, t.minutes])}
         />
+      </StatSection>
+      <StatSection title="زمن رد المعلمين" note="بأيام الدراسة (الأحد إلى الخميس، بدون أيام الاستئذان): كم ردّ، ومتوسط وقت الرد، وكم عنده مفتوحة ومتأخرة">
+        <DataTable
+          columns={["المعلم", "ردّ", "متوسط الرد (أيام)", "مفتوحة عنده", "متأخر عن الرد", "بُتّ بدون رد"]}
+          rows={s.teacherResponse.map((t) => [t.name, t.replied, t.avgDays ?? "—", t.open, t.late, t.decidedWithoutReply])}
+        />
+      </StatSection>
+      <StatSection title="زمن قرار الإدارة" note="بأيام الدراسة، من رد المعلم إلى القرار">
+        <DataTable columns={["من قرّر", "المسائلات", "متوسط الوقت للقرار (أيام)"]} rows={s.adminDecisions.map((d) => [d.name, d.decided, d.avgDays ?? "—"])} />
+        <p className="text-xs text-slate-500">
+          عند الإدارة الحين: {s.adminWaiting.waiting} مسائلة ردّ عليها المعلم وتنتظر القرار، منها {s.adminWaiting.late} متأخرة عن القرار (أكثر من يومين دراسة).
+        </p>
       </StatSection>
       <StatSection title="لكل معلم حسب نوع المسائلة">
         <DataTable columns={["المعلم", "تأخير (حضوري)", "غياب", "أخرى", "المجموع"]} rows={matrixRows(s.byTeacherKinds)} />

@@ -8,6 +8,8 @@ import { InquiryReviewList } from "@/components/inquiries/InquiryReviewList";
 import { OfficerSentList } from "@/components/inquiries/OfficerSentList";
 import { countInquiryFiles } from "@/lib/inquiry-files";
 import { WeeklyPrintButton } from "@/components/inquiries/WeeklyPrintButton";
+import { inquiryStage } from "@/lib/inquiry-clock";
+import { getExemptDates } from "@/lib/inquiry-exempt";
 
 type Tab = "all" | "delay" | "absence" | "other";
 
@@ -36,6 +38,11 @@ export default async function InquiriesPage({ searchParams }: { searchParams: Pr
   // the older file inquiries brought over (already decided) have their own place in the list (the archive)
   const isLegacy = (i: { extractedText: string }) => i.extractedText.startsWith("مسائلة مرفوعة كملف");
   const shown = ofTab.filter((i) => !isLegacy(i));
+
+  // the days a teacher is excused, for the teachers whose inquiries are still open (their reply clock skips those days)
+  const openTeachers = new Map<string, string>();
+  for (const i of inquiries) if (!i.decision && !isLegacy(i)) openTeachers.set(i.teacherId, i.teacherName);
+  const exempt = await getExemptDates([...openTeachers].map(([id, name]) => ({ id, name })));
 
   // what the uploading account sent itself, grouped by upload (for its delete buttons)
   const sentBatches = (() => {
@@ -112,6 +119,9 @@ export default async function InquiriesPage({ searchParams }: { searchParams: Pr
           kind: i.kind,
           teacherName: i.teacherName,
           createdAt: i.createdAt,
+          justifiedAt: i.justifiedAt,
+          stage: inquiryStage({ createdAt: i.createdAt, teacherOpenedAt: i.teacherOpenedAt, justifiedAt: i.justifiedAt, decidedAt: i.decidedAt }, exempt.get(i.teacherId) ?? []),
+          exemptDates: exempt.get(i.teacherId) ?? [],
           delayMinutes: i.delayMinutes,
           extractedText: displayText(i.extractedText).text,
           textReadable: displayText(i.extractedText).readable,

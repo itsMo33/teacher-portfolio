@@ -1,6 +1,8 @@
 import "server-only";
 import { supabaseAdmin } from "@/lib/supabase/server";
-import { ABSENCE_OPTIONS, absenceOptionOf, isLateReply, type AbsenceOption } from "@/lib/inquiry-logic";
+import { ABSENCE_OPTIONS, absenceOptionOf, type AbsenceOption } from "@/lib/inquiry-logic";
+import { inquiryStage, schoolMsBetween } from "@/lib/inquiry-clock";
+import { getExemptDates } from "@/lib/inquiry-exempt";
 
 export type StatRange = "week" | "month" | "all";
 
@@ -114,6 +116,11 @@ export interface InquiryStats {
   byDay: [string, number][];
   /** How the decided absence inquiries ended (the form's three outcomes). */
   absenceOutcomes: [string, number][];
+  /** Per teacher: how fast they answer (school days) and how many are open or late on their side. */
+  teacherResponse: { name: string; replied: number; avgDays: number | null; open: number; late: number; decidedWithoutReply: number }[];
+  /** Per person who decided: how fast they decide after the teacher's answer (school days); and the administration's open ones. */
+  adminDecisions: { name: string; decided: number; avgDays: number | null }[];
+  adminWaiting: { waiting: number; late: number };
 }
 
 export async function getInquiryStats(range: StatRange): Promise<InquiryStats> {
@@ -128,8 +135,10 @@ export async function getInquiryStats(range: StatRange): Promise<InquiryStats> {
       justified_at: string | null;
       decision: string | null;
       decided_at: string | null;
+      decided_by: string | null;
+      teacher_opened_at: string | null;
     }>((from, to) => {
-      let q = supabaseAdmin.from("inquiries").select("id, kind, teacher_id, created_at, delay_minutes, justified_at, decision, decided_at").order("created_at");
+      let q = supabaseAdmin.from("inquiries").select("id, kind, teacher_id, created_at, delay_minutes, justified_at, decision, decided_at, decided_by, teacher_opened_at").order("created_at");
       if (since) q = q.gte("created_at", since);
       return q.range(from, to);
     }),
@@ -144,13 +153,12 @@ export async function getInquiryStats(range: StatRange): Promise<InquiryStats> {
   if (!filesRes.error) withFilesIds = new Set((filesRes.data ?? []).map((f) => f.inquiry_id as string));
 
   const state = (r: { decision: string | null }) => (r.decision === "accepted" ? "accepted" : r.decision === "rejected" ? "rejected" : "pending");
-  const now = Date.now();
   const stats: InquiryStats = {
     total: rows.length,
     accepted: rows.filter((r) => state(r) === "accepted").length,
     rejected: rows.filter((r) => state(r) === "rejected").length,
     pending: rows.filter((r) => state(r) === "pending").length,
-    overdue: rows.filter((r) => isLateReply({ createdAt: r.created_at, justifiedAt: r.justified_at, decidedAt: r.decided_at }, now)).length,
+    overdue: 0,
     withFiles: rows.filter((r) => withFilesIds.has(r.id)).length,
     avgDaysToAnswer: avgDays(rows.map((r) => [r.created_at, r.justified_at])),
     avgDaysToDecision: avgDays(rows.map((r) => [r.created_at, r.decided_at])),
@@ -161,6 +169,9 @@ export async function getInquiryStats(range: StatRange): Promise<InquiryStats> {
     byTeacher: [],
     byTeacherKinds: matrix(rows, (r) => names.get(r.teacher_id), (r) => r.kind, ["delay", "absence", "other"]),
     absenceOutcomes: await absenceOutcomeCounts(rows),
+    teacherResponse: [],
+    adminDecisions: [],
+    adminWaiting: { waiting: 0, late: 0 },
     byDay: count(rows, (r) => r.created_at.slice(0, 10)).sort((a, b) => a[0].localeCompare(b[0])),
   };
 
@@ -173,6 +184,37 @@ export async function getInquiryStats(range: StatRange): Promise<InquiryStats> {
     per.set(r.teacher_id, e);
   }
   stats.byTeacher = [...per.values()].sort((a, b) => b.total - a.total || b.minutes - a.minutes);
+
+  // the two clocks, in school time: the teacher's (sent -> answered) and the administration's (answered -> decided)
+  const DAY = 24 * 60 * 60 * 1000;
+  const exempt = await getExemptDates([...new Set(rows.map((r) => r.teacher_id))].map((id) => ({ id, name: names.get(id) ?? "" })));
+  const mean = (list: number[]) => (list.length ? Math.round((list.reduce((x, y) => x + y, 0) / list.length / DAY) * 10) / 10 : null);
+  const resp = new Map<string, { name: string; times: number[]; open: number; late: number; decidedWithoutReply: number }>();
+  const decisions = new Map<string, { name: string; times: number[] }>();
+  const adminWaiting = { waiting: 0, late: 0 };
+  for (const r of rows) {
+    const ex = exempt.get(r.teacher_id) ?? [];
+    const e = resp.get(r.teacher_id) ?? { name: names.get(r.teacher_id) ?? "—", times: [], open: 0, late: 0, decidedWithoutReply: 0 };
+    if (r.justified_at) e.times.push(schoolMsBetween(new Date(r.created_at).getTime(), new Date(r.justified_at).getTime(), ex));
+    else if (r.decided_at) e.decidedWithoutReply++;
+    const stage = inquiryStage({ createdAt: r.created_at, teacherOpenedAt: r.teacher_opened_at, justifiedAt: r.justified_at, decidedAt: r.decided_at }, ex);
+    if (stage === "teacher_unopened" || stage === "teacher_opened" || stage === "teacher_late") e.open++;
+    if (stage === "teacher_late") e.late++;
+    resp.set(r.teacher_id, e);
+    if (r.decided_at && r.justified_at && r.decided_by) {
+      const d = decisions.get(r.decided_by) ?? { name: names.get(r.decided_by) ?? "—", times: [] };
+      d.times.push(schoolMsBetween(new Date(r.justified_at).getTime(), new Date(r.decided_at).getTime()));
+      decisions.set(r.decided_by, d);
+    }
+    if (stage === "admin" || stage === "admin_late") adminWaiting.waiting++;
+    if (stage === "admin_late") adminWaiting.late++;
+  }
+  stats.overdue = [...resp.values()].reduce((n, e) => n + e.late, 0);
+  stats.teacherResponse = [...resp.values()]
+    .map((e) => ({ name: e.name, replied: e.times.length, avgDays: mean(e.times), open: e.open, late: e.late, decidedWithoutReply: e.decidedWithoutReply }))
+    .sort((a, b) => b.late - a.late || b.open - a.open || a.name.localeCompare(b.name, "ar"));
+  stats.adminDecisions = [...decisions.values()].map((d) => ({ name: d.name, decided: d.times.length, avgDays: mean(d.times) })).sort((a, b) => b.decided - a.decided);
+  stats.adminWaiting = adminWaiting;
   return stats;
 }
 

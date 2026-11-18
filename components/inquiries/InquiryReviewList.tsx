@@ -2,7 +2,8 @@
 
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { ABSENCE_OPTIONS, INQUIRY_KIND_LABEL, absenceOptionOf, isLateReply, type AbsenceOption, type InquiryKind } from "@/lib/inquiry-logic";
+import { ABSENCE_OPTIONS, INQUIRY_KIND_LABEL, absenceOptionOf, type AbsenceOption, type InquiryKind } from "@/lib/inquiry-logic";
+import type { InquiryStage } from "@/lib/inquiry-clock";
 import { InquiryFilesBox } from "@/components/inquiries/InquiryFilesBox";
 import { ReplyTimer } from "@/components/inquiries/ReplyTimer";
 
@@ -11,6 +12,12 @@ export interface ReviewInquiry {
   kind: InquiryKind;
   teacherName: string;
   createdAt: string;
+  /** When the teacher answered (null until they do). */
+  justifiedAt: string | null;
+  /** Whose turn it is and whether they are late, in school time (worked out on the server). */
+  stage: InquiryStage;
+  /** The days the teacher is excused (their clock does not run on them). */
+  exemptDates: string[];
   delayMinutes: number | null;
   extractedText: string;
   textReadable: boolean;
@@ -25,18 +32,22 @@ export interface ReviewInquiry {
   legacy: boolean;
 }
 
-type Filter = "all" | "awaiting" | "late" | "unopened" | "unjustified" | "decided" | "accepted" | "rejected" | "archive";
+type Filter = "all" | "admin" | "admin_late" | "teacher_late" | "with_teacher" | "unopened" | "decided" | "archive";
 
-/** The filter chips, الكل first. */
+/** The filter chips, الكل first, then by whose turn it is. */
 const FILTERS: { key: Filter; label: string }[] = [
   { key: "all", label: "الكل" },
-  { key: "awaiting", label: "بانتظار قراري" },
-  { key: "late", label: "متأخر عن الرد" },
+  { key: "admin", label: "تنتظر قراري" },
+  { key: "admin_late", label: "متأخرة عن القرار" },
+  { key: "teacher_late", label: "متأخر عن الرد (جاهزة للبت)" },
+  { key: "with_teacher", label: "عند المعلمين (في مهلتهم)" },
   { key: "unopened", label: "لم يفتحها المعلم" },
-  { key: "unjustified", label: "لم يبرر" },
   { key: "decided", label: "تم البت فيها" },
   { key: "archive", label: "الأرشيف (القديمة)" },
 ];
+
+/** Old links and alerts used other words for these. */
+const FILTER_ALIASES: Record<string, Filter> = { awaiting: "admin", late: "teacher_late", unjustified: "with_teacher" };
 
 /** How many show at first; the rest come with "عرض المزيد". */
 const PAGE_SIZE = 30;
@@ -47,20 +58,21 @@ function day(iso: string) {
   return new Date(iso).toLocaleDateString("ar-SA", { day: "numeric", month: "long" });
 }
 
-const late = (i: ReviewInquiry) => isLateReply({ createdAt: i.createdAt, justifiedAt: i.justification ? i.createdAt : null, decidedAt: i.decision ? i.createdAt : null });
+/** The inquiry is the teacher's to answer, or the administration's to decide. */
+const withTeacher = (i: ReviewInquiry) => i.stage === "teacher_unopened" || i.stage === "teacher_opened" || i.stage === "teacher_late";
+const withAdmin = (i: ReviewInquiry) => i.stage === "admin" || i.stage === "admin_late";
 
-/** "Not opened" and "not answered" only make sense while an inquiry is still open -- once it is decided they say nothing --
- *  and the older file inquiries live in their own place (the archive) so they do not crowd the current ones. */
+/** Each filter looks at whose turn it is: what is the administration's, what is still the teacher's (and so not the
+ *  administration's delay), and what is late on either side. The older file inquiries live apart, in the archive. */
 function matches(i: ReviewInquiry, f: Filter): boolean {
   if (f === "archive") return i.legacy;
   if (i.legacy) return false;
-  if (f === "awaiting") return !i.decision;
-  if (f === "late") return late(i);
-  if (f === "unopened") return !i.decision && !i.teacherOpenedAt;
-  if (f === "unjustified") return !i.decision && !i.justification;
-  if (f === "decided") return !!i.decision;
-  if (f === "accepted") return i.decision === "accepted";
-  if (f === "rejected") return i.decision === "rejected";
+  if (f === "admin") return withAdmin(i);
+  if (f === "admin_late") return i.stage === "admin_late";
+  if (f === "teacher_late") return i.stage === "teacher_late";
+  if (f === "with_teacher") return i.stage === "teacher_unopened" || i.stage === "teacher_opened";
+  if (f === "unopened") return i.stage === "teacher_unopened";
+  if (f === "decided") return i.stage === "decided";
   return true;
 }
 
@@ -101,7 +113,6 @@ function Row({ item }: { item: ReviewInquiry }) {
   }
 
   const isDelay = item.kind === "delay";
-  const isLate = late(item);
 
   return (
     <li className="flex flex-col gap-2 rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-3 text-sm">
@@ -115,30 +126,11 @@ function Row({ item }: { item: ReviewInquiry }) {
         </div>
         <div className="flex flex-wrap gap-1.5 text-xs">
           {item.legacy && <span className="rounded-full px-2 py-0.5 bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300">قديمة</span>}
-          {/* opened / answered only matter while the inquiry is open */}
-          {!item.decision && (
-            <>
-              <span
-                className={`rounded-full px-2 py-0.5 ${
-                  item.teacherOpenedAt
-                    ? "bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300"
-                    : "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300"
-                }`}
-              >
-                {item.teacherOpenedAt ? `فتحها ${day(item.teacherOpenedAt)}` : "لم يفتحها"}
-              </span>
-              <span
-                className={`rounded-full px-2 py-0.5 ${
-                  item.justification
-                    ? "bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300"
-                    : "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300"
-                }`}
-              >
-                {item.justification ? "برّر" : "لم يبرر"}
-              </span>
-            </>
-          )}
-          {isLate && <span className="rounded-full px-2 py-0.5 bg-red-600 text-white font-medium">متأخر عن الرد</span>}
+          {item.stage === "teacher_unopened" && <span className="rounded-full px-2 py-0.5 bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300">عند المعلم · لم يفتحها</span>}
+          {item.stage === "teacher_opened" && <span className="rounded-full px-2 py-0.5 bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300">عند المعلم · فتحها ولم يردّ</span>}
+          {item.stage === "teacher_late" && <span className="rounded-full px-2 py-0.5 bg-red-600 text-white font-medium">متأخر عن الرد (المعلم)</span>}
+          {item.stage === "admin" && <span className="rounded-full px-2 py-0.5 bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300">ردّ المعلم · تنتظر قرارك</span>}
+          {item.stage === "admin_late" && <span className="rounded-full px-2 py-0.5 bg-orange-700 text-white font-medium">متأخرة عن القرار (الإدارة)</span>}
           {item.decision && (
             <span
               className={`rounded-full px-2 py-0.5 ${
@@ -153,7 +145,8 @@ function Row({ item }: { item: ReviewInquiry }) {
         </div>
       </div>
 
-      {!item.decision && !item.justification && !item.legacy && <ReplyTimer createdAt={item.createdAt} compact />}
+      {!item.legacy && withTeacher(item) && <ReplyTimer from={item.createdAt} exempt={item.exemptDates} subject="reply" compact />}
+      {!item.legacy && withAdmin(item) && item.justifiedAt && <ReplyTimer from={item.justifiedAt} subject="decision" compact />}
 
       {item.justification && (
         <p className="rounded-lg bg-slate-50 dark:bg-slate-800/50 p-2 text-slate-700 dark:text-slate-200">«{item.justification}»</p>
@@ -185,6 +178,8 @@ function Row({ item }: { item: ReviewInquiry }) {
 
       {!item.decision ? (
         <div className="flex flex-col gap-2 border-t border-slate-100 dark:border-slate-800 pt-2">
+          {item.stage === "teacher_late" && <p className="text-xs text-red-700 dark:text-red-300">انقضت مهلة المعلم بدون رد -- تقدر تبت فيها الحين (تُطبع بدون إفادة).</p>}
+          {(item.stage === "teacher_unopened" || item.stage === "teacher_opened") && <p className="text-xs text-slate-500">لسا في مهلة المعلم للرد. تقدر تبت فيها لكن الأفضل تنتظر ردّه.</p>}
           <input
             value={note}
             onChange={(e) => setNote(e.target.value)}
@@ -242,23 +237,28 @@ function Row({ item }: { item: ReviewInquiry }) {
 
 const CARDS: { filter: Filter; label: string; tone: string }[] = [
   { filter: "all", label: "الكل", tone: "bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-200" },
-  { filter: "accepted", label: "مقبولة", tone: "bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300" },
-  { filter: "rejected", label: "غير مقبولة", tone: "bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300" },
-  { filter: "awaiting", label: "بانتظار القرار", tone: "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300" },
+  { filter: "admin", label: "تنتظر قرارك", tone: "bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300" },
+  { filter: "with_teacher", label: "عند المعلمين", tone: "bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300" },
+  { filter: "teacher_late", label: "متأخر عن الرد", tone: "bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300" },
+  { filter: "decided", label: "تم البت فيها", tone: "bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300" },
 ];
 
-/** One teacher's inquiries together: a title with the counts, and the inquiries inside when it is opened. */
+/** One teacher's inquiries together: a title with where they stand, and the inquiries inside when it is opened. */
 function TeacherGroup({ name, items }: { name: string; items: ReviewInquiry[] }) {
-  const waiting = items.filter((i) => !i.decision).length;
-  const lateCount = items.filter(late).length;
+  const atTeacher = items.filter(withTeacher).length;
+  const atAdmin = items.filter(withAdmin).length;
+  const teacherLate = items.filter((i) => i.stage === "teacher_late").length;
+  const adminLate = items.filter((i) => i.stage === "admin_late").length;
   return (
     <details className="rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900">
       <summary className="flex cursor-pointer flex-wrap items-center justify-between gap-2 p-3 text-sm">
         <span className="font-bold text-slate-900 dark:text-slate-50">{name}</span>
         <span className="flex flex-wrap gap-1.5 text-xs">
           <span className="rounded-full bg-slate-100 px-2 py-0.5 text-slate-600 dark:bg-slate-800 dark:text-slate-300">{items.length} مسائلة</span>
-          {waiting > 0 && <span className="rounded-full bg-amber-100 px-2 py-0.5 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300">بانتظار {waiting}</span>}
-          {lateCount > 0 && <span className="rounded-full bg-red-600 px-2 py-0.5 text-white">متأخر {lateCount}</span>}
+          {atTeacher > 0 && <span className="rounded-full bg-blue-100 px-2 py-0.5 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300">عنده {atTeacher}</span>}
+          {teacherLate > 0 && <span className="rounded-full bg-red-600 px-2 py-0.5 text-white">متأخر عن الرد {teacherLate}</span>}
+          {atAdmin > 0 && <span className="rounded-full bg-amber-100 px-2 py-0.5 text-amber-800 dark:bg-amber-900/40 dark:text-amber-300">عند الإدارة {atAdmin}</span>}
+          {adminLate > 0 && <span className="rounded-full bg-orange-700 px-2 py-0.5 text-white">متأخرة عن القرار {adminLate}</span>}
         </span>
       </summary>
       <ul className="flex flex-col gap-2 border-t border-slate-100 p-2 dark:border-slate-800">
@@ -272,7 +272,10 @@ function TeacherGroup({ name, items }: { name: string; items: ReviewInquiry[] })
 
 export function InquiryReviewList({ inquiries, kind, initialFilter }: { inquiries: ReviewInquiry[]; kind: InquiryKind | "all"; initialFilter?: string }) {
   const ofKind = useMemo(() => (kind === "all" ? inquiries : inquiries.filter((i) => i.kind === kind)), [inquiries, kind]);
-  const [filter, setFilter] = useState<Filter>(() => (FILTERS.some((f) => f.key === initialFilter) ? (initialFilter as Filter) : "all"));
+  const [filter, setFilter] = useState<Filter>(() => {
+    const wanted = FILTER_ALIASES[initialFilter ?? ""] ?? initialFilter;
+    return FILTERS.some((f) => f.key === wanted) ? (wanted as Filter) : "all";
+  });
   const [search, setSearch] = useState("");
   const [limit, setLimit] = useState(PAGE_SIZE);
   const [byTeacher, setByTeacher] = useState(false);
@@ -282,14 +285,16 @@ export function InquiryReviewList({ inquiries, kind, initialFilter }: { inquirie
     const q = search.trim();
     const list = ofKind.filter((i) => matches(i, filter) && (!q || i.teacherName.includes(q)));
     // open ones first (the newest first within each group: the server already sends them newest first)
-    return [...list].sort((a, b) => Number(!!a.decision) - Number(!!b.decision));
+    return [...list].sort((a, b) => Number(a.stage === "decided") - Number(b.stage === "decided"));
   }, [ofKind, filter, search]);
 
   const groups = useMemo(() => {
     const m = new Map<string, ReviewInquiry[]>();
     for (const i of shown) m.set(i.teacherName, [...(m.get(i.teacherName) ?? []), i]);
-    // the teacher with the most waiting / late first
-    return [...m.entries()].sort((a, b) => b[1].filter(late).length - a[1].filter(late).length || b[1].filter((i) => !i.decision).length - a[1].filter((i) => !i.decision).length || a[0].localeCompare(b[0], "ar"));
+    // the teacher with the most late replies first, then the one with the most still open
+    const lateOf = (l: ReviewInquiry[]) => l.filter((i) => i.stage === "teacher_late").length;
+    const openOf = (l: ReviewInquiry[]) => l.filter((i) => i.stage !== "decided").length;
+    return [...m.entries()].sort((a, b) => lateOf(b[1]) - lateOf(a[1]) || openOf(b[1]) - openOf(a[1]) || a[0].localeCompare(b[0], "ar"));
   }, [shown]);
 
   const pick = (f: Filter) => {
@@ -300,7 +305,7 @@ export function InquiryReviewList({ inquiries, kind, initialFilter }: { inquirie
   return (
     <div className="flex flex-col gap-3">
       {/* the mini dashboard: a tap on a box shows those inquiries */}
-      <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+      <div className="grid grid-cols-2 gap-2 sm:grid-cols-5">
         {CARDS.map((c) => (
           <button
             key={c.filter}
@@ -323,7 +328,7 @@ export function InquiryReviewList({ inquiries, kind, initialFilter }: { inquirie
             className={`rounded-full border px-3 py-1 text-xs transition-colors ${
               filter === f.key
                 ? "border-[var(--brand-primary)] bg-[var(--brand-primary)] text-white"
-                : f.key === "late" && count("late") > 0
+                : (f.key === "teacher_late" || f.key === "admin_late") && count(f.key) > 0
                   ? "border-red-400 text-red-700 dark:text-red-300 hover:bg-red-50 dark:hover:bg-red-900/20"
                   : "border-slate-300 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800"
             }`}

@@ -212,8 +212,11 @@ export async function buildCompletedForm(inquiry: Inquiry): Promise<Uint8Array |
   if (!doc) return null;
   const page = doc.getPage(0);
 
-  // the teacher's answer, on the dotted lines
+  // the teacher's answer, on the dotted lines; a decision with no answer says so
   let continuation: string | null = null;
+  if (!inquiry.justification && inquiry.decidedAt) {
+    await drawLine(doc, page, "لم يقدّم المعلم إفادة خلال المهلة المحددة.", { right: tpl.justificationRight, baseline: tpl.justificationBaselines[0] - 2, size: 9.5 });
+  }
   if (inquiry.justification) {
     let size = 9.5;
     let lines = wrap(inquiry.justification, size, tpl.justificationWidth);

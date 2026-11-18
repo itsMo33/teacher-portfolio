@@ -224,9 +224,10 @@ export default async function AdminDashboard() {
   const reviewer = !!session && canReview(session.user);
   const alerts = await getAdminAlerts({ inquiries: reviewer, referrals: !!session && getReferralActor(session.user) === "viewer" });
   const attention = [
-    { label: "مسائلات بانتظار قرارك", count: alerts.inquiriesAwaiting, href: "/admin/inquiries?filter=awaiting", tone: "amber" },
-    { label: "متأخرة عن الرد (أكثر من يومين)", count: alerts.inquiriesLate, href: "/admin/inquiries?filter=late", tone: "red" },
-    { label: "مسائلات لم يفتحها المعلم", count: alerts.inquiriesUnopened, href: "/admin/inquiries?filter=unopened", tone: "blue" },
+    { label: "تنتظر قرارك (ردّ عليها المعلم)", count: alerts.inquiriesAdmin, href: "/admin/inquiries?filter=admin", tone: "amber" },
+    { label: "متأخرة عن القرار (تقصير إدارة)", count: alerts.inquiriesAdminLate, href: "/admin/inquiries?filter=admin_late", tone: "red" },
+    { label: "جاهزة للبت -- انقضت مهلة المعلم بدون رد", count: alerts.inquiriesReady, href: "/admin/inquiries?filter=teacher_late", tone: "red" },
+    { label: "عند المعلمين (في مهلتهم)", count: alerts.inquiriesWithTeachers, href: "/admin/inquiries?filter=with_teacher", tone: "blue" },
     { label: "تحويلات طلاب لم تُفتح", count: alerts.referralsUnopened, href: "/admin/student-referrals", tone: "blue" },
     { label: "تنبيهات زمن الحصة اليوم", count: classTimeFlags.length, href: "/admin/teacher-performance?category=class_time_commitment", tone: "red" },
   ].filter((a) => a.count > 0);

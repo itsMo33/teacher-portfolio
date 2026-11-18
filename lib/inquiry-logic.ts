@@ -1,6 +1,8 @@
 /** The pure part of the مسائلات workflow (no database, no PDF reading): turning a PDF's text into one
  *  item per teacher, and the silent decision rule for the delay inquiries. Kept apart so it can be tested. */
 
+import { INQUIRY_WINDOW_DAYS, INQUIRY_WINDOW_MS, schoolMsBetween } from "@/lib/inquiry-clock";
+
 export type InquiryKind = "delay" | "absence" | "other";
 export type InquiryDecision = "accepted" | "rejected";
 
@@ -413,11 +415,16 @@ export function absenceOptionOf(decision: InquiryDecision | null, option: Absenc
   return null;
 }
 
-/** A recipient who has not answered two days after the inquiry reached them is late with the reply. */
-export const LATE_REPLY_DAYS = 2;
+/** A recipient who has not answered within two school days of the inquiry reaching them is late with the reply. */
+export const LATE_REPLY_DAYS = INQUIRY_WINDOW_DAYS;
 
-/** True for an inquiry still open (no decision) that nobody has answered, more than two days after it was sent. */
-export function isLateReply(inquiry: { createdAt: string; justifiedAt: string | null; decidedAt: string | null }, now: number = Date.now()): boolean {
+/** True for an inquiry still open (no decision) that nobody has answered, once the two school days are over (Friday,
+ *  Saturday and the teacher's excused days do not count). */
+export function isLateReply(
+  inquiry: { createdAt: string; justifiedAt: string | null; decidedAt: string | null },
+  now: number = Date.now(),
+  exempt: readonly string[] = []
+): boolean {
   if (inquiry.decidedAt || inquiry.justifiedAt) return false;
-  return now - new Date(inquiry.createdAt).getTime() > LATE_REPLY_DAYS * 24 * 60 * 60 * 1000;
+  return schoolMsBetween(new Date(inquiry.createdAt).getTime(), now, exempt) > INQUIRY_WINDOW_MS;
 }

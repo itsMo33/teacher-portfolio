@@ -1,12 +1,11 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { LATE_REPLY_DAYS } from "@/lib/inquiry-logic";
+import { INQUIRY_WINDOW_MS, schoolMsBetween } from "@/lib/inquiry-clock";
 
 const HOUR = 60 * 60 * 1000;
-const WINDOW = LATE_REPLY_DAYS * 24 * HOUR;
 
-/** The colour of the bar as the time to answer runs out: green, then yellow, orange and red, and a dark red once late. */
+/** The colour of the bar as the time runs out: green, then yellow, orange and red, and a dark red once late. */
 const STOPS: [number, [number, number, number]][] = [
   [0, [34, 197, 94]],
   [0.4, [234, 179, 8]],
@@ -37,9 +36,21 @@ function span(ms: number): string {
   return `${days === 1 ? "يوم" : `${days} أيام`}${rest > 0 ? ` و${rest} ساعة` : ""}`;
 }
 
-/** A bar for an inquiry nobody has answered yet: it fills as the two days to answer pass, going from green to red,
- *  and turns dark red and says "متأخر عن الرد" when the time is up. */
-export function ReplyTimer({ createdAt, compact = false }: { createdAt: string; compact?: boolean }) {
+/** A bar that fills as the two school days run out, going from green to red, and turns dark red and says who is late
+ *  when the time is up. `subject` is whose clock it is: the teacher's reply ("reply") or the administration's decision
+ *  ("decision"). Friday, Saturday and the teacher's excused days do not count. */
+export function ReplyTimer({
+  from,
+  exempt = [],
+  subject = "reply",
+  compact = false,
+}: {
+  /** When the clock started: the inquiry reaching the teacher (reply), or the teacher's answer (decision). */
+  from: string;
+  exempt?: string[];
+  subject?: "reply" | "decision";
+  compact?: boolean;
+}) {
   // the clock is read after the page loads (a server-rendered time would not match the browser's)
   const [now, setNow] = useState<number | null>(null);
   useEffect(() => {
@@ -50,11 +61,13 @@ export function ReplyTimer({ createdAt, compact = false }: { createdAt: string; 
   }, []);
   if (now === null) return <div className={compact ? "h-1.5" : "h-6"} />;
 
-  const elapsed = now - new Date(createdAt).getTime();
-  const progress = Math.max(0, elapsed / WINDOW);
+  const elapsed = schoolMsBetween(new Date(from).getTime(), now, exempt);
+  const progress = Math.max(0, elapsed / INQUIRY_WINDOW_MS);
   const isLate = progress >= 1;
   const color = colorAt(progress);
-  const label = isLate ? `متأخر عن الرد منذ ${span(elapsed - WINDOW)}` : `باقي ${span(WINDOW - elapsed)} للرد`;
+  const left = subject === "reply" ? "للرد" : "للقرار";
+  const lateText = subject === "reply" ? "متأخر عن الرد" : "متأخر عن القرار";
+  const label = isLate ? `${lateText} منذ ${span(elapsed - INQUIRY_WINDOW_MS)}` : `باقي ${span(INQUIRY_WINDOW_MS - elapsed)} ${left}`;
 
   return (
     <div className="flex flex-col gap-1" role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.min(100, Math.round(progress * 100))} aria-label={label}>

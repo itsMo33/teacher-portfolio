@@ -11,7 +11,7 @@ function day(iso: string) {
   return new Date(iso).toLocaleDateString("ar-SA", { day: "numeric", month: "long" });
 }
 
-function Card({ item }: { item: TeacherInquiryView }) {
+function Card({ item, exemptDates }: { item: TeacherInquiryView; exemptDates: string[] }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [text, setText] = useState(item.justification ?? "");
@@ -53,7 +53,7 @@ function Card({ item }: { item: TeacherInquiryView }) {
   }
 
   const absenceOutcome = item.kind === "absence" && decided ? ABSENCE_OPTIONS.find((o) => o.key === absenceOptionOf(item.decision, item.decisionOption)) : undefined;
-  const late = isLateReply({ createdAt: item.createdAt, justifiedAt: item.justifiedAt, decidedAt: item.decidedAt });
+  const late = isLateReply({ createdAt: item.createdAt, justifiedAt: item.justifiedAt, decidedAt: item.decidedAt }, undefined, exemptDates);
   const status = decided
     ? item.decision === "accepted"
       ? { label: absenceOutcome ? `تم قبول المسائلة: ${absenceOutcome.short}` : "تم قبول المسائلة", tone: "bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300" }
@@ -74,7 +74,7 @@ function Card({ item }: { item: TeacherInquiryView }) {
         </span>
       </button>
 
-      {!decided && !item.justifiedAt && <ReplyTimer createdAt={item.createdAt} />}
+      {!decided && !item.justifiedAt && <ReplyTimer from={item.createdAt} exempt={exemptDates} subject="reply" />}
 
       {open && (
         <div className="flex flex-col gap-3 border-t border-slate-100 dark:border-slate-800 pt-3">
@@ -129,11 +129,11 @@ function Card({ item }: { item: TeacherInquiryView }) {
   );
 }
 
-export function TeacherInquiries({ inquiries }: { inquiries: TeacherInquiryView[] }) {
+export function TeacherInquiries({ inquiries, exemptDates = [] }: { inquiries: TeacherInquiryView[]; /** The days this teacher is excused (their reply clock does not run). */ exemptDates?: string[] }) {
   return (
     <ul className="flex flex-col gap-3">
       {inquiries.map((i) => (
-        <Card key={i.id} item={i} />
+        <Card key={i.id} item={i} exemptDates={exemptDates} />
       ))}
       {inquiries.length === 0 && <p className="text-sm text-slate-400">ما عندك مسائلات.</p>}
     </ul>

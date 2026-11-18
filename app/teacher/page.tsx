@@ -11,6 +11,7 @@ import { TEACHER_COMPLETION_SLOTS, TOTAL_TEACHER_COMPLETION_SLOTS } from "@/lib/
 import { getSchoolManagementCategory } from "@/lib/school-files";
 import { getFilesNeedingRevision } from "@/lib/weekly-review";
 import { inquiryAttention, listInquiries, toTeacherView } from "@/lib/inquiries";
+import { getExemptDates } from "@/lib/inquiry-exempt";
 import { getRecentClassTimeFlags } from "@/lib/class-time-flags";
 import { ProgressGrid } from "@/components/portfolio/ProgressGrid";
 
@@ -26,7 +27,8 @@ export default async function TeacherDashboard() {
   ]);
 
   const classTimeFlags = await getRecentClassTimeFlags(session!.user.id);
-  const inquiryNotice = inquiryAttention((await listInquiries({ teacherId: session!.user.id })).map(toTeacherView));
+  const ownExempt = (await getExemptDates([{ id: session!.user.id, name: session!.user.name ?? "" }])).get(session!.user.id) ?? [];
+  const inquiryNotice = inquiryAttention((await listInquiries({ teacherId: session!.user.id })).map(toTeacherView), ownExempt);
 
   const restrictedCategoryLabel = session!.user.restrictedCategory
     ? (await getSchoolManagementCategory(session!.user.restrictedCategory))?.labelAr ?? session!.user.restrictedCategory
