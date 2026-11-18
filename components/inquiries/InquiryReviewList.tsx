@@ -20,17 +20,23 @@ export interface ReviewInquiry {
   decisionNote: string | null;
   /** How many files the recipient attached to their answer. */
   fileCount: number;
+  /** One of the older file inquiries brought over into this list: already decided, never opened or answered here. */
+  legacy: boolean;
 }
 
-type Filter = "all" | "awaiting" | "unopened" | "unjustified" | "decided";
+type Filter = "all" | "awaiting" | "unopened" | "unjustified" | "decided" | "archive";
 
 const FILTERS: { key: Filter; label: string }[] = [
-  { key: "all", label: "الكل" },
   { key: "awaiting", label: "بانتظار قراري" },
   { key: "unopened", label: "لم يفتحها المعلم" },
   { key: "unjustified", label: "لم يبرر" },
   { key: "decided", label: "تم البت فيها" },
+  { key: "all", label: "الكل" },
+  { key: "archive", label: "الأرشيف (المسائلات القديمة)" },
 ];
+
+/** How many show at first; the rest come with "عرض المزيد". */
+const PAGE_SIZE = 30;
 
 const DECISION_LABEL = { accepted: "مقبولة", rejected: "مرفوضة" } as const;
 
@@ -38,10 +44,14 @@ function day(iso: string) {
   return new Date(iso).toLocaleDateString("ar-SA", { day: "numeric", month: "long" });
 }
 
+/** "Not opened" and "not answered" only make sense while an inquiry is still open -- once it is decided they say nothing --
+ *  and the older file inquiries live in their own place (the archive) so they do not crowd the current ones. */
 function matches(i: ReviewInquiry, f: Filter): boolean {
+  if (f === "archive") return i.legacy;
+  if (i.legacy) return false;
   if (f === "awaiting") return !i.decision;
-  if (f === "unopened") return !i.teacherOpenedAt;
-  if (f === "unjustified") return !i.justification;
+  if (f === "unopened") return !i.decision && !i.teacherOpenedAt;
+  if (f === "unjustified") return !i.decision && !i.justification;
   if (f === "decided") return !!i.decision;
   return true;
 }
@@ -96,24 +106,30 @@ function Row({ item }: { item: ReviewInquiry }) {
           </p>
         </div>
         <div className="flex flex-wrap gap-1.5 text-xs">
-          <span
-            className={`rounded-full px-2 py-0.5 ${
-              item.teacherOpenedAt
-                ? "bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300"
-                : "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300"
-            }`}
-          >
-            {item.teacherOpenedAt ? `فتحها ${day(item.teacherOpenedAt)}` : "لم يفتحها"}
-          </span>
-          <span
-            className={`rounded-full px-2 py-0.5 ${
-              item.justification
-                ? "bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300"
-                : "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300"
-            }`}
-          >
-            {item.justification ? "برّر" : "لم يبرر"}
-          </span>
+          {item.legacy && <span className="rounded-full px-2 py-0.5 bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300">قديمة</span>}
+          {/* opened / answered only matter while the inquiry is open */}
+          {!item.decision && (
+            <>
+              <span
+                className={`rounded-full px-2 py-0.5 ${
+                  item.teacherOpenedAt
+                    ? "bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300"
+                    : "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300"
+                }`}
+              >
+                {item.teacherOpenedAt ? `فتحها ${day(item.teacherOpenedAt)}` : "لم يفتحها"}
+              </span>
+              <span
+                className={`rounded-full px-2 py-0.5 ${
+                  item.justification
+                    ? "bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300"
+                    : "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300"
+                }`}
+              >
+                {item.justification ? "برّر" : "لم يبرر"}
+              </span>
+            </>
+          )}
           {!item.decision && !item.justification && daysLeft <= 0 && (
             <span className="rounded-full px-2 py-0.5 bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300">تجاوز مهلة الأسبوع</span>
           )}
@@ -220,9 +236,17 @@ function Row({ item }: { item: ReviewInquiry }) {
 }
 
 export function InquiryReviewList({ inquiries, kind }: { inquiries: ReviewInquiry[]; kind: InquiryKind | "all" }) {
-  const [filter, setFilter] = useState<Filter>("all");
   const ofKind = useMemo(() => (kind === "all" ? inquiries : inquiries.filter((i) => i.kind === kind)), [inquiries, kind]);
-  const shown = useMemo(() => ofKind.filter((i) => matches(i, filter)), [ofKind, filter]);
+  // it opens on what needs a decision; when nothing does, on everything
+  const [filter, setFilter] = useState<Filter>(() => (ofKind.some((i) => matches(i, "awaiting")) ? "awaiting" : "all"));
+  const [search, setSearch] = useState("");
+  const [limit, setLimit] = useState(PAGE_SIZE);
+  const shown = useMemo(() => {
+    const q = search.trim();
+    const list = ofKind.filter((i) => matches(i, filter) && (!q || i.teacherName.includes(q)));
+    // open ones first (the newest first within each group: the server already sends them newest first)
+    return [...list].sort((a, b) => Number(!!a.decision) - Number(!!b.decision));
+  }, [ofKind, filter, search]);
 
   return (
     <div className="flex flex-col gap-3">
@@ -231,7 +255,10 @@ export function InquiryReviewList({ inquiries, kind }: { inquiries: ReviewInquir
           <button
             key={f.key}
             type="button"
-            onClick={() => setFilter(f.key)}
+            onClick={() => {
+              setFilter(f.key);
+              setLimit(PAGE_SIZE);
+            }}
             className={`rounded-full border px-3 py-1 text-xs transition-colors ${
               filter === f.key
                 ? "border-[var(--brand-primary)] bg-[var(--brand-primary)] text-white"
@@ -242,11 +269,29 @@ export function InquiryReviewList({ inquiries, kind }: { inquiries: ReviewInquir
           </button>
         ))}
       </div>
+      <input
+        value={search}
+        onChange={(e) => {
+          setSearch(e.target.value);
+          setLimit(PAGE_SIZE);
+        }}
+        placeholder="بحث باسم المعلم"
+        className="rounded-lg border border-slate-300 dark:border-slate-700 bg-transparent px-3 py-1.5 text-sm text-slate-900 dark:text-slate-50 focus:outline-none focus:ring-2 focus:ring-[var(--brand-primary)]"
+      />
       <ul className="flex flex-col gap-2">
-        {shown.map((i) => (
+        {shown.slice(0, limit).map((i) => (
           <Row key={i.id} item={i} />
         ))}
       </ul>
+      {shown.length > limit && (
+        <button
+          type="button"
+          onClick={() => setLimit((n) => n + PAGE_SIZE)}
+          className="self-center rounded-lg border border-slate-300 dark:border-slate-700 px-4 py-1.5 text-sm text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800"
+        >
+          عرض المزيد ({shown.length - limit} متبقي)
+        </button>
+      )}
       {shown.length === 0 && <p className="text-sm text-slate-400">ما فيه مسائلات هنا.</p>}
     </div>
   );

@@ -33,7 +33,11 @@ export default async function InquiriesPage({ searchParams }: { searchParams: Pr
   const sendKinds: InquiryKind[] = tab === "delay" || tab === "absence" || tab === "other" ? [tab] : tab === "all" ? ["delay", "absence", "other"] : [];
 
   const [inquiries, fileCounts] = await Promise.all([listInquiries(), countInquiryFiles()]);
-  const shown = tab === "all" ? inquiries : inquiries.filter((i) => i.kind === tab);
+  const ofTab = tab === "all" ? inquiries : inquiries.filter((i) => i.kind === tab);
+  // the older file inquiries brought over (already decided) have their own place in the list; the totals and the
+  // per-teacher table above it are about the current ones
+  const isLegacy = (i: { extractedText: string }) => i.extractedText.startsWith("مسائلة مرفوعة كملف");
+  const shown = ofTab.filter((i) => !isLegacy(i));
 
   // what the uploading account sent itself, grouped by upload (for its delete buttons)
   const sentBatches = (() => {
@@ -131,6 +135,7 @@ export default async function InquiriesPage({ searchParams }: { searchParams: Pr
                 </div>
               )}
               <InquiryReviewList
+                key={tab}
                 kind={tab === "all" ? "all" : tab}
                 inquiries={inquiries.map((i) => ({
                   id: i.id,
@@ -146,6 +151,7 @@ export default async function InquiriesPage({ searchParams }: { searchParams: Pr
                   decisionOption: i.decisionOption,
                   decisionNote: i.decisionNote,
                   fileCount: fileCounts.get(i.id) ?? 0,
+                  legacy: isLegacy(i),
                 }))}
               />
           </>
