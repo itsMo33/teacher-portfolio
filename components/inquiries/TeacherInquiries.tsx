@@ -3,8 +3,9 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import type { TeacherInquiryView } from "@/lib/inquiries";
-import { ABSENCE_OPTIONS, INQUIRY_KIND_LABEL, LATE_REPLY_DAYS, absenceOptionOf, isLateReply } from "@/lib/inquiry-logic";
+import { ABSENCE_OPTIONS, INQUIRY_KIND_LABEL, absenceOptionOf, isLateReply } from "@/lib/inquiry-logic";
 import { InquiryFilesBox } from "@/components/inquiries/InquiryFilesBox";
+import { ReplyTimer } from "@/components/inquiries/ReplyTimer";
 
 function day(iso: string) {
   return new Date(iso).toLocaleDateString("ar-SA", { day: "numeric", month: "long" });
@@ -73,6 +74,8 @@ function Card({ item }: { item: TeacherInquiryView }) {
         </span>
       </button>
 
+      {!decided && !item.justifiedAt && <ReplyTimer createdAt={item.createdAt} />}
+
       {open && (
         <div className="flex flex-col gap-3 border-t border-slate-100 dark:border-slate-800 pt-3">
           {item.textReadable || !item.hasTeacherFile ? (
@@ -84,12 +87,6 @@ function Card({ item }: { item: TeacherInquiryView }) {
             <button type="button" onClick={viewFile} className="self-start text-xs text-[var(--brand-primary)] hover:underline">
               فتح المسائلة الأصلية (PDF)
             </button>
-          )}
-
-          {!decided && !item.justifiedAt && (
-            <p className={`text-xs ${late ? "font-semibold text-red-600 dark:text-red-400" : "text-slate-500"}`}>
-              {late ? `متأخر عن الرد: مضى أكثر من ${LATE_REPLY_DAYS === 2 ? "يومين" : `${LATE_REPLY_DAYS} أيام`} على وصول المسائلة -- بادر بالرد الآن` : "المطلوب الرد خلال يومين من وصول المسائلة"}
-            </p>
           )}
 
           {decided && item.decisionNote && <p className="text-xs text-slate-500">ملاحظة الإدارة: {item.decisionNote}</p>}

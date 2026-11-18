@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ABSENCE_OPTIONS, INQUIRY_KIND_LABEL, absenceOptionOf, isLateReply, type AbsenceOption, type InquiryKind } from "@/lib/inquiry-logic";
 import { InquiryFilesBox } from "@/components/inquiries/InquiryFilesBox";
+import { ReplyTimer } from "@/components/inquiries/ReplyTimer";
 
 export interface ReviewInquiry {
   id: string;
@@ -151,6 +152,8 @@ function Row({ item }: { item: ReviewInquiry }) {
           )}
         </div>
       </div>
+
+      {!item.decision && !item.justification && !item.legacy && <ReplyTimer createdAt={item.createdAt} compact />}
 
       {item.justification && (
         <p className="rounded-lg bg-slate-50 dark:bg-slate-800/50 p-2 text-slate-700 dark:text-slate-200">«{item.justification}»</p>
