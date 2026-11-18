@@ -270,9 +270,9 @@ function TeacherGroup({ name, items }: { name: string; items: ReviewInquiry[] })
   );
 }
 
-export function InquiryReviewList({ inquiries, kind }: { inquiries: ReviewInquiry[]; kind: InquiryKind | "all" }) {
+export function InquiryReviewList({ inquiries, kind, initialFilter }: { inquiries: ReviewInquiry[]; kind: InquiryKind | "all"; initialFilter?: string }) {
   const ofKind = useMemo(() => (kind === "all" ? inquiries : inquiries.filter((i) => i.kind === kind)), [inquiries, kind]);
-  const [filter, setFilter] = useState<Filter>("all");
+  const [filter, setFilter] = useState<Filter>(() => (FILTERS.some((f) => f.key === initialFilter) ? (initialFilter as Filter) : "all"));
   const [search, setSearch] = useState("");
   const [limit, setLimit] = useState(PAGE_SIZE);
   const [byTeacher, setByTeacher] = useState(false);
