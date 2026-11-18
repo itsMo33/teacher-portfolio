@@ -15,6 +15,7 @@ import { getExemptDates } from "@/lib/inquiry-exempt";
 import { getRecentClassTimeFlags } from "@/lib/class-time-flags";
 import { ProgressGrid } from "@/components/portfolio/ProgressGrid";
 import { PushToggle } from "@/components/ui/PushToggle";
+import { canUseApp } from "@/lib/app-access";
 
 export default async function TeacherDashboard() {
   const session = await auth();
@@ -59,9 +60,11 @@ export default async function TeacherDashboard() {
           <span className="absolute text-base font-bold tabular-nums text-slate-900 dark:text-slate-50">{completionPercent}%</span>
         </div>
       </div>
-      <div className="mb-3 empty:hidden">
-        <PushToggle compact />
-      </div>
+      {canUseApp(session!.user) && (
+        <div className="mb-3 empty:hidden">
+          <PushToggle compact />
+        </div>
+      )}
       {session!.user.restrictedCategory && (
         <Link
           href="/admin"
