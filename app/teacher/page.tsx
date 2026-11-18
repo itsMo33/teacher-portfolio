@@ -43,26 +43,30 @@ export default async function TeacherDashboard() {
       100
   );
 
+  const neededNow = filesNeedingRevision.length + inquiryNotice.late + inquiryNotice.toJustify + inquiryNotice.newResults + classTimeFlags.length;
+
   return (
     <div>
-      <div className="flex items-center gap-3 mb-4">
-        <h2 className="text-xl font-bold text-slate-900 dark:text-slate-50">
-          مرحبًا، {session!.user.name} 👋
-        </h2>
-        <span
-          className={`text-xs px-2 py-0.5 rounded-full whitespace-nowrap font-medium ${
-            completionPercent > 0
-              ? "bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300"
-              : "bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300"
-          }`}
-        >
-          نسبة الإنجاز: {completionPercent}%
-        </span>
+      <div className="surface mb-6 flex items-center justify-between gap-4 p-5">
+        <div className="min-w-0">
+          <p className="text-sm text-slate-500 dark:text-slate-400">أهلًا بك</p>
+          <h2 className="truncate text-2xl font-bold tracking-tight text-slate-900 dark:text-slate-50">{session!.user.name}</h2>
+          <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
+            {neededNow === 0 ? "ما عندك شيء مطلوب الآن ✓" : `عندك ${neededNow} ${neededNow === 1 ? "شيء مطلوب" : "أشياء مطلوبة"} الآن`}
+          </p>
+        </div>
+        <div className="relative grid h-20 w-20 shrink-0 place-items-center" role="img" aria-label={`نسبة الإنجاز ${completionPercent}%`}>
+          <svg viewBox="0 0 36 36" className="h-20 w-20 -rotate-90">
+            <circle cx="18" cy="18" r="15.5" fill="none" strokeWidth="3" className="stroke-slate-100 dark:stroke-slate-800" />
+            <circle cx="18" cy="18" r="15.5" fill="none" strokeWidth="3" strokeLinecap="round" strokeDasharray={`${completionPercent * 0.974} 100`} className="stroke-[var(--brand-primary)] transition-all duration-700" />
+          </svg>
+          <span className="absolute text-base font-bold tabular-nums text-slate-900 dark:text-slate-50">{completionPercent}%</span>
+        </div>
       </div>
       {session!.user.restrictedCategory && (
         <Link
           href="/admin"
-          className="mb-4 flex items-center gap-2 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg w-fit"
+          className="surface surface-link mb-4 flex w-fit items-center gap-2 p-4"
         >
           <span className="inline-block h-2.5 w-2.5 shrink-0 rounded-full bg-[var(--brand-primary)]" />
           <span className="font-semibold text-slate-900 dark:text-slate-50">
@@ -71,7 +75,7 @@ export default async function TeacherDashboard() {
         </Link>
       )}
       {filesNeedingRevision.length > 0 && (
-        <div className="mb-4 flex flex-col gap-2 rounded-xl border border-amber-300 dark:border-amber-800 bg-amber-50 dark:bg-amber-900/20 p-4">
+        <div className="mb-4 flex flex-col gap-2 rounded-2xl border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-900/20 p-4">
           <p className="font-semibold text-amber-800 dark:text-amber-200">
             ملفات رجّعها لك المراجعون وتحتاج تعديل ({filesNeedingRevision.length})
           </p>
@@ -92,7 +96,7 @@ export default async function TeacherDashboard() {
       {inquiryNotice.late > 0 && (
         <Link
           href="/teacher/portfolio/accountability"
-          className="mb-4 flex items-center justify-between gap-2 rounded-xl bg-red-600 p-4 text-white transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg"
+          className="mb-3 flex items-center justify-between gap-2 rounded-2xl bg-red-700 p-4 text-white shadow-sm transition-transform duration-200 hover:-translate-y-0.5"
         >
           <span className="font-semibold">متأخر عن الرد: {inquiryNotice.late} مسائلة مضى عليها أكثر من يومين بدون تبرير</span>
           <span className="text-xs">رد الآن</span>
@@ -101,23 +105,23 @@ export default async function TeacherDashboard() {
       {inquiryNotice.toJustify > 0 && (
         <Link
           href="/teacher/portfolio/accountability"
-          className="mb-4 flex items-center justify-between gap-2 rounded-xl border border-red-500 dark:border-red-700 bg-red-200 dark:bg-red-900/60 p-4 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg"
+          className="mb-3 flex items-center justify-between gap-2 rounded-2xl border border-red-200 bg-red-50 p-4 transition-transform duration-200 hover:-translate-y-0.5 dark:border-red-900 dark:bg-red-900/30"
         >
-          <span className="font-bold text-red-950 dark:text-red-50">وصلتك {inquiryNotice.toJustify} مسائلة بانتظار تبريرك</span>
+          <span className="font-semibold text-red-900 dark:text-red-100">وصلتك {inquiryNotice.toJustify} مسائلة بانتظار تبريرك</span>
           <span className="text-xs font-medium text-red-900 dark:text-red-100">اضغط لفتحها</span>
         </Link>
       )}
       {inquiryNotice.newResults > 0 && (
         <Link
           href="/teacher/portfolio/accountability"
-          className="mb-4 flex items-center justify-between gap-2 rounded-xl border border-blue-300 dark:border-blue-900 bg-blue-50 dark:bg-blue-900/20 p-4 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg"
+          className="mb-3 flex items-center justify-between gap-2 rounded-2xl border border-blue-200 bg-blue-50 p-4 transition-transform duration-200 hover:-translate-y-0.5 dark:border-blue-900 dark:bg-blue-900/20"
         >
           <span className="font-semibold text-blue-800 dark:text-blue-200">صدرت نتيجة {inquiryNotice.newResults} مسائلة</span>
           <span className="text-xs text-blue-700 dark:text-blue-300">اضغط لمعرفة النتيجة</span>
         </Link>
       )}
       {classTimeFlags.length > 0 && (
-        <div className="mb-4 flex flex-col gap-2 rounded-xl border border-red-300 dark:border-red-900 bg-red-50 dark:bg-red-900/20 p-4">
+        <div className="mb-4 flex flex-col gap-2 rounded-2xl border border-red-200 dark:border-red-900 bg-red-50 dark:bg-red-900/20 p-4">
           <p className="font-semibold text-red-800 dark:text-red-200">تنبيهات الالتزام بزمن الحصة (آخر 7 أيام)</p>
           <ul className="flex flex-col gap-1.5 text-sm text-red-900 dark:text-red-100">
             {classTimeFlags.map((f) => (
@@ -158,8 +162,7 @@ export default async function TeacherDashboard() {
       )}
       <Link
         href="/teacher/student-referrals"
-        style={{ borderInlineStartColor: "#b45309", borderInlineStartWidth: 4 }}
-        className="mb-4 flex flex-col gap-1 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg"
+        className="surface surface-link mb-3 flex flex-col gap-1 p-4"
       >
         <span className="flex items-center gap-2 font-semibold text-slate-900 dark:text-slate-50">
           <span className="inline-block h-2.5 w-2.5 shrink-0 rounded-full bg-amber-600" />
@@ -169,6 +172,7 @@ export default async function TeacherDashboard() {
           نموذج إلكتروني لتحويل طالب (ضعف دراسي، غياب، سلوك...) مع طباعة وإرسال
         </span>
       </Link>
+      <h3 className="mb-3 mt-6 text-sm font-bold text-slate-500 dark:text-slate-400">أقسام ملفك</h3>
       <ProgressGrid
         slotCounts={slotCounts}
         linkPrefix="/teacher/portfolio"

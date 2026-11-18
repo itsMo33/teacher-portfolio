@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { COMPLETION_EXCLUDED_KEYS, PORTFOLIO_SECTIONS } from "@/lib/portfolio-sections";
 import { TROPHY_BADGE } from "@/lib/motivational-messages";
+import { IconChip } from "@/components/ui/Icons";
 
 function NewBadge() {
   return (
@@ -90,19 +91,12 @@ export function ProgressGrid({
           <Link
             key={section.key}
             href={isSchedule ? scheduleHref : `${linkPrefix}/${section.key}`}
-            style={{
-              borderInlineStartColor: section.accentColor,
-              borderInlineStartWidth: 4,
-              animationDelay: `${index * 45}ms`,
-            }}
-            className="animate-fade-in-up group rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg"
+            style={{ animationDelay: `${index * 40}ms` }}
+            className="surface surface-link animate-fade-in-up group flex flex-col gap-2 p-4"
           >
-            <div className="flex items-center justify-between mb-1">
-              <h3 className="flex items-center gap-2 font-semibold text-slate-900 dark:text-slate-50">
-                <span
-                  className="inline-block h-2.5 w-2.5 shrink-0 rounded-full transition-transform duration-200 group-hover:scale-125"
-                  style={{ backgroundColor: section.accentColor }}
-                />
+            <div className="flex items-center justify-between gap-2">
+              <h3 className="flex min-w-0 items-center gap-3 font-semibold text-slate-900 dark:text-slate-50">
+                <IconChip name={isSchedule ? "calendar" : "folder"} color={section.accentColor} />
                 {section.labelAr}
                 {isNew && <NewBadge />}
               </h3>
@@ -117,7 +111,12 @@ export function ProgressGrid({
                 </span>
               )}
             </div>
-            {section.note && <p className="text-xs text-amber-600 dark:text-amber-400 mb-2">{section.note}</p>}
+            {!excluded && !isSchedule && sectionShowPercent && (
+              <div className="h-1.5 w-full overflow-hidden rounded-full bg-slate-100 dark:bg-slate-800">
+                <div className="h-full rounded-full transition-[width] duration-700" style={{ width: `${sectionPercent ?? 0}%`, backgroundColor: section.accentColor }} />
+              </div>
+            )}
+            {section.note && <p className="text-xs text-amber-600 dark:text-amber-400">{section.note}</p>}
             {section.hasSubsections && (
               <ul className="text-xs text-slate-500 dark:text-slate-400 flex flex-col gap-0.5">
                 {section.subsections!.map((sub) => {

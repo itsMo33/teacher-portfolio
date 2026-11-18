@@ -32,8 +32,8 @@ export function AppShell({
   const isOnAdminSide = pathname.startsWith("/admin");
 
   return (
-    <div className="flex min-h-screen flex-col bg-slate-50 dark:bg-slate-950 overflow-x-hidden print:block print:overflow-visible print:bg-white">
-      <div className="no-print h-1.5 w-full shrink-0 bg-gradient-to-l from-[var(--brand-primary)] to-[var(--brand-accent)]" />
+    <div className="flex min-h-screen flex-col bg-[var(--background)] overflow-x-hidden print:block print:overflow-visible print:bg-white">
+      <div className="no-print h-1 w-full shrink-0 bg-gradient-to-l from-[var(--brand-primary)] to-[var(--brand-accent)]" />
       {demoViewOnly && (
         <div className="no-print flex flex-wrap items-center justify-between gap-2 bg-amber-100 dark:bg-amber-900/40 px-4 py-2 text-sm text-amber-800 dark:text-amber-200">
           <span>🔒 حساب عرض فقط -- لا يمكن إضافة أو حذف أو تعديل أي شيء</span>
@@ -45,7 +45,7 @@ export function AppShell({
           </Link>
         </div>
       )}
-      <header className="no-print flex items-center justify-between gap-2 border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 px-3 sm:px-6 py-3">
+      <header className="no-print flex items-center justify-between gap-2 sticky top-0 z-20 border-b border-slate-200/70 dark:border-slate-800 bg-white/85 dark:bg-slate-900/85 backdrop-blur px-3 sm:px-6 py-3">
         <div className="flex min-w-0 items-center gap-2 sm:gap-4">
           <button
             onClick={() => setMenuOpen(true)}
@@ -65,10 +65,12 @@ export function AppShell({
             <h1 className="truncate text-base font-bold text-slate-900 dark:text-slate-50 sm:text-lg">{title}</h1>
             <p className="truncate text-[11px] font-medium text-[var(--brand-primary)]">وثّق عطاءك.. ليبقى أثرك</p>
             <p className="truncate text-[11px] text-slate-400">{SCHOOL_NAME}</p>
-            <p className="truncate text-xs text-slate-500 dark:text-slate-400">مرحبًا، {userName}</p>
           </div>
         </div>
-        <SignOutButton />
+        <div className="flex shrink-0 items-center gap-3">
+          <span className="hidden max-w-40 truncate text-xs text-slate-500 dark:text-slate-400 sm:block">{userName}</span>
+          <SignOutButton />
+        </div>
       </header>
 
       <div className="relative flex flex-1 print:block">
@@ -80,7 +82,7 @@ export function AppShell({
         )}
 
         <nav
-          className={`no-print fixed inset-y-0 right-0 z-40 w-64 shrink-0 border-l border-slate-200 bg-white p-4 transition-transform duration-200 dark:border-slate-800 dark:bg-slate-900 md:static md:z-auto md:w-56 md:translate-x-0 ${
+          className={`no-print fixed inset-y-0 right-0 z-40 w-64 shrink-0 border-l border-slate-200/70 bg-white p-3 transition-transform duration-200 dark:border-slate-800 dark:bg-slate-900 md:static md:z-auto md:w-56 md:translate-x-0 ${
             menuOpen ? "translate-x-0" : "translate-x-full"
           }`}
         >
@@ -90,7 +92,8 @@ export function AppShell({
                 <Link
                   href={item.href}
                   onClick={() => setMenuOpen(false)}
-                  className="block rounded-lg px-3 py-2 text-sm text-slate-700 dark:text-slate-300 transition-all duration-150 hover:translate-x-[-4px] hover:bg-[var(--brand-primary)]/10 hover:text-[var(--brand-primary)]"
+                  aria-current={pathname === item.href || (item.href !== "/teacher" && item.href !== "/admin" && pathname.startsWith(item.href)) ? "page" : undefined}
+                  className="block rounded-xl px-3 py-2.5 text-sm text-slate-600 dark:text-slate-300 transition-colors duration-150 hover:bg-slate-100 dark:hover:bg-slate-800 aria-[current=page]:bg-[var(--brand-primary)]/10 aria-[current=page]:font-semibold aria-[current=page]:text-[var(--brand-primary)]"
                 >
                   {item.label}
                 </Link>

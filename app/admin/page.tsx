@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { IconChip } from "@/components/ui/Icons";
 import { redirect } from "next/navigation";
 import { auth } from "@/lib/auth/auth-options";
 import { supabaseAdmin } from "@/lib/supabase/server";
@@ -21,6 +22,17 @@ interface DashboardCard {
 
 // Only the most-used tools live on the dashboard as cards -- everything else (including these
 // five) stays reachable from the sidebar nav (see fullNavItems in app/admin/layout.tsx).
+const CARD_ICONS: Record<string, string> = {
+  "/admin/teachers": "users",
+  "/admin/school-schedule": "calendar",
+  "/admin/substitute-schedule": "swap",
+  "/admin/statistics": "chart",
+  "/admin/teacher-performance": "star",
+  "/admin/inquiries": "file",
+  "/admin/late-minutes": "clock",
+  "/admin/weekly-review": "inbox",
+};
+
 const DASHBOARD_CARDS: DashboardCard[] = [
   { href: "/admin/teachers", label: "قائمة المعلمين", description: "استعراض جميع المعلمين ونسب إنجازهم", accentColor: "#2563eb" },
   { href: "/admin/school-schedule", label: "الجدول المدرسي للشعب", description: "جداول الشعب بالمادة والمعلم والغياب والانتظار", accentColor: "#2563eb" },
@@ -234,9 +246,9 @@ export default async function AdminDashboard() {
 
   return (
     <div>
-      <h2 className="text-xl font-bold text-slate-900 dark:text-slate-50 mb-4">لوحة تحكم الإدارة</h2>
+      <h2 className="mb-5 text-2xl font-bold tracking-tight text-slate-900 dark:text-slate-50">لوحة تحكم الإدارة</h2>
       <section className="mb-6">
-        <h3 className="mb-2 text-sm font-bold text-slate-700 dark:text-slate-200">يحتاج انتباهك الآن</h3>
+        <h3 className="mb-3 text-sm font-bold text-slate-500 dark:text-slate-400">يحتاج انتباهك الآن</h3>
         {attention.length === 0 ? (
           <p className="rounded-xl border border-green-300 dark:border-green-900 bg-green-50 dark:bg-green-900/20 p-4 text-sm font-medium text-green-800 dark:text-green-200">كل شي تمام -- ما فيه شي ينتظرك ✓</p>
         ) : (
@@ -245,16 +257,13 @@ export default async function AdminDashboard() {
               <Link
                 key={a.label}
                 href={a.href}
-                className={`flex flex-col gap-1 rounded-xl border p-4 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg ${
-                  a.tone === "red"
-                    ? "border-red-300 bg-red-50 text-red-800 dark:border-red-900 dark:bg-red-900/20 dark:text-red-200"
-                    : a.tone === "amber"
-                      ? "border-amber-300 bg-amber-50 text-amber-900 dark:border-amber-900 dark:bg-amber-900/20 dark:text-amber-200"
-                      : "border-blue-300 bg-blue-50 text-blue-900 dark:border-blue-900 dark:bg-blue-900/20 dark:text-blue-200"
-                }`}
+                className="surface surface-link flex flex-col gap-1.5 p-4"
               >
-                <span className="text-3xl font-bold tabular-nums">{a.count}</span>
-                <span className="text-xs font-medium">{a.label}</span>
+                <span className={`text-3xl font-bold tabular-nums ${a.tone === "red" ? "text-red-600 dark:text-red-400" : a.tone === "amber" ? "text-amber-600 dark:text-amber-400" : "text-blue-600 dark:text-blue-400"}`}>{a.count}</span>
+                <span className="flex items-start gap-1.5 text-xs font-medium leading-5 text-slate-600 dark:text-slate-300">
+                  <span className={`mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full ${a.tone === "red" ? "bg-red-500" : a.tone === "amber" ? "bg-amber-500" : "bg-blue-500"}`} />
+                  {a.label}
+                </span>
               </Link>
             ))}
           </div>
@@ -288,19 +297,12 @@ export default async function AdminDashboard() {
           <Link
             key={card.href}
             href={card.href}
-            style={{
-              borderInlineStartColor: card.accentColor,
-              borderInlineStartWidth: 4,
-              animationDelay: `${index * 45}ms`,
-            }}
-            className="animate-fade-in-up group rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-4 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg"
+            style={{ animationDelay: `${index * 40}ms` }}
+            className="surface surface-link animate-fade-in-up group flex flex-col gap-2 p-4"
           >
-            <div className="flex items-center justify-between mb-1">
-              <h3 className="flex items-center gap-2 font-semibold text-slate-900 dark:text-slate-50">
-                <span
-                  className="inline-block h-2.5 w-2.5 shrink-0 rounded-full transition-transform duration-200 group-hover:scale-125"
-                  style={{ backgroundColor: card.accentColor }}
-                />
+            <div className="flex items-center justify-between gap-2">
+              <h3 className="flex min-w-0 items-center gap-3 font-semibold text-slate-900 dark:text-slate-50">
+                <IconChip name={CARD_ICONS[card.href] ?? "folder"} color={card.accentColor} />
                 {card.label}
               </h3>
               {card.href === "/admin/teachers" && (
