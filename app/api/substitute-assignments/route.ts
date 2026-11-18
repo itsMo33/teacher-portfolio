@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth/auth-options";
 import { supabaseAdmin } from "@/lib/supabase/server";
-import { clearMarksForWaitingAbsentees } from "@/lib/waiting-activation";
+import { clearMarksForWaitingAbsentees, findTeacherIdByShortName } from "@/lib/waiting-activation";
+import { sendPush } from "@/lib/push";
 
 function forbidTeachers(role: string | undefined) {
   return role === "teacher"
@@ -73,6 +74,12 @@ export async function POST(req: NextRequest) {
 
   // the teacher is now absent for the day: drop any late / absent mark already recorded for them in متابعة الأداء
   await clearMarksForWaitingAbsentees().catch(() => {});
+
+  // the substitute is told which class he covers (the table keeps names, so find the account by name)
+  const substituteId = await findTeacherIdByShortName(substitute);
+  if (substituteId) {
+    await sendPush([substituteId], { title: "حصة انتظار", body: `تم إسنادك حصة انتظار: الحصة ${period} يوم ${day}${section ? ` (${section})` : ""}.`, url: "/teacher/schedule", tag: `waiting-${day}-${period}` });
+  }
 
   return NextResponse.json({
     assignment: {

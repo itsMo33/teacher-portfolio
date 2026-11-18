@@ -3,6 +3,7 @@ import { auth } from "@/lib/auth/auth-options";
 import { supabaseAdmin } from "@/lib/supabase/server";
 import { getTrackedPeople } from "@/lib/performance-people";
 import { getWaitingAbsences, getWaitingAssignments } from "@/lib/waiting-activation";
+import { sendPush } from "@/lib/push";
 import { getPerformanceCategory, isValidPerformanceCategory, PERFORMANCE_PERIODS } from "@/lib/teacher-performance";
 
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
@@ -137,6 +138,12 @@ export async function PUT(req: NextRequest) {
   );
 
   if (upsertError) return NextResponse.json({ error: upsertError.message }, { status: 500 });
+
+  // the class-time notes are the ones the teacher sees on his dashboard, so he is told at once (the other categories stay private)
+  if (category === CLASS_TIME && (status === "late" || status === "absent")) {
+    const what = status === "absent" ? "غياب" : `تأخر${lateMinutes ? ` ${lateMinutes} دقيقة` : ""}`;
+    await sendPush([teacherId], { title: "تنبيه الالتزام بزمن الحصة", body: `تم رصد ${what} في الحصة ${periodValue} بتاريخ ${date}.`, url: "/teacher", tag: `class-time-${date}-${periodValue}` });
+  }
   return NextResponse.json({ success: true });
 }
 

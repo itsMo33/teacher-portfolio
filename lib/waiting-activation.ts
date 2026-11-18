@@ -120,3 +120,10 @@ export async function clearMarksForWaitingAbsentees(): Promise<number> {
   }
   return removed;
 }
+
+/** The account of a person the waiting table names by short name (the table never stores ids). */
+export async function findTeacherIdByShortName(shortName: string): Promise<string | null> {
+  const { data } = await supabaseAdmin.from("users").select("id, name").eq("role", "teacher").is("deleted_at", null);
+  const found = (data ?? []).filter((t) => matchShortName(t.name as string, WAITING_NAMES) === shortName);
+  return found.length === 1 ? (found[0].id as string) : null;
+}
