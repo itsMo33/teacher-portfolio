@@ -99,10 +99,10 @@ export default async function TeacherDashboard() {
       {inquiryNotice.toJustify > 0 && (
         <Link
           href="/teacher/portfolio/accountability"
-          className="mb-4 flex items-center justify-between gap-2 rounded-xl border border-red-400 dark:border-red-800 bg-red-100 dark:bg-red-900/40 p-4 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg"
+          className="mb-4 flex items-center justify-between gap-2 rounded-xl border border-red-500 dark:border-red-700 bg-red-200 dark:bg-red-900/60 p-4 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg"
         >
-          <span className="font-semibold text-red-900 dark:text-red-100">وصلتك {inquiryNotice.toJustify} مسائلة بانتظار تبريرك</span>
-          <span className="text-xs text-red-800 dark:text-red-200">اضغط لفتحها</span>
+          <span className="font-bold text-red-950 dark:text-red-50">وصلتك {inquiryNotice.toJustify} مسائلة بانتظار تبريرك</span>
+          <span className="text-xs font-medium text-red-900 dark:text-red-100">اضغط لفتحها</span>
         </Link>
       )}
       {inquiryNotice.newResults > 0 && (
