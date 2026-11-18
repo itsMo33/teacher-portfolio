@@ -1,4 +1,5 @@
 import "server-only";
+import { sendPush } from "@/lib/push";
 import { randomUUID } from "crypto";
 import { getDocumentProxy, extractText } from "unpdf";
 import { PDFDocument } from "pdf-lib";
@@ -273,6 +274,12 @@ export async function createInquiries(opts: {
   for (let i = 0; i < opts.items.length; i += SEND_CONCURRENCY) {
     await Promise.all(opts.items.slice(i, i + SEND_CONCURRENCY).map(createOne));
   }
+  // each teacher is told once, on every device
+  await Promise.all(
+    [...new Set(opts.items.map((i) => i.teacherId))].map((id) =>
+      sendPush([id], { title: "وصلتك مسائلة", body: "وصلتك مسائلة جديدة بانتظار ردك. مهلتك يومان دراسيان.", url: "/teacher/portfolio/accountability", tag: "inquiry-new" }),
+    ),
+  );
   return { created, batchId };
 }
 

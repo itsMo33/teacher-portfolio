@@ -3,6 +3,7 @@ import { auth } from "@/lib/auth/auth-options";
 import { supabaseAdmin } from "@/lib/supabase/server";
 import { canDecideInquiry, getInquiry, getInquiryRole } from "@/lib/inquiries";
 import { logActivity } from "@/lib/audit";
+import { sendPush } from "@/lib/push";
 import { ABSENCE_OPTIONS, INQUIRY_KIND_LABEL } from "@/lib/inquiry-logic";
 
 /** محمد (the uploading account), رائد or the manager decides an inquiry: accept or reject. Only then does the teacher see the result. For a
@@ -53,6 +54,7 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
     targetTeacherName: inquiry.teacherName,
     details: `${INQUIRY_KIND_LABEL[inquiry.kind]}: ${option ? option.short : decision === "accepted" ? "مقبولة" : "غير مقبولة"}`,
   });
+  await sendPush([inquiry.teacherId], { title: "صدرت نتيجة مسائلتك", body: "تم البت في مسائلتك. اضغط لمعرفة النتيجة.", url: "/teacher/portfolio/accountability", tag: "inquiry-result" });
   return NextResponse.json({ success: true });
 }
 

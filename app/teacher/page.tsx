@@ -14,6 +14,7 @@ import { inquiryAttention, listInquiries, toTeacherView } from "@/lib/inquiries"
 import { getExemptDates } from "@/lib/inquiry-exempt";
 import { getRecentClassTimeFlags } from "@/lib/class-time-flags";
 import { ProgressGrid } from "@/components/portfolio/ProgressGrid";
+import { PushToggle } from "@/components/ui/PushToggle";
 
 export default async function TeacherDashboard() {
   const session = await auth();
@@ -57,6 +58,9 @@ export default async function TeacherDashboard() {
           </svg>
           <span className="absolute text-base font-bold tabular-nums text-slate-900 dark:text-slate-50">{completionPercent}%</span>
         </div>
+      </div>
+      <div className="mb-3 empty:hidden">
+        <PushToggle compact />
       </div>
       {session!.user.restrictedCategory && (
         <Link

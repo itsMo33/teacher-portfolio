@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth/auth-options";
 import { applyJustification, getInquiry } from "@/lib/inquiries";
+import { getInquiryDeciderIds, sendPush } from "@/lib/push";
 
 /** Whoever the inquiry was sent to (any account) writes -- or rewrites, until the inquiry is decided -- their justification. */
 export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
@@ -19,5 +20,6 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
 
   const error = await applyJustification(inquiry, justification);
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  await sendPush(await getInquiryDeciderIds(), { title: "ردّ معلم على مسائلة", body: `${inquiry.teacherName} ردّ على مسائلته وتنتظر قرارك.`, url: "/admin/inquiries?filter=admin", tag: "inquiry-decisions" });
   return NextResponse.json({ success: true });
 }
