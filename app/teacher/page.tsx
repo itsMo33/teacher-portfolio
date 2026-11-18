@@ -49,8 +49,8 @@ export default async function TeacherDashboard() {
     <div>
       <div className="surface mb-6 flex items-center justify-between gap-4 p-5">
         <div className="min-w-0">
-          <p className="text-sm text-slate-500 dark:text-slate-400">أهلًا بك</p>
-          <h2 className="truncate text-2xl font-bold tracking-tight text-slate-900 dark:text-slate-50">{session!.user.name}</h2>
+          <p className="text-sm text-slate-500 dark:text-slate-400">مرحبًا بك</p>
+          <h2 className="truncate text-2xl font-bold tracking-tight text-slate-900 dark:text-slate-50">المعلم {session!.user.name}</h2>
           <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
             {neededNow === 0 ? "ما عندك شيء مطلوب الآن ✓" : `عندك ${neededNow} ${neededNow === 1 ? "شيء مطلوب" : "أشياء مطلوبة"} الآن`}
           </p>
@@ -162,6 +162,7 @@ export default async function TeacherDashboard() {
       )}
       <Link
         href="/teacher/student-referrals"
+        style={{ borderInlineStartColor: "#2563eb", borderInlineStartWidth: 4 }}
         className="surface surface-link mb-3 flex flex-col gap-1 p-4"
       >
         <span className="flex items-center gap-2 font-semibold text-slate-900 dark:text-slate-50">

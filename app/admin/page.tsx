@@ -297,7 +297,7 @@ export default async function AdminDashboard() {
           <Link
             key={card.href}
             href={card.href}
-            style={{ animationDelay: `${index * 40}ms` }}
+            style={{ borderInlineStartColor: card.accentColor, borderInlineStartWidth: 4, animationDelay: `${index * 40}ms` }}
             className="surface surface-link animate-fade-in-up group flex flex-col gap-2 p-4"
           >
             <div className="flex items-center justify-between gap-2">
