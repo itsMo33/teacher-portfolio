@@ -28,6 +28,7 @@ interface WeekInquiry {
  *  big week never runs into a server time limit); the PDF opens for printing or saving. */
 export function WeeklyPrintButton({ kind }: { kind: string }) {
   const [day, setDay] = useState(today);
+  const [status, setStatus] = useState<"all" | "done" | "open">("all");
   const [busy, setBusy] = useState(false);
   const [progress, setProgress] = useState("");
   const [error, setError] = useState("");
@@ -39,10 +40,10 @@ export function WeeklyPrintButton({ kind }: { kind: string }) {
     setResult(null);
     try {
       setProgress("جارٍ تحضير قائمة مسائلات الأسبوع...");
-      const listRes = await fetch(`/api/inquiries/week?week=${day}&kind=${kind}`);
+      const listRes = await fetch(`/api/inquiries/week?week=${day}&kind=${kind}&status=${status}`);
       if (!listRes.ok) throw new Error("تعذّر تحميل مسائلات الأسبوع");
       const { weekStart, weekEnd, inquiries } = (await listRes.json()) as { weekStart: string; weekEnd: string; inquiries: WeekInquiry[] };
-      if (inquiries.length === 0) throw new Error(`ما فيه مسائلات أُرسلت في هذا الأسبوع (${show(weekStart)} إلى ${show(weekEnd)})`);
+      if (inquiries.length === 0) throw new Error(`ما فيه مسائلات${status === "done" ? " منتهية" : status === "open" ? " غير منتهية" : ""} أُرسلت في هذا الأسبوع (${show(weekStart)} إلى ${show(weekEnd)})`);
 
       const { PDFDocument } = await import("pdf-lib");
       const merged = await PDFDocument.create();
@@ -112,12 +113,35 @@ export function WeeklyPrintButton({ kind }: { kind: string }) {
           {busy ? "جارٍ التجهيز..." : "تجهيز طباعة الأسبوع"}
         </button>
       </div>
+      <div className="flex flex-wrap gap-2 text-sm" role="radiogroup" aria-label="حالة المسائلات">
+        {(
+          [
+            ["all", "كل المسائلات"],
+            ["done", "اللي تم الانتهاء منها"],
+            ["open", "اللي لم يتم الانتهاء منها"],
+          ] as const
+        ).map(([key, label]) => (
+          <label
+            key={key}
+            className={`cursor-pointer rounded-full border px-3 py-1 text-xs transition-colors ${
+              status === key
+                ? "border-[var(--brand-primary)] bg-[var(--brand-primary)] text-white"
+                : "border-slate-300 dark:border-slate-700 text-slate-600 dark:text-slate-300"
+            }`}
+          >
+            <input type="radio" name="weekly-status" value={key} checked={status === key} onChange={() => setStatus(key)} disabled={busy} className="sr-only" />
+            {label}
+          </label>
+        ))}
+      </div>
       <p className="text-xs text-slate-500">يشمل كل المسائلات اللي أُرسلت في الأسبوع الذي يقع فيه التاريخ المختار{kind !== "all" ? " (من هذا النوع فقط)" : ""}، كل واحدة بنموذجها ومرفقاتها.</p>
       {progress && <p className="text-xs text-slate-500">{progress}</p>}
       {error && <p className="text-xs text-red-600 dark:text-red-400">{error}</p>}
       {result && (
         <div className="flex flex-col gap-1 rounded-lg bg-green-50 dark:bg-green-900/20 p-3 text-sm text-green-800 dark:text-green-200">
-          <p>جاهز: {result.count} مسائلة للأسبوع {result.range}.</p>
+          <p>
+            جاهز: {result.count} مسائلة{status === "done" ? " منتهية" : status === "open" ? " غير منتهية" : ""} للأسبوع {result.range}.
+          </p>
           <div className="flex flex-wrap gap-3">
             <a href={result.url} target="_blank" rel="noopener noreferrer" className="font-semibold underline">
               فتح الملف للطباعة

@@ -16,6 +16,8 @@ export async function GET(req: NextRequest) {
 
   const day = req.nextUrl.searchParams.get("week");
   const kind = req.nextUrl.searchParams.get("kind") ?? "all";
+  // done = the inquiry has been decided, open = not decided yet, all = both
+  const status = req.nextUrl.searchParams.get("status") ?? "all";
   const today = new Date(Date.now() + 3 * 60 * 60 * 1000).toISOString().slice(0, 10);
   const weekStart = weekStartOf(day && DATE_RE.test(day) ? day : today);
   const weekEnd = addDays(weekStart, 6);
@@ -24,6 +26,7 @@ export async function GET(req: NextRequest) {
   const rows = (await listInquiries())
     .filter((i) => riyadhDay(i.createdAt) >= weekStart && riyadhDay(i.createdAt) <= weekEnd)
     .filter((i) => !KINDS.includes(kind) || i.kind === kind)
+    .filter((i) => status === "done" ? i.decision !== null : status === "open" ? i.decision === null : true)
     .sort((a, b) => KINDS.indexOf(a.kind) - KINDS.indexOf(b.kind) || a.teacherName.localeCompare(b.teacherName, "ar"));
 
   return NextResponse.json({
